@@ -3,7 +3,7 @@ version: '3.8'
 services:
   palo-alto-monitor:
     build: .
-    container_name: palo-alto-monitor
+    container_name: PANfm
     ports:
       - "5000:5000"
     volumes:

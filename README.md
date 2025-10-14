@@ -90,7 +90,9 @@ The application will be available at http://localhost:5000
 
 ### Getting a Palo Alto API Key
 
-\`\`\`bash
+https://docs.paloaltonetworks.com/pan-os/11-0/pan-os-panorama-api/get-started-with-the-pan-os-xml-api/get-your-api-key
+
+
 # Generate an API key via SSH or the web interface
 curl -k 'https://<firewall-ip>/api/?type=keygen&user=<username>&password=<password>'
 \`\`\`
