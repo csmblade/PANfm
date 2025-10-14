@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  palo-alto-monitor:
+    build: .
+    container_name: palo-alto-monitor
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount the entire project for live development
+      - .:/app
+      # Mount data directory for persistent storage
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    restart: unless-stopped
+    # Override CMD for development with auto-reload
+    command: python app.py
