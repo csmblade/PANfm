@@ -94,7 +94,7 @@ DEVICES_FILE = os.path.join(os.path.dirname(__file__), 'devices.json')
 
 # Default settings
 DEFAULT_SETTINGS = {
-    'refresh_interval': 60,
+    'refresh_interval': 30,
     'match_count': 10,
     'top_apps_count': 10,
     'debug_logging': False,
@@ -222,8 +222,16 @@ class DeviceManager:
     def save_devices(self, devices):
         """Save devices to file with encryption for sensitive data"""
         try:
-            with open(self.devices_file, 'r') as f:
-                data = json.load(f)
+            # Try to read existing data to preserve groups
+            try:
+                with open(self.devices_file, 'r') as f:
+                    data = json.load(f)
+            except:
+                # If file doesn't exist or can't be read, use default structure
+                data = {
+                    "devices": [],
+                    "groups": ["Headquarters", "Branch Offices", "DMZ", "Remote Sites"]
+                }
 
             # Create a deep copy and encrypt sensitive fields
             encrypted_devices = []
@@ -295,9 +303,13 @@ class DeviceManager:
         try:
             with open(self.devices_file, 'r') as f:
                 data = json.load(f)
-                return data.get('groups', [])
+                groups = data.get('groups', [])
+                # If no groups defined, return default groups
+                if not groups:
+                    return ["Headquarters", "Branch Offices", "DMZ", "Remote Sites"]
+                return groups
         except:
-            return ["Default"]
+            return ["Headquarters", "Branch Offices", "DMZ", "Remote Sites"]
 
     def test_connection(self, ip, api_key):
         """Test connection to a device"""
