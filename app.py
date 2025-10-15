@@ -2253,4 +2253,4 @@ def get_all_devices_status():
 # ============================================================================
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=3000, use_reloader=False)
+    app.run(debug=True, host='0.0.0.0', port=8189, use_reloader=False)
