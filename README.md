@@ -1,6 +1,6 @@
 # PANfm: Palo Alto Networks - firewall monitor
 
-A real-time monitoring dashboard for Palo Alto Networks firewalls built with Flask and Chart.js.
+A light weight real-time monitoring dashboard for Palo Alto Networks firewalls built with Flask and Chart.js.
 
 ## Features
 
@@ -8,10 +8,9 @@ A real-time monitoring dashboard for Palo Alto Networks firewalls built with Fla
 - **Real-Time Throughput Monitoring**: View network traffic in Mbps with interactive charts
 - **Threat Intelligence**: Track critical threats, medium threats, and blocked URLs
 - **Session Monitoring**: Monitor active TCP, UDP, and ICMP sessions
-- **System Resources**: Track CPU usage (data plane and management plane) and memory
 - **Traffic Logs**: View and search through detailed traffic logs
 - **System Logs**: Monitor system events and warnings
-- **Security Policies**: View and manage security policy rules
+- **Security Policies**: View and security policy rules
 - **Top Applications**: See which applications are consuming the most bandwidth
 - **Per-Device Configuration**: Each device can monitor a different interface
 - **Responsive UI**: Modern, gradient-based design with real-time updates
@@ -25,54 +24,20 @@ A real-time monitoring dashboard for Palo Alto Networks firewalls built with Fla
 
 ### 1. Clone the Repository
 
-\`\`\`bash
+
 git clone <your-repo-url>
-cd palo-alto-monitor
-\`\`\`
+
 
 ### 2. Run with Docker Compose
 
-\`\`\`bash
-# Build and start the container
-docker-compose up -d
+To run the container:
 
-# View logs
-docker-compose logs -f
+docker-compose build
+docker-compose up
 
-# Stop the container
-docker-compose down
-\`\`\`
+The application will be available at http://localhost:8189
 
-The application will be available at http://localhost:5000
 
-### Development Mode
-
-The docker-compose.yml is configured for development:
-- Your local code is mounted into the container as a volume
-- Flask runs with auto-reload enabled
-- Changes to your code are immediately reflected without rebuilding
-
-\`\`\`bash
-# Edit files locally - changes are live!
-# Restart if needed:
-docker-compose restart
-\`\`\`
-
-## Manual Installation (Without Docker)
-
-### 1. Install Dependencies
-
-\`\`\`bash
-pip install -r requirements.txt
-\`\`\`
-
-### 2. Run the Application
-
-\`\`\`bash
-python app.py
-\`\`\`
-
-The application will be available at http://localhost:5000
 
 ## Configuration
 
@@ -95,7 +60,6 @@ https://docs.paloaltonetworks.com/pan-os/11-0/pan-os-panorama-api/get-started-wi
 
 # Generate an API key via SSH or the web interface
 curl -k 'https://<firewall-ip>/api/?type=keygen&user=<username>&password=<password>'
-\`\`\`
 
 ### Settings
 
@@ -105,72 +69,6 @@ Access the Settings page to configure:
 - **Top Apps Count**: Number of top applications to show
 - **Debug Logging**: Enable detailed logging for troubleshooting
 
-## Docker Development Workflow
-
-### Making Changes
-
-1. **Edit Files**: Make changes to any Python, HTML, CSS, or JavaScript files locally
-2. **Auto-Reload**: Flask will automatically detect changes and reload
-3. **View Logs**: Run \`docker-compose logs -f\` to see application output
-
-### Rebuilding the Image
-
-Only needed if you change \`requirements.txt\` or \`Dockerfile\`:
-
-\`\`\`bash
-docker-compose down
-docker-compose build
-docker-compose up -d
-\`\`\`
-
-### Accessing the Container
-
-\`\`\`bash
-# Open a shell in the running container
-docker-compose exec palo-alto-monitor bash
-
-# View real-time logs
-docker-compose logs -f
-\`\`\`
-
-### Data Persistence
-
-The following directories/files are persisted using Docker volumes:
-- \`./data/\` - Application data (devices, settings)
-- \`devices.json\` - Device configurations
-- \`settings.json\` - Application settings
-
-## GitHub Repository Setup
-
-### Initial Setup
-
-\`\`\`bash
-# Initialize git repository (if not already done)
-git init
-
-# Add files
-git add .
-
-# Create initial commit
-git commit -m "Initial commit: Palo Alto Networks Firewall Monitor"
-
-# Add remote repository
-git remote add origin <your-github-repo-url>
-
-# Push to GitHub
-git push -u origin main
-\`\`\`
-
-### .gitignore
-
-The repository includes a \`.gitignore\` file that excludes:
-- Sensitive data (devices.json, settings.json, API keys)
-- Debug logs
-- Python cache files
-- IDE settings
-- OS-specific files
-
-**Important**: Never commit sensitive data like API keys or device configurations to GitHub!
 
 ## Architecture
 
@@ -193,7 +91,7 @@ The repository includes a \`.gitignore\` file that excludes:
 
 ## Security Considerations
 
-- API keys are stored locally (not in the container by default)
+- API keys are stored encrypted locally
 - SSL verification is disabled for self-signed certificates
 - Consider using environment variables for sensitive data in production
 - Run behind a reverse proxy (nginx) in production
@@ -211,7 +109,7 @@ The repository includes a \`.gitignore\` file that excludes:
 
 \`\`\`bash
 # View container logs
-docker-compose logs palo-alto-monitor
+docker-compose logs panfm
 
 # Restart containers
 docker-compose restart
