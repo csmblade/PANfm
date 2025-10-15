@@ -2143,6 +2143,9 @@ function showDeviceModal(deviceId = null) {
     form.reset();
     document.getElementById('connectionTestResult').style.display = 'none';
 
+    // Update group options before showing modal
+    updateGroupOptions();
+
     if (deviceId) {
         const device = currentDevices.find(d => d.id === deviceId);
         if (device) {

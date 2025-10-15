@@ -61,7 +61,7 @@ https://docs.paloaltonetworks.com/pan-os/11-0/pan-os-panorama-api/get-started-wi
 
 
 # Generate an API key via SSH or the web interface
-curl -k 'https://<firewall-ip>/api/?type=keygen&user=<username>&password=<password>'
+curl -k 'https:///api/?type=keygen&user=<username>&password=<password>'
 
 ### Settings
 
