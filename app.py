@@ -65,8 +65,8 @@ def decrypt_value(encrypted_value):
 
 # Palo Alto Firewall Configuration (moved to settings)
 # These are fallback defaults only
-DEFAULT_FIREWALL_IP = ""
-DEFAULT_API_KEY = ""
+DEFAULT_FIREWALL_IP = "1.1.1.1"
+DEFAULT_API_KEY = "123456"
 
 # Store previous values for throughput calculation
 # Store per-device statistics for rate calculation
@@ -90,12 +90,12 @@ DEVICES_FILE = os.path.join(os.path.dirname(__file__), 'devices.json')
 
 # Default settings
 DEFAULT_SETTINGS = {
-    'refresh_interval': 5,
-    'match_count': 5,
-    'top_apps_count': 5,
+    'refresh_interval': 15,
+    'match_count': 10,
+    'top_apps_count': 10,
     'debug_logging': False,
     'selected_device_id': '',
-    'monitored_interface': 'ethernet1/12'
+    'monitored_interface': 'ethernet1/1'
 }
 
 def log_debug(message):
@@ -247,7 +247,7 @@ class DeviceManager:
                 return device
         return None
 
-    def add_device(self, name, ip, api_key, group="Default", description="", monitored_interface="ethernet1/12"):
+    def add_device(self, name, ip, api_key, group="Default", description="", monitored_interface="ethernet1/12", interface_speed_mbps=0):
         """Add a new device"""
         import uuid
         devices = self.load_devices()
@@ -262,7 +262,8 @@ class DeviceManager:
             "description": description,
             "added_date": datetime.now().isoformat(),
             "last_seen": None,
-            "monitored_interface": monitored_interface
+            "monitored_interface": monitored_interface,
+            "interface_speed_mbps": interface_speed_mbps  # 0 means auto-detect
         }
 
         devices.append(new_device)
@@ -791,14 +792,18 @@ def get_threat_stats(max_logs=5):
             entries = root.findall('.//entry')
             sys.stderr.write(f"Total threat entries found: {len(entries)}\n")
             sys.stderr.flush()
+            log_debug(f"Total threat entries found in XML: {len(entries)}")
 
             # Count threats by severity and collect details
+            entry_count = 0
             for entry in root.findall('.//entry'):
+                entry_count += 1
                 severity = entry.find('.//severity')
                 threat_type = entry.find('.//type')
                 subtype = entry.find('.//subtype')
                 action = entry.find('.//action')
-                threat_name = entry.find('.//threat-name') or entry.find('.//threatid')
+                threat_name = entry.find('.//threat-name')
+                threat_id = entry.find('.//threatid')
                 src = entry.find('.//src')
                 dst = entry.find('.//dst')
                 sport = entry.find('.//sport')
@@ -808,16 +813,33 @@ def get_threat_stats(max_logs=5):
                 url_field = entry.find('.//url') or entry.find('.//misc')
                 app = entry.find('.//app')
 
-                # Try to find threat information from various fields
+                # Debug: log all available fields for first few entries to see structure
+                if entry_count <= 3:
+                    log_debug(f"=== Threat entry #{entry_count} XML fields ===")
+                    for child in entry:
+                        if child.text:
+                            log_debug(f"  {child.tag}: {child.text[:200] if len(child.text) > 200 else child.text}")
+                        else:
+                            log_debug(f"  {child.tag}: (empty)")
+                    log_debug("=== End of entry ===\n")
+
+                # Extract threat ID and name
+                threat_id_value = None
+                if threat_id is not None and threat_id.text:
+                    threat_id_value = threat_id.text.strip()
+
                 threat_display = 'Unknown'
                 if threat_name is not None and threat_name.text:
                     threat_display = threat_name.text
+                    log_debug(f"Using threat name: {threat_display}")
                 elif category is not None and category.text:
                     threat_display = category.text
+                    log_debug(f"Using category: {threat_display}")
 
                 # Create log entry
                 log_entry = {
                     'threat': threat_display,
+                    'threat_id': threat_id_value,
                     'src': src.text if src is not None and src.text else 'N/A',
                     'dst': dst.text if dst is not None and dst.text else 'N/A',
                     'sport': sport.text if sport is not None and sport.text else 'N/A',
@@ -837,10 +859,12 @@ def get_threat_stats(max_logs=5):
                         medium_count += 1
                         if len(medium_logs) < max_logs:
                             medium_logs.append(log_entry)
+                            log_debug(f"Added medium threat: {threat_display}")
                     elif sev_lower in ['critical', 'high', 'crit']:
                         critical_count += 1
                         if len(critical_logs) < max_logs:
                             critical_logs.append(log_entry)
+                            log_debug(f"Added critical threat: {threat_display}")
 
                 # Skip URL blocking from threat logs - we'll get them from URL filtering logs instead
 
@@ -1050,18 +1074,186 @@ def get_throughput_data():
 
         # Get monitored interface from the device, not from settings
         monitored_interface = 'ethernet1/12'  # default
+        manual_interface_speed = 0  # 0 means auto-detect
         if selected_device_id:
             device = device_manager.get_device(selected_device_id)
-            if device and device.get('monitored_interface'):
-                monitored_interface = device['monitored_interface']
+            if device:
+                if device.get('monitored_interface'):
+                    monitored_interface = device['monitored_interface']
+                if device.get('interface_speed_mbps'):
+                    manual_interface_speed = int(device.get('interface_speed_mbps', 0))
 
         log_debug(f"=== get_throughput_data called ===")
         log_debug(f"Selected device from settings: {selected_device_id}")
         log_debug(f"Fetching throughput data from device: {firewall_ip}")
         log_debug(f"Monitored interface: {monitored_interface}")
+        log_debug(f"Manual interface speed override: {manual_interface_speed} Mbps (0 = auto-detect)")
 
         # Use device ID as key for per-device stats, fallback to IP if no device ID
         device_key = selected_device_id if selected_device_id else firewall_ip
+
+        # Check if manual speed is configured
+        if manual_interface_speed > 0:
+            interface_speed_mbps = manual_interface_speed
+            log_debug(f"Using manual interface speed: {interface_speed_mbps} Mbps")
+        else:
+            # First, query for interface hardware information to get speed
+            hw_cmd = f"<show><interface>{monitored_interface}</interface></show>"
+            hw_params = {
+                'type': 'op',
+                'cmd': hw_cmd,
+                'key': api_key
+            }
+
+            interface_speed_mbps = 1000  # Default to 1Gbps if we can't determine
+            try:
+                hw_response = api_request_get(base_url, params=hw_params, verify=False, timeout=10)
+                if hw_response.status_code == 200:
+                    # Export the XML response to a file for debugging
+                    try:
+                        with open('interface_hw_output.xml', 'w') as f:
+                            f.write(hw_response.text)
+                        log_debug("Exported interface hardware XML to interface_hw_output.xml")
+                    except Exception as write_error:
+                        log_debug(f"Error exporting interface hardware XML: {write_error}")
+
+                    hw_root = ET.fromstring(hw_response.text)
+                    log_debug(f"Interface hardware XML (first 2000 chars):\n{hw_response.text[:2000]}")
+
+                    # First, try to find runtime link speed (actual negotiated speed)
+                    # This is typically in a field like "Runtime link speed/duplex/state"
+                    speed_elem = None
+
+                    # Pattern 1: Look for runtime speed/duplex/state field
+                    # This might be in various formats like "2.5Gb/s-full-up" or "1000/full/up"
+                    for elem in hw_root.iter():
+                        if elem.text is not None and ('runtime' in elem.tag.lower() or 'link' in elem.tag.lower()):
+                            log_debug(f"Found potential runtime element: {elem.tag} = {elem.text}")
+                            # Check if it contains speed info
+                            if any(x in elem.text.lower() for x in ['gb/s', 'mb/s', 'full', 'half', 'duplex', '/up', '/down']):
+                                speed_elem = elem
+                                log_debug(f"Using runtime link speed from: {elem.tag}")
+                                break
+
+                    # Pattern 2: Direct speed element
+                    if speed_elem is None:
+                        speed_elem = hw_root.find('.//speed')
+
+                    # Pattern 3: hw/speed
+                    if speed_elem is None:
+                        speed_elem = hw_root.find('.//hw/speed')
+
+                    # Pattern 4: Check under ifnet/entry
+                    if speed_elem is None:
+                        speed_elem = hw_root.find('.//ifnet/entry/speed')
+
+                    if speed_elem is not None and speed_elem.text:
+                        speed_text = speed_elem.text.strip().lower()
+                        log_debug(f"Raw speed text from XML: '{speed_text}'")
+
+                        # Parse runtime link speed formats:
+                        # Supported speeds: 10Mbps, 100Mbps, 1Gbps, 2.5Gbps, 5Gbps, 10Gbps
+                        # Examples: "5Gb/s-full-up", "2.5Gb/s-full-up", "1000/full/up", "10Gb/s-full-up", "100Mb/s-full-up"
+
+                        # Check for runtime format with "Gb/s" or "Mb/s"
+                        if 'gb/s' in speed_text or 'mb/s' in speed_text:
+                            log_debug("Detected runtime link speed format")
+                            # Extract the speed value (e.g., "5" from "5Gb/s-full-up", "2.5" from "2.5Gb/s-full-up")
+                            import re
+                            # Match patterns like "10Gb/s", "5Gb/s", "2.5Gb/s", "100Mb/s"
+                            gb_match = re.search(r'(\d+\.?\d*)\s*gb/s', speed_text)
+                            mb_match = re.search(r'(\d+\.?\d*)\s*mb/s', speed_text)
+
+                            if gb_match:
+                                speed_val = float(gb_match.group(1))
+                                interface_speed_mbps = int(speed_val * 1000)  # Convert Gb to Mb
+                                log_debug(f"Parsed {speed_val} Gb/s as {interface_speed_mbps} Mbps")
+                            elif mb_match:
+                                speed_val = float(mb_match.group(1))
+                                interface_speed_mbps = int(speed_val)
+                                log_debug(f"Parsed {speed_val} Mb/s as {interface_speed_mbps} Mbps")
+                        else:
+                            # Parse traditional speed formats (e.g., "1000", "10000", "auto")
+                            # Remove 'auto-' prefix if present
+                            if 'auto-' in speed_text:
+                                speed_text = speed_text.replace('auto-', '')
+
+                            # Check for specific speed values (check higher speeds first to avoid partial matches)
+                            # Supported: 10Mbps, 100Mbps, 1Gbps (1000Mbps), 2.5Gbps (2500Mbps), 5Gbps (5000Mbps), 10Gbps (10000Mbps)
+                            if '10000' in speed_text or '10g' in speed_text or speed_text == '10g':
+                                interface_speed_mbps = 10000
+                            elif '5000' in speed_text or '5g' in speed_text or speed_text == '5g' or '5.0g' in speed_text:
+                                interface_speed_mbps = 5000
+                            elif '2500' in speed_text or '2.5g' in speed_text or speed_text == '2.5g' or '2500m' in speed_text:
+                                interface_speed_mbps = 2500
+                            elif '1000' in speed_text or '1g' in speed_text or speed_text == '1g':
+                                interface_speed_mbps = 1000
+                            elif speed_text == '100' or '100m' in speed_text:
+                                interface_speed_mbps = 100
+                            elif speed_text == '10' or '10m' in speed_text:
+                                interface_speed_mbps = 10
+                            # If speed is just "auto", try to find duplex or other indicators
+                            elif 'auto' in speed_text:
+                                log_debug("Speed is 'auto', looking for duplex or other speed indicators...")
+                                # Try to find duplex which might indicate actual speed
+                                duplex_elem = hw_root.find('.//duplex')
+                                if duplex_elem is not None and duplex_elem.text:
+                                    log_debug(f"Duplex setting: {duplex_elem.text}")
+                                # Default to 1000 for auto
+                                interface_speed_mbps = 1000
+
+                        log_debug(f"Interface speed detected: {interface_speed_mbps} Mbps from text '{speed_text}'")
+                    else:
+                        log_debug("No speed element found in interface hardware XML")
+                        # Try to extract from state element if available
+                        state_elem = hw_root.find('.//state')
+                        if state_elem is not None and state_elem.text:
+                            log_debug(f"Interface state: {state_elem.text}")
+            except Exception as e:
+                log_debug(f"Error querying interface speed: {e}, using default 1000 Mbps")
+                import traceback
+                log_debug(f"Traceback: {traceback.format_exc()}")
+
+            # Alternative: Try to get speed from system info if the above didn't work
+            if interface_speed_mbps == 1000:  # Still at default
+                try:
+                    # Try network interfaces command which might have more detail
+                    alt_cmd = "<show><interface>all</interface></show>"
+                    alt_params = {
+                        'type': 'op',
+                        'cmd': alt_cmd,
+                        'key': api_key
+                    }
+                    alt_response = api_request_get(base_url, params=alt_params, verify=False, timeout=10)
+                    if alt_response.status_code == 200:
+                        alt_root = ET.fromstring(alt_response.text)
+                        # Find our specific interface in the list
+                        for hw_entry in alt_root.findall('.//hw/entry'):
+                            name_elem = hw_entry.find('name')
+                            if name_elem is not None and name_elem.text == monitored_interface:
+                                speed_elem = hw_entry.find('speed')
+                                if speed_elem is not None and speed_elem.text:
+                                    speed_text = speed_elem.text.strip().lower()
+                                    log_debug(f"Found speed in 'show interface all' for {monitored_interface}: '{speed_text}'")
+                                    # Parse the speed (check higher speeds first)
+                                    # Supported: 10Mbps, 100Mbps, 1Gbps, 2.5Gbps, 5Gbps, 10Gbps
+                                    if '10000' in speed_text or '10g' in speed_text:
+                                        interface_speed_mbps = 10000
+                                    elif '5000' in speed_text or '5g' in speed_text or '5.0g' in speed_text:
+                                        interface_speed_mbps = 5000
+                                    elif '2500' in speed_text or '2.5g' in speed_text or '2500m' in speed_text:
+                                        interface_speed_mbps = 2500
+                                    elif '1000' in speed_text or '1g' in speed_text:
+                                        interface_speed_mbps = 1000
+                                    elif '100' in speed_text:
+                                        interface_speed_mbps = 100
+                                    elif '10' in speed_text and '100' not in speed_text and '1000' not in speed_text:
+                                        interface_speed_mbps = 10
+                                    break
+                except Exception as alt_error:
+                    log_debug(f"Alternative speed query failed: {alt_error}")
+
+            log_debug(f"Final interface speed for {monitored_interface}: {interface_speed_mbps} Mbps")
 
         # Query for interface statistics
         cmd = f"<show><counter><interface>{monitored_interface}</interface></counter></show>"
@@ -1210,6 +1402,11 @@ def get_throughput_data():
             # Get top applications
             top_apps = get_top_applications(top_apps_count)
 
+            # Calculate interface utilization percentages
+            inbound_utilization = (inbound_mbps / interface_speed_mbps * 100) if interface_speed_mbps > 0 else 0
+            outbound_utilization = (outbound_mbps / interface_speed_mbps * 100) if interface_speed_mbps > 0 else 0
+            total_utilization = (total_mbps / interface_speed_mbps * 100) if interface_speed_mbps > 0 else 0
+
             return {
                 'timestamp': datetime.now().isoformat(),
                 'inbound_mbps': round(max(0, inbound_mbps), 2),
@@ -1218,6 +1415,10 @@ def get_throughput_data():
                 'inbound_pps': round(max(0, inbound_pps), 0),
                 'outbound_pps': round(max(0, outbound_pps), 0),
                 'total_pps': round(max(0, total_pps), 0),
+                'interface_speed_mbps': interface_speed_mbps,
+                'inbound_utilization': round(max(0, min(100, inbound_utilization)), 2),
+                'outbound_utilization': round(max(0, min(100, outbound_utilization)), 2),
+                'total_utilization': round(max(0, min(100, total_utilization)), 2),
                 'sessions': session_data,
                 'cpu': resource_data,
                 'threats': threat_data,
@@ -1955,6 +2156,98 @@ def test_new_device_connection():
         return jsonify({
             'status': 'error',
             'message': str(e)
+        }), 500
+
+@app.route('/api/devices/status-all', methods=['GET'])
+def get_all_devices_status():
+    """Get status, uptime, and basic info for all devices"""
+    try:
+        devices = device_manager.load_devices()
+        device_statuses = []
+
+        for device in devices:
+            if not device.get('enabled', True):
+                # Skip disabled devices
+                continue
+
+            device_status = {
+                'id': device['id'],
+                'name': device['name'],
+                'ip': device['ip'],
+                'group': device.get('group', 'Default'),
+                'status': 'unknown',
+                'uptime': 'Unknown',
+                'hostname': 'Unknown',
+                'model': 'Unknown',
+                'serial': 'Unknown',
+                'sw_version': 'Unknown',
+                'last_checked': datetime.now().isoformat()
+            }
+
+            # Try to get system info from the device
+            try:
+                base_url = f"https://{device['ip']}/api/"
+                api_key = device['api_key']
+
+                cmd = "<show><system><info></info></system></show>"
+                params = {
+                    'type': 'op',
+                    'cmd': cmd,
+                    'key': api_key
+                }
+
+                response = requests.get(base_url, params=params, verify=False, timeout=5)
+
+                if response.status_code == 200:
+                    root = ET.fromstring(response.text)
+
+                    # Check for successful response
+                    if root.get('status') == 'success':
+                        device_status['status'] = 'up'
+
+                        # Extract system info
+                        uptime_elem = root.find('.//uptime')
+                        hostname_elem = root.find('.//hostname')
+                        model_elem = root.find('.//model')
+                        serial_elem = root.find('.//serial')
+                        sw_version_elem = root.find('.//sw-version')
+
+                        if uptime_elem is not None and uptime_elem.text:
+                            device_status['uptime'] = uptime_elem.text
+                        if hostname_elem is not None and hostname_elem.text:
+                            device_status['hostname'] = hostname_elem.text
+                        if model_elem is not None and model_elem.text:
+                            device_status['model'] = model_elem.text
+                        if serial_elem is not None and serial_elem.text:
+                            device_status['serial'] = serial_elem.text
+                        if sw_version_elem is not None and sw_version_elem.text:
+                            device_status['sw_version'] = sw_version_elem.text
+                    else:
+                        device_status['status'] = 'down'
+                else:
+                    device_status['status'] = 'down'
+
+            except requests.exceptions.Timeout:
+                device_status['status'] = 'timeout'
+            except Exception as e:
+                device_status['status'] = 'error'
+                log_debug(f"Error checking device {device['name']}: {str(e)}")
+
+            device_statuses.append(device_status)
+
+        return jsonify({
+            'status': 'success',
+            'devices': device_statuses,
+            'total': len(device_statuses),
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        log_debug(f"Error in get_all_devices_status: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'devices': []
         }), 500
 
 # ============================================================================

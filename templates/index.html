@@ -223,59 +223,80 @@
             border-radius: 2px;
         }
 
-        .threat-log-table {
-            width: 100%;
-            font-size: 0.7em;
-            border-collapse: separate;
-            border-spacing: 0 3px;
-        }
-
-        .threat-log-table th {
-            text-align: left;
-            padding: 6px 8px;
-            font-weight: 700;
-            color: rgba(255,255,255,0.95);
-            text-transform: uppercase;
-            font-size: 0.75em;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid rgba(255,255,255,0.3);
-            background: rgba(0,0,0,0.15);
-        }
-
-        .threat-log-table td {
-            padding: 6px 8px;
-            background: rgba(255,255,255,0.12);
+        .threat-list-item {
+            background: rgba(255,255,255,0.08);
             border-left: 3px solid;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
             transition: all 0.2s ease;
         }
 
-        .threat-log-table tr:hover td {
-            background: rgba(255,255,255,0.18);
-            transform: translateX(2px);
+        .threat-list-item:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateX(3px);
         }
 
-        .threat-log-table tr td:first-child {
-            border-top-left-radius: 6px;
-            border-bottom-left-radius: 6px;
+        .threat-cve-header {
+            margin-bottom: 6px;
+        }
+
+        .threat-cve-header a {
+            color: #ffffff;
+            background: rgba(220, 38, 38, 0.8);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .threat-cve-header a:hover {
+            background: #ffeb3b;
+            color: #000000;
+            transform: scale(1.05);
+        }
+
+        .threat-list-name {
+            font-size: 0.85em;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .threat-list-name a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 2px;
+            transition: all 0.2s ease;
+            display: inline;
+        }
+
+        .threat-list-name a:hover {
+            color: #ffeb3b;
+            border-bottom-color: #ffeb3b;
+        }
+
+        .threat-list-time {
+            font-size: 0.75em;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 4px;
             font-weight: 500;
         }
 
-        .threat-log-table tr td:last-child {
-            border-top-right-radius: 6px;
-            border-bottom-right-radius: 6px;
-        }
-
-        .threat-name {
-            font-weight: 600;
-            color: rgba(255,255,255,0.95);
-            max-width: 200px;
+        .threat-list-details {
+            font-size: 0.7em;
+            color: rgba(255,255,255,0.5);
+            font-family: 'Courier New', monospace;
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
-            cursor: help;
         }
 
         .threat-src {
@@ -424,7 +445,11 @@
             </div>
             <div class="menu-item" data-page="software-updates">
                 <span class="menu-icon">📦</span>
-                <span>Software Updates</span>
+                <span>Software Versions</span>
+            </div>
+            <div class="menu-item" data-page="site-monitor">
+                <span class="menu-icon">🌐</span>
+                <span>Site Monitor</span>
             </div>
             <div class="menu-item" data-page="devices">
                 <span class="menu-icon">🖥️</span>
@@ -509,7 +534,7 @@
             <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">
                 Dashboard Summary
             </h1>
-            <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Real-time monitoring and threat intelligence for Palo Alto Networks</p>
+            <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Real-time monitoring for Palo Alto Networks firewalls</p>
         </div>
 
         <div id="debugAlert" style="display: none; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); border-left: 5px solid #cc5200; border-radius: 8px; color: white; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -562,32 +587,10 @@
                 <div class="stat-value" id="icmpValue">-</div>
                 <div class="stat-unit">sessions</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">⚡</div>
-                <div class="stat-label">Data Plane CPU</div>
-                <div class="stat-value" id="dataCpuValue">-</div>
-                <div class="stat-unit">%</div>
-                <canvas class="mini-chart" id="dataCpuChart"></canvas>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">🖥️</div>
-                <div class="stat-label">Mgmt Plane CPU</div>
-                <div class="stat-value" id="mgmtCpuValue">-</div>
-                <div class="stat-unit">%</div>
-                <canvas class="mini-chart" id="mgmtCpuChart"></canvas>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">🧠</div>
-                <div class="stat-label">Memory Usage</div>
-                <div class="stat-value" id="memoryValue">-</div>
-                <div class="stat-unit">%</div>
-                <div style="font-size: 0.8em; color: #999; margin-top: 5px;" id="memoryDetails">-</div>
-            </div>
         </div>
 
         <div class="stats-grid">
             <div class="stat-card threat-card" style="background: linear-gradient(135deg, #d96500 0%, #a64f00 100%); border-left: 4px solid #ffffff;">
-                <div class="stat-icon">🚨</div>
                 <div class="stat-label" style="color: #ffffff;">Critical Threats</div>
                 <div class="stat-value" style="color: #ffffff;" id="criticalValue">-</div>
                 <div class="stat-unit" style="color: #ffcc99;">last 5 matches</div>
@@ -596,7 +599,6 @@
                 </div>
             </div>
             <div class="stat-card threat-card" style="background: linear-gradient(135deg, #e67300 0%, #b35900 100%); border-left: 4px solid #ffffff;">
-                <div class="stat-icon">⚠️</div>
                 <div class="stat-label" style="color: #ffffff;">Medium Threats</div>
                 <div class="stat-value" style="color: #ffffff;" id="mediumValue">-</div>
                 <div class="stat-unit" style="color: #ffffff;">last 5 matches</div>
@@ -605,7 +607,6 @@
                 </div>
             </div>
             <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #ffffff;">
-                <div class="stat-icon">🛡️</div>
                 <div class="stat-label" style="color: #ffffff;">Blocked URLs</div>
                 <div class="stat-value" style="color: #ffffff;" id="blockedUrlValue">-</div>
                 <div class="stat-unit" style="color: #ffffff;">last 5 matches</div>
@@ -615,7 +616,6 @@
             </div>
 
             <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #ff6600;">
-                <div class="stat-icon">📊</div>
                 <div class="stat-label" style="color: #ffffff;">Top Applications</div>
                 <div class="stat-value" style="color: #ffffff;" id="topAppsValue">-</div>
                 <div class="stat-unit" style="color: #ffffff;" id="topAppsUnit">last 5 matches</div>
@@ -723,11 +723,11 @@
             </div>
         </div>
 
-        <!-- Software Updates Content -->
+        <!-- Software Versions Content -->
         <div id="software-updates-content" class="page-content" style="display: none;">
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
-                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Software Updates</h1>
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Software Versions</h1>
                     <p style="color: #ff6600; font-size: 0.9em; margin: 0;">System and Content Version Information</p>
                 </div>
 
@@ -735,7 +735,7 @@
 
                 <div id="softwareLoading" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <div class="spinner" style="margin: 0 auto 20px auto; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #ff6600; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <p style="color: #666; font-size: 1.1em;">Loading software updates...</p>
+                    <p style="color: #666; font-size: 1.1em;">Loading software versions...</p>
                 </div>
 
                 <div id="softwareTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
@@ -840,6 +840,60 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div id="site-monitor-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Site Monitor</h1>
+                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Real-time status monitoring for all firewalls</p>
+                </div>
+
+                <div class="error-message" id="siteMonitorErrorMessage"></div>
+
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="color: #333; font-size: 1.3em; font-weight: 600; margin: 0;">Firewall Status</h2>
+                        <button onclick="refreshSiteMonitor()" style="background: #ff6600; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <div id="siteMonitorLoading" style="text-align: center; padding: 40px; color: #666;">
+                        Loading firewall status...
+                    </div>
+
+                    <div id="siteMonitorTable" style="display: none;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f8f9fa; border-bottom: 2px solid #ff6600;">
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Status</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Name</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">IP Address</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Hostname</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Model</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Uptime</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Version</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siteMonitorTableBody">
+                                <!-- Rows will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="siteMonitorEmpty" style="display: none; text-align: center; padding: 40px; color: #666;">
+                        <p style="font-size: 1.1em; margin-bottom: 10px;">No firewalls configured</p>
+                        <p style="font-size: 0.9em;">Add firewalls in the Devices page to see their status here.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(255, 102, 0, 0.1); border-left: 4px solid #ff6600; border-radius: 6px;">
+                    <p style="color: #ffffff; font-size: 0.9em; margin: 0;">
+                        <strong>Note:</strong> The Site Monitor page shows real-time status for all enabled firewalls. Status checks are performed when you load or refresh this page.
+                    </p>
+                </div>
             </div>
         </div>
 

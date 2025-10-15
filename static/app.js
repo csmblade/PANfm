@@ -42,8 +42,6 @@ let historicalData = {
 
 // Mini chart instances
 let sessionChart = null;
-let dataCpuChart = null;
-let mgmtCpuChart = null;
 
 // Initialize Chart.js
 const ctx = document.getElementById('throughputChart').getContext('2d');
@@ -229,9 +227,41 @@ function updateStats(data) {
         historicalData.total.shift();
     }
 
-    document.getElementById('inboundValue').innerHTML = data.inbound_mbps.toLocaleString() + calculateTrend(historicalData.inbound);
-    document.getElementById('outboundValue').innerHTML = data.outbound_mbps.toLocaleString() + calculateTrend(historicalData.outbound);
-    document.getElementById('totalValue').innerHTML = data.total_mbps.toLocaleString() + calculateTrend(historicalData.total);
+    // Display throughput with utilization percentage if available
+    const inboundText = data.inbound_mbps.toLocaleString() + calculateTrend(historicalData.inbound);
+    const outboundText = data.outbound_mbps.toLocaleString() + calculateTrend(historicalData.outbound);
+    const totalText = data.total_mbps.toLocaleString() + calculateTrend(historicalData.total);
+
+    document.getElementById('inboundValue').innerHTML = inboundText;
+    document.getElementById('outboundValue').innerHTML = outboundText;
+    document.getElementById('totalValue').innerHTML = totalText;
+
+    // Update the unit text to show utilization percentage if available
+    if (data.interface_speed_mbps && data.inbound_utilization !== undefined) {
+        // Find the stat-unit elements for throughput cards and update them
+        const inboundCard = document.getElementById('inboundValue').closest('.stat-card');
+        const outboundCard = document.getElementById('outboundValue').closest('.stat-card');
+        const totalCard = document.getElementById('totalValue').closest('.stat-card');
+
+        if (inboundCard) {
+            const unitDiv = inboundCard.querySelector('.stat-unit');
+            if (unitDiv) {
+                unitDiv.innerHTML = `Mbps (${data.inbound_utilization}% of ${data.interface_speed_mbps} Mbps)`;
+            }
+        }
+        if (outboundCard) {
+            const unitDiv = outboundCard.querySelector('.stat-unit');
+            if (unitDiv) {
+                unitDiv.innerHTML = `Mbps (${data.outbound_utilization}% of ${data.interface_speed_mbps} Mbps)`;
+            }
+        }
+        if (totalCard) {
+            const unitDiv = totalCard.querySelector('.stat-unit');
+            if (unitDiv) {
+                unitDiv.innerHTML = `Mbps (${data.total_utilization}% of ${data.interface_speed_mbps} Mbps)`;
+            }
+        }
+    }
 
     // Update session counts and mini chart
     if (data.sessions) {
@@ -269,9 +299,6 @@ function updateStats(data) {
             historicalData.mgmtCpu.shift();
         }
 
-        document.getElementById('dataCpuValue').innerHTML = data.cpu.data_plane_cpu + calculateTrend(historicalData.dataCpu);
-        document.getElementById('mgmtCpuValue').innerHTML = data.cpu.mgmt_plane_cpu + calculateTrend(historicalData.mgmtCpu);
-
         // Update uptime display in sidebar
         const sidebarUptimeElement = document.getElementById('sidebarUptime');
         if (data.cpu.uptime && sidebarUptimeElement) {
@@ -293,33 +320,7 @@ function updateStats(data) {
             sidebarOutboundPpsElement.textContent = data.outbound_pps.toLocaleString();
         }
 
-        // Update memory usage
-        const memoryValueElement = document.getElementById('memoryValue');
-        const memoryDetailsElement = document.getElementById('memoryDetails');
-        if (data.cpu.memory_used_pct !== undefined && memoryValueElement) {
-            // Store historical data
-            historicalData.memory.push(data.cpu.memory_used_pct);
-            if (historicalData.memory.length > 60) {
-                historicalData.memory.shift();
-            }
 
-            memoryValueElement.innerHTML = data.cpu.memory_used_pct + calculateTrend(historicalData.memory);
-            if (memoryDetailsElement && data.cpu.memory_used_mb && data.cpu.memory_total_mb) {
-                memoryDetailsElement.textContent = `${(data.cpu.memory_used_mb / 1024).toFixed(1)}GB / ${(data.cpu.memory_total_mb / 1024).toFixed(1)}GB`;
-            }
-        }
-
-        // Update mini chart data
-        miniChartData.dataCpu.push(data.cpu.data_plane_cpu);
-        miniChartData.mgmtCpu.push(data.cpu.mgmt_plane_cpu);
-
-        if (miniChartData.dataCpu.length > MAX_MINI_POINTS) {
-            miniChartData.dataCpu.shift();
-            miniChartData.mgmtCpu.shift();
-        }
-
-        updateMiniChart(dataCpuChart, miniChartData.dataCpu, '#ff9933');
-        updateMiniChart(mgmtCpuChart, miniChartData.mgmtCpu, '#ff6600');
     }
 
     // Update API stats display in sidebar
@@ -364,22 +365,61 @@ function updateStats(data) {
 
         // Update the list of apps
         if (topAppsContainer && data.top_applications.apps && data.top_applications.apps.length > 0) {
-            let appsHtml = '';
+            topAppsContainer.innerHTML = '';
+
             data.top_applications.apps.forEach((app) => {
                 const barWidth = data.top_applications.apps[0].count > 0 ? (app.count / data.top_applications.apps[0].count * 100) : 0;
-                appsHtml += `
-                    <div style="margin-bottom: 8px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                            <span style="color: #ffffff; font-size: 0.85em;">${app.name}</span>
-                            <span style="color: #ffcc99; font-size: 0.85em; font-weight: 600;">${app.count}</span>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.2); border-radius: 4px; height: 6px; overflow: hidden;">
-                            <div style="background: #ffffff; height: 100%; width: ${barWidth}%; transition: width 0.3s ease;"></div>
-                        </div>
-                    </div>
-                `;
+
+                // Create app item container
+                const appItem = document.createElement('div');
+                appItem.style.marginBottom = '8px';
+
+                // Create header row with name and count
+                const headerRow = document.createElement('div');
+                headerRow.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 2px;';
+
+                // Create clickable app name link
+                const appLink = document.createElement('a');
+                appLink.href = `https://applipedia.paloaltonetworks.com/`;
+                appLink.target = '_blank';
+                appLink.rel = 'noopener noreferrer';
+                appLink.textContent = app.name;
+                appLink.title = `View ${app.name} on Applipedia`;
+                appLink.style.cssText = 'color: #ffffff; font-size: 0.85em; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: all 0.2s ease;';
+
+                // Add hover effect
+                appLink.addEventListener('mouseenter', function() {
+                    this.style.color = '#ffeb3b';
+                    this.style.borderBottomColor = '#ffeb3b';
+                });
+                appLink.addEventListener('mouseleave', function() {
+                    this.style.color = '#ffffff';
+                    this.style.borderBottomColor = 'rgba(255,255,255,0.3)';
+                });
+
+                // Create count span
+                const countSpan = document.createElement('span');
+                countSpan.textContent = app.count;
+                countSpan.style.cssText = 'color: #ffcc99; font-size: 0.85em; font-weight: 600;';
+
+                headerRow.appendChild(appLink);
+                headerRow.appendChild(countSpan);
+
+                // Create progress bar
+                const barContainer = document.createElement('div');
+                barContainer.style.cssText = 'background: rgba(255,255,255,0.2); border-radius: 4px; height: 6px; overflow: hidden;';
+
+                const barFill = document.createElement('div');
+                barFill.style.cssText = `background: #ffffff; height: 100%; width: ${barWidth}%; transition: width 0.3s ease;`;
+
+                barContainer.appendChild(barFill);
+
+                // Assemble the item
+                appItem.appendChild(headerRow);
+                appItem.appendChild(barContainer);
+
+                topAppsContainer.appendChild(appItem);
             });
-            topAppsContainer.innerHTML = appsHtml;
         } else if (topAppsContainer) {
             topAppsContainer.innerHTML = '<div style="color: rgba(255,255,255,0.7); font-size: 0.85em; text-align: center;">No data</div>';
         }
@@ -682,32 +722,16 @@ function updateThreatLogs(elementId, logs, borderColor) {
     container.innerHTML = '';
 
     if (logs.length === 0) {
-        container.innerHTML = '<div style="font-size: 0.7em; color: #999; padding: 5px;">No recent matches</div>';
+        container.innerHTML = '<div style="font-size: 0.8em; color: rgba(255,255,255,0.6); padding: 10px; text-align: center;">No recent matches</div>';
         return;
     }
 
-    // Create table
-    const table = document.createElement('table');
-    table.className = 'threat-log-table';
+    // Check if this is for blocked URLs
+    const isBlockedUrls = elementId === 'blockedUrlLogs';
 
-    // Create header
-    const thead = document.createElement('thead');
-    thead.innerHTML = `
-        <tr>
-            <th>Threat/URL</th>
-            <th>Time</th>
-        </tr>
-    `;
-    table.appendChild(thead);
-
-    // Create body
-    const tbody = document.createElement('tbody');
-
-    logs.forEach(log => {
-        const row = document.createElement('tr');
-        row.style.borderLeftColor = borderColor;
-
+    logs.forEach((log, index) => {
         const threat = log.threat || log.url || 'Unknown';
+        const threatId = log.threat_id || null;
         const src = log.src || 'N/A';
         const dst = log.dst || 'N/A';
         const dport = log.dport || 'N/A';
@@ -720,35 +744,117 @@ function updateThreatLogs(elementId, logs, borderColor) {
         const time = datetime ? datetime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
         const fullTime = datetime ? datetime.toLocaleString() : 'N/A';
 
-        // Build comprehensive tooltip
-        let tooltipParts = [
-            `Threat/URL: ${threat}`,
-            `Time: ${fullTime}`,
-            `Source: ${src}:${sport}`,
-            `Destination: ${dst}:${dport}`,
-            `Action: ${action}`,
-            `Application: ${app}`
-        ];
+        // Create list item
+        const item = document.createElement('div');
+        item.className = 'threat-list-item';
+        item.style.borderLeftColor = borderColor;
 
-        if (severity !== 'N/A') tooltipParts.push(`Severity: ${severity}`);
-        if (category !== 'N/A') tooltipParts.push(`Category: ${category}`);
+        // Check if this is a blocked URL
+        if (isBlockedUrls) {
+            const urlFilteringUrl = `https://urlfiltering.paloaltonetworks.com/`;
 
-        const tooltip = tooltipParts.join('\n');
+            console.log(`Creating URL Filtering link for: ${threat}`);
 
-        row.innerHTML = `
-            <td style="border-left-color: ${borderColor};">
-                <div class="threat-name" title="${tooltip}">${threat}</div>
-            </td>
-            <td style="border-left-color: ${borderColor};">
-                <div class="threat-time" title="${tooltip}">${time}</div>
-            </td>
-        `;
+            // Create clickable URL link
+            const urlLink = document.createElement('a');
+            urlLink.href = urlFilteringUrl;
+            urlLink.target = '_blank';
+            urlLink.rel = 'noopener noreferrer';
+            urlLink.textContent = threat;
+            urlLink.title = `Click to check URL category on Palo Alto URL Filtering`;
+            urlLink.style.cssText = 'color: #ffffff; font-size: 0.85em; text-decoration: none; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 2px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: inline-block;';
 
-        tbody.appendChild(row);
+            // Add hover effect
+            urlLink.addEventListener('mouseenter', function() {
+                this.style.color = '#ffeb3b';
+                this.style.borderBottomColor = '#ffeb3b';
+            });
+            urlLink.addEventListener('mouseleave', function() {
+                this.style.color = '#ffffff';
+                this.style.borderBottomColor = 'rgba(255,255,255,0.3)';
+            });
+
+            const urlDiv = document.createElement('div');
+            urlDiv.className = 'threat-list-name';
+            urlDiv.appendChild(urlLink);
+
+            item.appendChild(urlDiv);
+        } else if (threatId) {
+            // This is a threat with Threat ID - link to Threat Vault
+            const threatVaultUrl = `https://threatvault.paloaltonetworks.com/?query=${encodeURIComponent(threatId)}`;
+
+            console.log(`Creating Threat Vault link: ${threatId} -> ${threatVaultUrl}`);
+
+            // Create Threat ID header as clickable badge
+            const threatIdHeaderDiv = document.createElement('div');
+            threatIdHeaderDiv.className = 'threat-cve-header';
+
+            const threatIdLink = document.createElement('a');
+            threatIdLink.href = threatVaultUrl;
+            threatIdLink.target = '_blank';
+            threatIdLink.rel = 'noopener noreferrer';
+            threatIdLink.textContent = `Threat ID: ${threatId}`;
+            threatIdLink.title = `Click to view threat details on Palo Alto Threat Vault`;
+            threatIdLink.style.cssText = 'color: #ffffff; background: rgba(220, 38, 38, 0.8); padding: 4px 10px; border-radius: 4px; font-size: 0.75em; font-weight: 700; text-decoration: none; display: inline-block; cursor: pointer; transition: all 0.2s ease; letter-spacing: 0.5px;';
+
+            // Add click event for debugging
+            threatIdLink.addEventListener('click', function(e) {
+                console.log(`Threat Vault link clicked: ${threatVaultUrl}`);
+            });
+
+            // Add hover effect via JavaScript
+            threatIdLink.addEventListener('mouseenter', function() {
+                this.style.background = '#ffeb3b';
+                this.style.color = '#000000';
+                this.style.transform = 'scale(1.05)';
+            });
+            threatIdLink.addEventListener('mouseleave', function() {
+                this.style.background = 'rgba(220, 38, 38, 0.8)';
+                this.style.color = '#ffffff';
+                this.style.transform = 'scale(1)';
+            });
+
+            threatIdHeaderDiv.appendChild(threatIdLink);
+
+            // Create threat description element
+            const threatDescDiv = document.createElement('div');
+            threatDescDiv.className = 'threat-list-name';
+            threatDescDiv.textContent = threat;
+            threatDescDiv.style.marginTop = '6px';
+            threatDescDiv.style.fontWeight = '600';
+            threatDescDiv.style.color = 'rgba(255,255,255,0.95)';
+
+            // Add Threat ID header first, then description
+            item.appendChild(threatIdHeaderDiv);
+            item.appendChild(threatDescDiv);
+        } else {
+            // Regular text for non-CVE threats
+            const threatNameDiv = document.createElement('div');
+            threatNameDiv.className = 'threat-list-name';
+            threatNameDiv.textContent = threat;
+            threatNameDiv.style.fontWeight = '600';
+            threatNameDiv.style.color = 'rgba(255,255,255,0.95)';
+
+            item.appendChild(threatNameDiv);
+        }
+
+        // Create time element
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'threat-list-time';
+        timeDiv.textContent = time;
+
+        // Create details element (source -> destination)
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'threat-list-details';
+        detailsDiv.textContent = `${src}:${sport} → ${dst}:${dport}`;
+        detailsDiv.title = `Source: ${src}:${sport}\nDestination: ${dst}:${dport}\nApp: ${app}\nAction: ${action}${severity !== 'N/A' ? '\nSeverity: ' + severity : ''}${category !== 'N/A' ? '\nCategory: ' + category : ''}`;
+
+        // Add time and details (CVE header and description were already added above for CVE threats)
+        item.appendChild(timeDiv);
+        item.appendChild(detailsDiv);
+
+        container.appendChild(item);
     });
-
-    table.appendChild(tbody);
-    container.appendChild(table);
 }
 
 // Initialize and update mini sparkline charts
@@ -866,8 +972,6 @@ async function init() {
 
     // Initialize mini charts
     sessionChart = createMiniChart('sessionChart', '#ff6600');
-    dataCpuChart = createMiniChart('dataCpuChart', '#ff9933');
-    mgmtCpuChart = createMiniChart('mgmtCpuChart', '#ff6600');
 
     // Set up interface update button
     const updateInterfaceBtn = document.getElementById('updateInterfaceBtn');
@@ -922,6 +1026,7 @@ function initPageNavigation() {
         'system-logs': document.getElementById('system-logs-content'),
         'traffic': document.getElementById('traffic-content'),
         'software-updates': document.getElementById('software-updates-content'),
+        'site-monitor': document.getElementById('site-monitor-content'),
         'devices': document.getElementById('devices-content'),
         'settings': document.getElementById('settings-content')
     };
@@ -946,6 +1051,8 @@ function initPageNavigation() {
                         updateTrafficPage();
                     } else if (pageKey === 'software-updates') {
                         loadSoftwareUpdates();
+                    } else if (pageKey === 'site-monitor') {
+                        loadSiteMonitor();
                     } else if (pageKey === 'devices') {
                         loadDevices();
                     } else if (pageKey === 'settings') {
@@ -1386,7 +1493,7 @@ async function loadSoftwareUpdates() {
             tableDiv.innerHTML = '';
         }
     } catch (error) {
-        console.error('Error loading software updates:', error);
+        console.error('Error loading software versions:', error);
         loadingDiv.style.display = 'none';
         tableDiv.style.display = 'none';
         errorDiv.textContent = 'Failed to load software updates: ' + error.message;
@@ -1846,10 +1953,6 @@ async function onDeviceChange() {
     document.getElementById('udpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
     document.getElementById('icmpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
 
-    // CPU and Memory stats
-    document.getElementById('dataCpuValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('mgmtCpuValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('memoryValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
 
     // Threat stats
     document.getElementById('criticalValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
@@ -1880,14 +1983,6 @@ async function onDeviceChange() {
     if (sessionChart) {
         sessionChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         sessionChart.update();
-    }
-    if (dataCpuChart) {
-        dataCpuChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        dataCpuChart.update();
-    }
-    if (mgmtCpuChart) {
-        mgmtCpuChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        mgmtCpuChart.update();
     }
 
     // Clear historical data arrays
@@ -2179,4 +2274,130 @@ async function testConnection() {
         resultDiv.style.background = '#f8d7da';
         resultDiv.style.color = '#721c24';
     }
+}
+
+// ============================================================================
+// Site Monitor Functions
+// ============================================================================
+
+async function loadSiteMonitor() {
+    console.log('Loading site monitor...');
+    const loadingDiv = document.getElementById('siteMonitorLoading');
+    const tableDiv = document.getElementById('siteMonitorTable');
+    const emptyDiv = document.getElementById('siteMonitorEmpty');
+    const errorDiv = document.getElementById('siteMonitorErrorMessage');
+
+    // Show loading state
+    loadingDiv.style.display = 'block';
+    tableDiv.style.display = 'none';
+    emptyDiv.style.display = 'none';
+    errorDiv.textContent = '';
+    errorDiv.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/devices/status-all');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            loadingDiv.style.display = 'none';
+
+            if (data.devices.length === 0) {
+                emptyDiv.style.display = 'block';
+            } else {
+                renderSiteMonitorTable(data.devices);
+                tableDiv.style.display = 'block';
+            }
+        } else {
+            throw new Error(data.message || 'Failed to load device status');
+        }
+    } catch (error) {
+        console.error('Error loading site monitor:', error);
+        loadingDiv.style.display = 'none';
+        errorDiv.textContent = 'Error loading device status: ' + error.message;
+        errorDiv.style.display = 'block';
+    }
+}
+
+function renderSiteMonitorTable(devices) {
+    const tbody = document.getElementById('siteMonitorTableBody');
+    tbody.innerHTML = '';
+
+    devices.forEach(device => {
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #e9ecef';
+
+        // Status column with colored indicator
+        const statusCell = document.createElement('td');
+        statusCell.style.padding = '12px';
+
+        let statusColor = '#28a745'; // green for up
+        let statusText = '● Online';
+        let statusBg = 'rgba(40, 167, 69, 0.1)';
+
+        if (device.status === 'down' || device.status === 'error') {
+            statusColor = '#dc3545'; // red for down
+            statusText = '● Offline';
+            statusBg = 'rgba(220, 53, 69, 0.1)';
+        } else if (device.status === 'timeout') {
+            statusColor = '#ffc107'; // yellow for timeout
+            statusText = '● Timeout';
+            statusBg = 'rgba(255, 193, 7, 0.1)';
+        } else if (device.status === 'unknown') {
+            statusColor = '#6c757d'; // gray for unknown
+            statusText = '● Unknown';
+            statusBg = 'rgba(108, 117, 125, 0.1)';
+        }
+
+        statusCell.innerHTML = `<span style="color: ${statusColor}; background: ${statusBg}; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 0.9em;">${statusText}</span>`;
+        row.appendChild(statusCell);
+
+        // Name column
+        const nameCell = document.createElement('td');
+        nameCell.style.padding = '12px';
+        nameCell.textContent = device.name;
+        nameCell.style.fontWeight = '600';
+        row.appendChild(nameCell);
+
+        // IP column
+        const ipCell = document.createElement('td');
+        ipCell.style.padding = '12px';
+        ipCell.textContent = device.ip;
+        ipCell.style.fontFamily = 'monospace';
+        row.appendChild(ipCell);
+
+        // Hostname column
+        const hostnameCell = document.createElement('td');
+        hostnameCell.style.padding = '12px';
+        hostnameCell.textContent = device.hostname;
+        row.appendChild(hostnameCell);
+
+        // Model column
+        const modelCell = document.createElement('td');
+        modelCell.style.padding = '12px';
+        modelCell.textContent = device.model;
+        modelCell.style.fontSize = '0.9em';
+        row.appendChild(modelCell);
+
+        // Uptime column
+        const uptimeCell = document.createElement('td');
+        uptimeCell.style.padding = '12px';
+        uptimeCell.textContent = device.uptime;
+        uptimeCell.style.fontSize = '0.9em';
+        row.appendChild(uptimeCell);
+
+        // Version column
+        const versionCell = document.createElement('td');
+        versionCell.style.padding = '12px';
+        versionCell.textContent = device.sw_version;
+        versionCell.style.fontSize = '0.9em';
+        versionCell.style.color = '#666';
+        row.appendChild(versionCell);
+
+        tbody.appendChild(row);
+    });
+}
+
+function refreshSiteMonitor() {
+    console.log('Refreshing site monitor...');
+    loadSiteMonitor();
 }
