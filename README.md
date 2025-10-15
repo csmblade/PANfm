@@ -25,7 +25,8 @@ A light weight real-time monitoring dashboard for Palo Alto Networks firewalls b
 ### 1. Clone the Repository
 
 
-git clone <your-repo-url>
+git clone [(https://github.com/csmblade/PANfm)]
+
 
 
 ### 2. Run with Docker Compose
@@ -33,6 +34,7 @@ git clone <your-repo-url>
 To run the container:
 
 docker-compose build
+
 docker-compose up
 
 The application will be available at http://localhost:8189
