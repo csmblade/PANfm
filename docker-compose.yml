@@ -1,19 +1,41 @@
 version: '3.8'
 
 services:
-  palo-alto-monitor:
-    build: .
+  panfm:
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: PANfm
+    image: panfm:latest
     ports:
       - "5000:5000"
     volumes:
-      # Mount the entire project for live development
-      - .:/app
       # Mount data directory for persistent storage
       - ./data:/app/data
+      # Mount config files (if they exist)
+      - ./devices.json:/app/devices.json
+      - ./settings.json:/app/settings.json
+      # Mount encryption key for persistence
+      - ./.encryption_key:/app/.encryption_key
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    # Override CMD for development with auto-reload
-    command: python app.py
+    networks:
+      - panfm-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  panfm-network:
+    driver: bridge
+    name: panfm-network
+
+volumes:
+  panfm-data:
+    name: panfm-data

@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  panfm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: PANfm-prod
+    image: panfm:production
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount data directory for persistent storage
+      - panfm-data:/app/data
+      # Mount config files from host (create these before running)
+      - ./devices.json:/app/devices.json:ro
+      - ./settings.json:/app/settings.json
+      # Mount encryption key for persistence
+      - ./.encryption_key:/app/.encryption_key:ro
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - PYTHONUNBUFFERED=1
+    restart: always
+    networks:
+      - panfm-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  panfm-network:
+    driver: bridge
+    name: panfm-network-prod
+
+volumes:
+  panfm-data:
+    name: panfm-data-prod

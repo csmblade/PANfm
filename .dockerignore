@@ -4,33 +4,79 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
 env/
 venv/
 ENV/
+env.bak/
+venv.bak/
 *.egg-info/
 
 # IDEs
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+.AppleDouble
+.LSOverride
 
 # Git
 .git/
 .gitignore
+.gitattributes
 
 # Data files (will be mounted as volumes)
 devices.json
 settings.json
 debug.log
+*.log
 *.xml
+.encryption_key
+data/
 
 # Docker
 docker-compose.yml
+docker-compose.prod.yml
 Dockerfile
 .dockerignore
+
+# Documentation
+README.md
+*.md
+images/
+screenshots/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Testing
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Other
+*.bak
+*.tmp
+*.temp
+.env.local
+.env.*.local
