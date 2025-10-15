@@ -25,7 +25,7 @@ A light weight real-time monitoring dashboard for Palo Alto Networks firewalls b
 ### 1. Clone the Repository
 
 
-git clone [(https://github.com/csmblade/PANfm)]
+git clone [https://github.com/csmblade/PANfm]
 
 
 
