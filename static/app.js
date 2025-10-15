@@ -1595,7 +1595,7 @@ async function saveSettingsData() {
 }
 
 function resetSettingsData() {
-    document.getElementById('refreshInterval').value = 5;
+    document.getElementById('refreshInterval').value = 60;
     document.getElementById('matchCount').value = 5;
     document.getElementById('topAppsCount').value = 5;
     document.getElementById('debugLogging').checked = false;

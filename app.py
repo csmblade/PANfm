@@ -90,7 +90,7 @@ DEVICES_FILE = os.path.join(os.path.dirname(__file__), 'devices.json')
 
 # Default settings
 DEFAULT_SETTINGS = {
-    'refresh_interval': 15,
+    'refresh_interval': 60,
     'match_count': 10,
     'top_apps_count': 10,
     'debug_logging': False,
