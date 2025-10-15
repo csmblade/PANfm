@@ -15,8 +15,7 @@ services:
       # Mount config files from host (create these before running)
       - ./devices.json:/app/devices.json:ro
       - ./settings.json:/app/settings.json
-      # Mount encryption key for persistence
-      - ./.encryption_key:/app/.encryption_key:ro
+      # Note: .encryption_key will be created inside the container in /app/data/.encryption_key
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=0

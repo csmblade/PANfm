@@ -19,11 +19,15 @@ CORS(app)
 # Encryption Configuration
 # ============================================================================
 
-# Path to encryption key file
-ENCRYPTION_KEY_FILE = os.path.join(os.path.dirname(__file__), '.encryption_key')
+# Path to encryption key file - store in data directory for persistence
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+ENCRYPTION_KEY_FILE = os.path.join(DATA_DIR, '.encryption_key')
 
 def get_or_create_encryption_key():
     """Get or create encryption key for securing sensitive data"""
+    # Ensure data directory exists
+    os.makedirs(DATA_DIR, exist_ok=True)
+
     if os.path.exists(ENCRYPTION_KEY_FILE):
         with open(ENCRYPTION_KEY_FILE, 'rb') as f:
             return f.read()

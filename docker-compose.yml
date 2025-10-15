@@ -12,11 +12,10 @@ services:
     volumes:
       # Mount data directory for persistent storage
       - ./data:/app/data
-      # Mount config files (if they exist)
+      # Mount config files (if they exist) - these will be created if they don't exist
       - ./devices.json:/app/devices.json
       - ./settings.json:/app/settings.json
-      # Mount encryption key for persistence
-      - ./.encryption_key:/app/.encryption_key
+      # Note: .encryption_key will be created inside the container in /app/data/.encryption_key
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1

@@ -35,6 +35,10 @@ COPY --from=builder /root/.local /home/panfm/.local
 COPY --chown=panfm:panfm app.py .
 COPY --chown=panfm:panfm static/ ./static/
 COPY --chown=panfm:panfm templates/ ./templates/
+COPY --chown=panfm:panfm docker-entrypoint.sh /docker-entrypoint.sh
+
+# Make entrypoint script executable
+RUN chmod +x /docker-entrypoint.sh
 
 # Switch to non-root user
 USER panfm
@@ -55,4 +59,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8189/', timeout=5)" || exit 1
 
 # Run the application
-CMD ["python", "app.py"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
