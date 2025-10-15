@@ -7,8 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: PANfm
     image: panfm:latest
-    ports:
-      - "8189:8189"
+    network_mode: host
     volumes:
       # Mount data directory for persistent storage
       - ./data:/app/data
@@ -21,19 +20,12 @@ services:
       - FLASK_DEBUG=1
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    networks:
-      - panfm-network
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8189/', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-networks:
-  panfm-network:
-    driver: bridge
-    name: panfm-network
 
 volumes:
   panfm-data:
