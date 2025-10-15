@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: PANfm
     image: panfm:latest
+    # Use host network mode on Linux, bridge with port binding on macOS/Windows
+    network_mode: bridge
     ports:
       - "8189:8189"
     volumes:
@@ -21,7 +23,10 @@ services:
       - FLASK_DEBUG=1
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    # Use default bridge network to allow access to host via host.docker.internal
+    # Allow DNS resolution and access to host network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
