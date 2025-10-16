@@ -8,12 +8,22 @@ import time
 import os
 import json
 from cryptography.fernet import Fernet
+import threading
+import sys
+
+# Add src directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+from utils.logger import PANfmLogger
 
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 CORS(app)
+
+# Initialize logger
+logger = PANfmLogger.setup(debug=os.environ.get('DEBUG_LOGGING', 'False').lower() == 'true',
+                            log_file='debug.log')
 
 # ============================================================================
 # Encryption Configuration
@@ -75,13 +85,16 @@ DEFAULT_API_KEY = "123456"
 # Store previous values for throughput calculation
 # Store per-device statistics for rate calculation
 previous_stats = {}
+previous_stats_lock = threading.Lock()
 
 # Store policy hit count history for trend calculation
 policy_history = {}
+policy_history_lock = threading.Lock()
 
 # API call counter
 api_call_count = 0
 api_call_start_time = time.time()
+api_call_lock = threading.Lock()
 
 # Debug log file
 DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), 'debug.log')
@@ -106,12 +119,8 @@ DEFAULT_SETTINGS = {
 }
 
 def log_debug(message):
-    """Write debug message to log file if debug logging is enabled"""
-    settings = load_settings()
-    if settings.get('debug_logging', False):
-        with open(DEBUG_LOG_FILE, 'a') as f:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            f.write(f"[{timestamp}] {message}\n")
+    """Write debug message using Python logging (backward compatibility wrapper)"""
+    logger.debug(message)
 
 def load_settings():
     """Load settings from file or return defaults"""
@@ -148,30 +157,38 @@ def load_settings():
         return DEFAULT_SETTINGS.copy()
 
 def save_settings(settings):
-    """Save settings to file"""
+    """Save settings to file and update logger settings"""
     try:
         with open(SETTINGS_FILE, 'w') as f:
             json.dump(settings, f, indent=2)
             f.flush()
             os.fsync(f.fileno())
+
+        # Update logger debug mode if setting changed
+        debug_enabled = settings.get('debug_logging', False)
+        PANfmLogger.set_debug(debug_enabled)
+
         return True
     except Exception as e:
+        logger.error(f"Failed to save settings: {e}")
         return False
 
 def increment_api_call():
-    """Increment the API call counter"""
+    """Increment the API call counter (thread-safe)"""
     global api_call_count
-    api_call_count += 1
+    with api_call_lock:
+        api_call_count += 1
 
 def get_api_stats():
-    """Get API call statistics"""
+    """Get API call statistics (thread-safe)"""
     global api_call_count, api_call_start_time
-    uptime_seconds = time.time() - api_call_start_time
-    calls_per_minute = (api_call_count / uptime_seconds) * 60 if uptime_seconds > 0 else 0
-    return {
-        'total_calls': api_call_count,
-        'calls_per_minute': round(calls_per_minute, 1)
-    }
+    with api_call_lock:
+        uptime_seconds = time.time() - api_call_start_time
+        calls_per_minute = (api_call_count / uptime_seconds) * 60 if uptime_seconds > 0 else 0
+        return {
+            'total_calls': api_call_count,
+            'calls_per_minute': round(calls_per_minute, 1)
+        }
 
 def api_request_get(url, **kwargs):
     """Wrapper for requests.get that tracks API calls"""
@@ -252,8 +269,9 @@ class DeviceManager:
             try:
                 with open(self.devices_file, 'r') as f:
                     data = json.load(f)
-            except:
+            except (FileNotFoundError, json.JSONDecodeError, IOError) as e:
                 # If file doesn't exist or can't be read, use default structure
+                log_debug(f"Could not read devices file: {e}")
                 data = {
                     "devices": [],
                     "groups": ["Headquarters", "Branch Offices", "DMZ", "Remote Sites"]
@@ -334,7 +352,8 @@ class DeviceManager:
                 if not groups:
                     return ["Headquarters", "Branch Offices", "DMZ", "Remote Sites"]
                 return groups
-        except:
+        except (FileNotFoundError, json.JSONDecodeError, IOError) as e:
+            log_debug(f"Could not read groups from file: {e}")
             return ["Headquarters", "Branch Offices", "DMZ", "Remote Sites"]
 
     def test_connection(self, ip, api_key):
@@ -404,7 +423,8 @@ def get_system_resources():
                         try:
                             values = [int(v) for v in value_elem.text.strip().split(',') if v.strip()]
                             all_cpu_values.extend(values)  # Add all core values to the list
-                        except:
+                        except (ValueError, AttributeError) as e:
+                            log_debug(f"Error parsing CPU values: {e}")
                             pass
 
             if all_cpu_values:
@@ -426,7 +446,8 @@ def get_system_resources():
                                     avg = sum(values) / len(values)
                                     total_cpu += avg
                                     count += 1
-                            except:
+                            except (ValueError, AttributeError) as e:
+                                log_debug(f"Error parsing second average CPU values: {e}")
                                 pass
                     if count > 0:
                         data_plane_cpu = int(total_cpu / count)
@@ -1347,20 +1368,21 @@ def get_throughput_data():
             else:
                 log_debug(f"WARNING: Could not find {monitored_interface} entry in interface counter XML")
 
-            # Initialize device stats if not exists
-            if device_key not in previous_stats:
-                previous_stats[device_key] = {
-                    'ibytes': 0,
-                    'obytes': 0,
-                    'ipkts': 0,
-                    'opkts': 0,
-                    'timestamp': time.time()
-                }
+            # Initialize device stats if not exists (with thread safety)
+            with previous_stats_lock:
+                if device_key not in previous_stats:
+                    previous_stats[device_key] = {
+                        'ibytes': 0,
+                        'obytes': 0,
+                        'ipkts': 0,
+                        'opkts': 0,
+                        'timestamp': time.time()
+                    }
 
-            # Calculate throughput rate (bytes per second)
-            current_time = time.time()
-            device_stats = previous_stats[device_key]
-            time_delta = current_time - device_stats['timestamp']
+                # Calculate throughput rate (bytes per second)
+                current_time = time.time()
+                device_stats = previous_stats[device_key]
+                time_delta = current_time - device_stats['timestamp']
 
             if time_delta > 0 and device_stats['ibytes'] > 0:
                 # Calculate bytes per second, then convert to Mbps
@@ -1414,12 +1436,13 @@ def get_throughput_data():
                 outbound_pps = 0
                 total_pps = 0
 
-            # Update device stats for this device
-            device_stats['ibytes'] = total_ibytes
-            device_stats['obytes'] = total_obytes
-            device_stats['ipkts'] = total_ipkts
-            device_stats['opkts'] = total_opkts
-            device_stats['timestamp'] = current_time
+            # Update device stats for this device (with thread safety)
+            with previous_stats_lock:
+                device_stats['ibytes'] = total_ibytes
+                device_stats['obytes'] = total_obytes
+                device_stats['ipkts'] = total_ipkts
+                device_stats['opkts'] = total_opkts
+                device_stats['timestamp'] = current_time
 
             # Get session count data
             session_data = get_session_count()
@@ -2189,7 +2212,8 @@ def update_connected_devices_cache(current_devices):
                     time_diff = datetime.now() - first_seen_dt
                     device['is_new'] = time_diff.total_seconds() < 86400  # 24 hours in seconds
                     device['age_hours'] = int(time_diff.total_seconds() / 3600)
-                except:
+                except (ValueError, TypeError, KeyError) as e:
+                    log_debug(f"Error parsing device timestamp: {e}")
                     device['is_new'] = False
                     device['age_hours'] = 0
             else:
@@ -2339,7 +2363,8 @@ def get_policy_hit_counts():
                                     try:
                                         hit_counts[rule_name] = int(hit_count_elem.text)
                                         log_debug(f"  Rule '{rule_name}': {hit_count_elem.text} hits")
-                                    except:
+                                    except (ValueError, TypeError) as e:
+                                        log_debug(f"Error parsing hit count for rule {rule_name}: {e}")
                                         pass
 
                                     if latest_elem is not None and latest_elem.text:
@@ -2371,7 +2396,8 @@ def get_policy_hit_counts():
                                         try:
                                             hit_counts[rule_name] = int(hit_count_elem.text)
                                             log_debug(f"  Rule '{rule_name}': {hit_count_elem.text} hits (pattern 2)")
-                                        except:
+                                        except (ValueError, TypeError) as e:
+                                            log_debug(f"Error parsing hit count for rule {rule_name} (pattern 2): {e}")
                                             pass
 
                                         if latest_elem is not None and latest_elem.text:
@@ -2405,41 +2431,42 @@ def get_policy_hit_counts():
 
             log_debug(f"Total policies: {len(policies)}")
 
-            # Calculate trends based on last 5 readings
+            # Calculate trends based on last 5 readings (with thread safety)
             global policy_history
             for policy in policies:
                 policy_name = policy['name']
                 current_count = policy['hit_count']
 
-                # Initialize history for this policy if not exists
-                if policy_name not in policy_history:
-                    policy_history[policy_name] = []
+                with policy_history_lock:
+                    # Initialize history for this policy if not exists
+                    if policy_name not in policy_history:
+                        policy_history[policy_name] = []
 
-                # Add current count to history
-                policy_history[policy_name].append(current_count)
+                    # Add current count to history
+                    policy_history[policy_name].append(current_count)
 
-                # Keep only last 5 readings
-                if len(policy_history[policy_name]) > 5:
-                    policy_history[policy_name] = policy_history[policy_name][-5:]
+                    # Keep only last 5 readings
+                    if len(policy_history[policy_name]) > 5:
+                        policy_history[policy_name] = policy_history[policy_name][-5:]
 
-                # Calculate trend if we have at least 2 readings
-                if len(policy_history[policy_name]) >= 2:
-                    recent_counts = policy_history[policy_name]
-                    # Compare most recent to average of previous readings
-                    if len(recent_counts) > 1:
-                        previous_avg = sum(recent_counts[:-1]) / len(recent_counts[:-1])
-                        current = recent_counts[-1]
+                    # Calculate trend if we have at least 2 readings
+                    if len(policy_history[policy_name]) >= 2:
+                        recent_counts = policy_history[policy_name].copy()  # Copy to avoid lock issues
+                        # Compare most recent to average of previous readings
+                        if len(recent_counts) > 1:
+                            previous_avg = sum(recent_counts[:-1]) / len(recent_counts[:-1])
+                            current = recent_counts[-1]
 
-                        if current > previous_avg * 1.1:  # 10% increase threshold
-                            policy['trend'] = 'up'
-                        elif current < previous_avg * 0.9:  # 10% decrease threshold
-                            policy['trend'] = 'down'
+                            if current > previous_avg * 1.1:  # 10% increase threshold
+                                policy['trend'] = 'up'
+                            elif current < previous_avg * 0.9:  # 10% decrease threshold
+                                policy['trend'] = 'down'
+                            else:
+                                policy['trend'] = 'stable'
                         else:
                             policy['trend'] = 'stable'
                     else:
-                        policy['trend'] = 'stable'
-                else:
-                    policy['trend'] = None
+                        policy['trend'] = None
 
             # Sort by hit count descending
             policies.sort(key=lambda x: x['hit_count'], reverse=True)
@@ -2842,24 +2869,59 @@ def settings():
         # Save new settings
         try:
             new_settings = request.get_json()
+
+            # Validate that we received JSON data
+            if not new_settings or not isinstance(new_settings, dict):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid request: JSON object required'
+                }), 400
+
             log_debug(f"=== POST /api/settings called ===")
             log_debug(f"Received settings: {new_settings}")
 
-            # Validate settings
-            refresh_interval = int(new_settings.get('refresh_interval', 5))
-            match_count = int(new_settings.get('match_count', 5))
-            top_apps_count = int(new_settings.get('top_apps_count', 5))
+            # Validate and sanitize settings with proper type checking
+            try:
+                refresh_interval = int(new_settings.get('refresh_interval', 5))
+            except (ValueError, TypeError):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid refresh_interval: must be a number'
+                }), 400
+
+            try:
+                match_count = int(new_settings.get('match_count', 5))
+            except (ValueError, TypeError):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid match_count: must be a number'
+                }), 400
+
+            try:
+                top_apps_count = int(new_settings.get('top_apps_count', 5))
+            except (ValueError, TypeError):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid top_apps_count: must be a number'
+                }), 400
 
             # Ensure values are within valid ranges
             refresh_interval = max(1, min(60, refresh_interval))
             match_count = max(1, min(20, match_count))
             top_apps_count = max(1, min(10, top_apps_count))
 
-            # Get debug logging setting
+            # Get debug logging setting with type validation
             debug_logging = new_settings.get('debug_logging', False)
+            if not isinstance(debug_logging, bool):
+                debug_logging = str(debug_logging).lower() in ('true', '1', 'yes')
 
-            # Get selected device ID (for multi-device support)
+            # Get selected device ID with validation
             selected_device_id = new_settings.get('selected_device_id', '')
+            if not isinstance(selected_device_id, str):
+                selected_device_id = str(selected_device_id)
+            # Sanitize device ID to prevent injection
+            selected_device_id = selected_device_id.strip()[:100]  # Limit length
+
             log_debug(f"selected_device_id to save: {selected_device_id}")
 
             settings_data = {
@@ -2885,8 +2947,8 @@ def settings():
             log_debug(f"Error in settings endpoint: {e}")
             return jsonify({
                 'status': 'error',
-                'message': str(e)
-            }), 400
+                'message': 'Internal server error'
+            }), 500
 
 # ============================================================================
 # Device Management API Endpoints
@@ -3146,4 +3208,6 @@ def get_all_devices_status():
 # ============================================================================
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8189, use_reloader=False)
+    # Use environment variable to control debug mode - defaults to False for production
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=8189, use_reloader=False)

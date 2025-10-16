@@ -56,3 +56,9 @@ data/
 # Environment variables
 .env
 .env.local
+
+# Development/refactoring files
+app_original.py
+REFACTORING_STATUS.md
+REFACTORING_COMPLETE.md
+EXTRACT_ROUTES_GUIDE.md

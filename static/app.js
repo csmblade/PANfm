@@ -2004,7 +2004,7 @@ function displayPolicies(policies) {
             statusColor = '#ef4444';
             statusBgColor = '#fee2e2';
         } else if (policy.hit_count > 10000) {
-            statusText = 'High Traffic';
+            statusText = 'Active';
             statusColor = '#f59e0b';
             statusBgColor = '#fef3c7';
         }
