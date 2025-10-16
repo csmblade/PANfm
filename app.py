@@ -92,6 +92,9 @@ SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
 # Devices file
 DEVICES_FILE = os.path.join(os.path.dirname(__file__), 'devices.json')
 
+# Connected devices cache file
+CONNECTED_DEVICES_CACHE_FILE = os.path.join(DATA_DIR, 'connected_devices_cache.json')
+
 # Default settings
 DEFAULT_SETTINGS = {
     'refresh_interval': 30,
@@ -116,6 +119,29 @@ def load_settings():
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, 'r') as f:
                 settings = json.load(f)
+
+                # Check if MAC vendor database file exists but metadata is missing
+                db_path = os.path.join(DATA_DIR, 'mac-vendors-export.json')
+                if os.path.exists(db_path) and not settings.get('mac_vendor_db', {}).get('uploaded', False):
+                    # Database file exists but settings don't have metadata - rebuild it
+                    try:
+                        file_stats = os.stat(db_path)
+                        with open(db_path, 'r') as db_file:
+                            db_data = json.load(db_file)
+
+                        settings['mac_vendor_db'] = {
+                            'uploaded': True,
+                            'filename': 'mac-vendors-export.json',
+                            'entries': len(db_data) if isinstance(db_data, list) else 0,
+                            'file_size': file_stats.st_size,
+                            'upload_time': datetime.fromtimestamp(file_stats.st_mtime).isoformat()
+                        }
+                        # Save updated settings
+                        save_settings(settings)
+                        log_debug("MAC vendor database metadata restored to settings")
+                    except Exception as e:
+                        log_debug(f"Error rebuilding MAC vendor database metadata: {e}")
+
                 return settings
         return DEFAULT_SETTINGS.copy()
     except Exception as e:
@@ -1468,7 +1494,12 @@ def serve_images(filename):
 def throughput():
     """API endpoint for real-time throughput data"""
     data = get_throughput_data()
-    return jsonify(data)
+    response = jsonify(data)
+    # Prevent caching to ensure fresh data on every request
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/api/health')
 def health():
@@ -1511,6 +1542,309 @@ def traffic_logs_api():
             'message': str(e),
             'logs': []
         })
+
+@app.route('/api/connected-devices')
+def connected_devices_api():
+    """API endpoint for connected devices"""
+    try:
+        log_debug("=== Connected Devices API called ===")
+        devices = get_connected_devices()
+        log_debug(f"Found {len(devices)} devices")
+
+        # Add MAC vendor lookup for devices with MAC addresses
+        for device in devices:
+            if device.get('mac'):
+                log_debug(f"Looking up vendor for MAC: {device['mac']}")
+                vendor_info = get_mac_vendor(device['mac'])
+                device['vendor'] = vendor_info.get('vendor', '')
+                device['country'] = vendor_info.get('country', '')
+                log_debug(f"Vendor info: {vendor_info}")
+
+        response = jsonify({
+            'status': 'success',
+            'devices': devices,
+            'total': len(devices),
+            'timestamp': datetime.now().isoformat()
+        })
+        # Prevent caching to ensure fresh device data
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    except Exception as e:
+        log_debug(f"Error in connected_devices_api: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'devices': []
+        })
+
+@app.route('/api/client-apps/<client_ip>')
+def client_apps_api(client_ip):
+    """API endpoint to get top applications for a specific client IP"""
+    try:
+        log_debug(f"=== Client Apps API called for IP: {client_ip} ===")
+
+        # Get application data for the client
+        app_data = get_client_applications(client_ip)
+
+        return jsonify({
+            'status': 'success',
+            'client_ip': client_ip,
+            'applications': app_data['applications'],
+            'total_sessions': app_data['total_sessions'],
+            'total_bytes': app_data['total_bytes'],
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        log_debug(f"Error in client_apps_api: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'applications': []
+        })
+
+# Cache for MAC vendor lookups and database
+mac_vendor_cache = {}
+mac_vendor_database = None
+mac_vendor_database_loaded = False
+
+def load_mac_vendor_database():
+    """Load MAC vendor database from JSON file"""
+    global mac_vendor_database, mac_vendor_database_loaded
+
+    if mac_vendor_database_loaded:
+        return mac_vendor_database
+
+    try:
+        db_path = os.path.join(DATA_DIR, 'mac-vendors-export.json')
+        if not os.path.exists(db_path):
+            log_debug("MAC vendor database not found")
+            mac_vendor_database_loaded = True
+            return None
+
+        with open(db_path, 'r') as f:
+            data = json.load(f)
+
+        # Build a lookup dictionary indexed by MAC prefix for fast lookups
+        # Support various MAC prefix formats: AA:BB:CC, AA-BB-CC, AABBCC
+        lookup_dict = {}
+        for entry in data:
+            # Get the MAC prefix from the entry
+            # Support different possible field names
+            mac_prefix = entry.get('macPrefix') or entry.get('mac_prefix') or entry.get('oui') or entry.get('assignment')
+
+            if mac_prefix:
+                # Normalize MAC prefix - remove separators and convert to uppercase
+                normalized = mac_prefix.replace(':', '').replace('-', '').replace('.', '').upper()
+                # Store with first 6 characters (OUI)
+                if len(normalized) >= 6:
+                    oui = normalized[:6]
+                    lookup_dict[oui] = {
+                        'vendor': entry.get('vendorName') or entry.get('vendor_name') or entry.get('companyName') or entry.get('organization') or '',
+                        'country': entry.get('country') or entry.get('countryCode') or ''
+                    }
+
+        mac_vendor_database = lookup_dict
+        mac_vendor_database_loaded = True
+        log_debug(f"MAC vendor database loaded with {len(lookup_dict)} entries")
+        return mac_vendor_database
+
+    except Exception as e:
+        log_debug(f"Error loading MAC vendor database: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        mac_vendor_database_loaded = True
+        return None
+
+def get_mac_vendor(mac_address):
+    """Lookup MAC address vendor information from local database"""
+    if not mac_address:
+        return {'vendor': '', 'country': ''}
+
+    # Check if database has been uploaded by checking settings metadata
+    settings = load_settings()
+    db_metadata = settings.get('mac_vendor_db', {})
+
+    if not db_metadata.get('uploaded', False):
+        # No database uploaded, skip lookup entirely
+        return {'vendor': '', 'country': ''}
+
+    # Check cache first
+    if mac_address in mac_vendor_cache:
+        return mac_vendor_cache[mac_address]
+
+    try:
+        # Load database if not already loaded
+        db = load_mac_vendor_database()
+        if not db:
+            vendor_info = {'vendor': '', 'country': ''}
+            mac_vendor_cache[mac_address] = vendor_info
+            return vendor_info
+
+        # Normalize MAC address - extract OUI (first 6 hex digits)
+        normalized = mac_address.replace(':', '').replace('-', '').replace('.', '').upper()
+        if len(normalized) >= 6:
+            oui = normalized[:6]
+
+            # Lookup in database
+            if oui in db:
+                vendor_info = db[oui]
+                log_debug(f"MAC lookup for {mac_address} (OUI: {oui}): Found {vendor_info.get('vendor', 'Unknown')}")
+            else:
+                vendor_info = {'vendor': '', 'country': ''}
+                log_debug(f"MAC lookup for {mac_address} (OUI: {oui}): Not found")
+        else:
+            vendor_info = {'vendor': '', 'country': ''}
+            log_debug(f"MAC lookup for {mac_address}: Invalid MAC format")
+
+        # Cache the result
+        mac_vendor_cache[mac_address] = vendor_info
+        return vendor_info
+
+    except Exception as e:
+        log_debug(f"Error looking up MAC vendor for {mac_address}: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        # Return empty and cache to avoid repeated failures
+        vendor_info = {'vendor': '', 'country': ''}
+        mac_vendor_cache[mac_address] = vendor_info
+        return vendor_info
+
+def get_client_applications(client_ip, max_logs=100):
+    """
+    Fetch and aggregate application usage for a specific client IP.
+    Returns top applications with session counts and bandwidth usage.
+    """
+    try:
+        _, api_key, base_url = get_firewall_config()
+
+        # Query traffic logs for this specific client IP
+        log_query = f"(addr.src in {client_ip})"
+        params = {
+            'type': 'log',
+            'log-type': 'traffic',
+            'query': log_query,
+            'nlogs': str(max_logs),
+            'key': api_key
+        }
+
+        log_debug(f"Querying traffic logs for client {client_ip}")
+        response = api_request_get(base_url, params=params, verify=False, timeout=15)
+        log_debug(f"Client apps query status: {response.status_code}")
+
+        app_stats = {}
+        total_sessions = 0
+        total_bytes = 0
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+
+            # Check if this is a job response (async log query)
+            job_id = root.find('.//job')
+            if job_id is not None and job_id.text:
+                log_debug(f"Job ID received: {job_id.text}, fetching results...")
+
+                # Wait briefly and fetch job results
+                time.sleep(1)
+                result_params = {
+                    'type': 'log',
+                    'action': 'get',
+                    'job-id': job_id.text,
+                    'key': api_key
+                }
+
+                result_response = api_request_get(base_url, params=result_params, verify=False, timeout=15)
+                if result_response.status_code == 200:
+                    root = ET.fromstring(result_response.text)
+
+            # Parse log entries
+            log_entries = root.findall('.//entry')
+            log_debug(f"Found {len(log_entries)} traffic log entries for {client_ip}")
+
+            for entry in log_entries:
+                app = entry.find('app')
+                bytes_sent = entry.find('bytes_sent')
+                bytes_received = entry.find('bytes_received')
+                dst = entry.find('dst')
+                dport = entry.find('dport')
+                proto = entry.find('proto')
+
+                app_name = app.text if app is not None else 'unknown'
+                bytes_s = int(bytes_sent.text) if bytes_sent is not None and bytes_sent.text else 0
+                bytes_r = int(bytes_received.text) if bytes_received is not None and bytes_received.text else 0
+                total_bytes_session = bytes_s + bytes_r
+
+                dst_ip = dst.text if dst is not None else ''
+                dst_port = dport.text if dport is not None else ''
+                protocol = proto.text if proto is not None else ''
+
+                # Aggregate by application
+                if app_name not in app_stats:
+                    app_stats[app_name] = {
+                        'app': app_name,
+                        'sessions': 0,
+                        'bytes_sent': 0,
+                        'bytes_received': 0,
+                        'total_bytes': 0,
+                        'destinations': set(),
+                        'ports': set(),
+                        'protocols': set()
+                    }
+
+                app_stats[app_name]['sessions'] += 1
+                app_stats[app_name]['bytes_sent'] += bytes_s
+                app_stats[app_name]['bytes_received'] += bytes_r
+                app_stats[app_name]['total_bytes'] += total_bytes_session
+
+                if dst_ip:
+                    app_stats[app_name]['destinations'].add(dst_ip)
+                if dst_port:
+                    app_stats[app_name]['ports'].add(dst_port)
+                if protocol:
+                    app_stats[app_name]['protocols'].add(protocol)
+
+                total_sessions += 1
+                total_bytes += total_bytes_session
+
+        # Convert sets to lists and format data
+        applications = []
+        for app_name, stats in app_stats.items():
+            applications.append({
+                'app': app_name,
+                'sessions': stats['sessions'],
+                'bytes_sent': stats['bytes_sent'],
+                'bytes_received': stats['bytes_received'],
+                'total_bytes': stats['total_bytes'],
+                'destinations_count': len(stats['destinations']),
+                'ports': list(stats['ports'])[:5],  # Top 5 ports
+                'protocols': list(stats['protocols'])
+            })
+
+        # Sort by total bytes descending
+        applications.sort(key=lambda x: x['total_bytes'], reverse=True)
+
+        log_debug(f"Found {len(applications)} unique applications for {client_ip}")
+
+        return {
+            'applications': applications,
+            'total_sessions': total_sessions,
+            'total_bytes': total_bytes
+        }
+
+    except Exception as e:
+        log_debug(f"Error fetching client applications: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return {
+            'applications': [],
+            'total_sessions': 0,
+            'total_bytes': 0
+        }
 
 def get_traffic_logs(max_logs=50):
     """Fetch traffic logs from Palo Alto firewall"""
@@ -1555,7 +1889,14 @@ def get_traffic_logs(max_logs=50):
 
             # Find all log entries
             for entry in root.findall('.//entry'):
-                time_generated = entry.get('time_generated', '')
+                # Pull receive_time using recursive search like system logs
+                receive_time_elem = entry.find('.//receive_time') or entry.find('.//time_generated')
+                time_generated = receive_time_elem.text if receive_time_elem is not None and receive_time_elem.text else ''
+
+                # Debug: Log time info for first entry
+                if len(traffic_logs) == 0:
+                    log_debug(f"First traffic log entry - receive_time: {time_generated}")
+
                 src = entry.find('src')
                 dst = entry.find('dst')
                 sport = entry.find('sport')
@@ -1594,6 +1935,301 @@ def get_traffic_logs(max_logs=50):
     except Exception as e:
         log_debug(f"Error fetching traffic logs: {e}")
         return []
+
+def get_connected_devices():
+    """Fetch connected devices from Palo Alto firewall - includes ARP from layer 3 devices (routers)"""
+    try:
+        _, api_key, base_url = get_firewall_config()
+
+        devices_dict = {}  # Use dict to track unique devices by IP+MAC
+
+        # Step 1: Query the main firewall ARP table
+        log_debug("Querying main firewall ARP table...")
+        cmd = "<show><arp><entry name='all'/></arp></show>"
+        params = {
+            'type': 'op',
+            'cmd': cmd,
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+        log_debug(f"Main ARP query status: {response.status_code}")
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+            if root.get('status') == 'success':
+                entries = root.findall('.//entries/entry')
+                log_debug(f"Found {len(entries)} ARP entries from main firewall")
+
+                for entry in entries:
+                    ip = entry.find('ip')
+                    mac = entry.find('mac')
+                    interface = entry.find('interface')
+                    status = entry.find('status')
+                    ttl = entry.find('ttl')
+                    port = entry.find('port')
+
+                    ip_text = ip.text if ip is not None else ''
+                    mac_text = mac.text if mac is not None else ''
+
+                    if ip_text or mac_text:
+                        device_key = f"{ip_text}_{mac_text}"
+                        status_text = status.text.strip() if status is not None and status.text else ''
+
+                        if device_key not in devices_dict:
+                            # Extract VLAN from interface name if present
+                            interface_name = interface.text if interface is not None else ''
+                            vlan = ''
+                            if interface_name and '.' in interface_name:
+                                vlan = interface_name.split('.')[-1]
+
+                            device_entry = {
+                                'hostname': ip_text,
+                                'ip': ip_text,
+                                'mac': mac_text,
+                                'interface': interface_name,
+                                'vlan': vlan,
+                                'status': status_text,
+                                'ttl': ttl.text if ttl is not None else '',
+                                'port': port.text if port is not None else '',
+                                'source': 'firewall'
+                            }
+                            devices_dict[device_key] = device_entry
+
+        log_debug(f"Total devices after main firewall ARP: {len(devices_dict)}")
+
+        # Step 2: Query active sessions to find devices behind routers
+        # This will show all source IPs that have active or recent sessions through the firewall
+        log_debug("Querying active sessions to find devices behind routers...")
+
+        session_cmd = "<show><session><all></all></session></show>"
+        session_params = {
+            'type': 'op',
+            'cmd': session_cmd,
+            'key': api_key
+        }
+
+        session_response = api_request_get(base_url, params=session_params, verify=False, timeout=10)
+        log_debug(f"Session query status: {session_response.status_code}")
+
+        if session_response.status_code == 200:
+            session_root = ET.fromstring(session_response.text)
+            log_debug(f"Session XML (first 3000 chars): {ET.tostring(session_root, encoding='unicode')[:3000]}")
+
+            if session_root.get('status') == 'success':
+                # Parse session entries to extract unique source IPs with their interface/vlan info
+                session_entries = session_root.findall('.//entry')
+                log_debug(f"Found {len(session_entries)} session entries")
+
+                # Track unique IPs with their associated interface and VLAN info
+                source_ip_info = {}
+                for entry in session_entries:
+                    source = entry.find('source')
+                    ingress = entry.find('ingress')
+                    egress = entry.find('egress')
+                    vsys = entry.find('vsys')
+
+                    if source is not None and source.text:
+                        source_ip = source.text
+                        if source_ip not in source_ip_info:
+                            source_ip_info[source_ip] = {
+                                'ingress': ingress.text if ingress is not None else '',
+                                'egress': egress.text if egress is not None else '',
+                                'vsys': vsys.text if vsys is not None else ''
+                            }
+
+                log_debug(f"Found {len(source_ip_info)} unique source IPs from sessions")
+
+                # Add these IPs to our devices list (without MAC since we don't have ARP for them)
+                for ip, info in source_ip_info.items():
+                    device_key = f"{ip}_unknown"
+                    if device_key not in devices_dict:
+                        # Check if we already have this IP with a known MAC
+                        already_exists = False
+                        for existing_key in devices_dict:
+                            if existing_key.startswith(f"{ip}_"):
+                                already_exists = True
+                                break
+
+                        if not already_exists:
+                            # Extract VLAN from interface name if present (e.g., vlan.100)
+                            interface_name = info['ingress'] or info['egress']
+                            vlan = ''
+                            if interface_name and '.' in interface_name:
+                                vlan = interface_name.split('.')[-1]
+
+                            device_entry = {
+                                'hostname': ip,
+                                'ip': ip,
+                                'mac': '',  # No MAC available from session data
+                                'interface': interface_name,
+                                'vlan': vlan,
+                                'status': 'active_session',
+                                'ttl': '',
+                                'port': interface_name,
+                                'source': 'session'
+                            }
+                            devices_dict[device_key] = device_entry
+
+                log_debug(f"Total devices after session query: {len(devices_dict)}")
+
+        # Step 3: Query MAC address table (which includes devices behind routers)
+        log_debug("Querying MAC address table from firewall...")
+
+        # Use the MAC address table command
+        mac_cmd = "<show><mac>all</mac></show>"
+        mac_params = {
+            'type': 'op',
+            'cmd': mac_cmd,
+            'key': api_key
+        }
+
+        mac_response = api_request_get(base_url, params=mac_params, verify=False, timeout=10)
+        log_debug(f"MAC table query status: {mac_response.status_code}")
+
+        if mac_response.status_code == 200:
+            mac_root = ET.fromstring(mac_response.text)
+            log_debug(f"MAC table XML (first 5000 chars): {ET.tostring(mac_root, encoding='unicode')[:5000]}")
+
+            if mac_root.get('status') == 'success':
+                # Parse MAC table entries
+                mac_entries = mac_root.findall('.//entry')
+                log_debug(f"Found {len(mac_entries)} entries from MAC address table")
+
+                for entry in mac_entries:
+                    # MAC table has different fields than ARP table
+                    mac = entry.find('mac')
+                    interface = entry.find('interface')
+                    vlan = entry.find('vlan')
+                    port = entry.find('port')
+
+                    mac_text = mac.text if mac is not None else ''
+
+                    # MAC table doesn't have IP addresses directly
+                    # We can use MAC to see which devices are present
+                    if mac_text:
+                        # Check if we already have this MAC from ARP table (which has IP)
+                        found_in_arp = False
+                        for existing_key in devices_dict:
+                            if mac_text in existing_key:
+                                found_in_arp = True
+                                break
+
+                        # If not in ARP table, add it with MAC only
+                        if not found_in_arp:
+                            device_key = f"unknown_{mac_text}"
+                            if device_key not in devices_dict:
+                                device_entry = {
+                                    'hostname': mac_text,  # Use MAC as hostname if no IP
+                                    'ip': '',  # No IP available in MAC table
+                                    'mac': mac_text,
+                                    'interface': interface.text if interface is not None else '',
+                                    'status': 'learned',
+                                    'ttl': '',
+                                    'port': port.text if port is not None else (interface.text if interface is not None else ''),
+                                    'source': 'mac_table'
+                                }
+                                devices_dict[device_key] = device_entry
+
+                log_debug(f"Total devices after MAC table query: {len(devices_dict)}")
+
+        # Convert dict back to list
+        devices = list(devices_dict.values())
+        log_debug(f"Returning {len(devices)} connected devices in total")
+
+        # Update cache with new device detection
+        devices = update_connected_devices_cache(devices)
+
+        return devices
+
+    except Exception as e:
+        log_debug(f"Error fetching connected devices: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return []
+
+def update_connected_devices_cache(current_devices):
+    """
+    Update the connected devices cache and mark new devices.
+    Devices not seen before are marked as 'new' with a first_seen timestamp.
+    """
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+
+        # Load existing cache
+        cache = {}
+        if os.path.exists(CONNECTED_DEVICES_CACHE_FILE):
+            try:
+                with open(CONNECTED_DEVICES_CACHE_FILE, 'r') as f:
+                    cache_data = json.load(f)
+                    cache = cache_data.get('devices', {})
+                    log_debug(f"Loaded cache with {len(cache)} devices")
+            except Exception as e:
+                log_debug(f"Error loading cache: {e}")
+                cache = {}
+
+        current_time = datetime.now().isoformat()
+        updated_cache = {}
+
+        # Process each current device
+        for device in current_devices:
+            # Create unique key for device (IP + MAC)
+            device_key = f"{device.get('ip', '')}_{device.get('mac', '')}"
+
+            # Check if this device exists in cache
+            if device_key in cache:
+                # Existing device - preserve first_seen and is_new status
+                cached_device = cache[device_key]
+                device['first_seen'] = cached_device.get('first_seen', current_time)
+                device['last_seen'] = current_time
+
+                # Calculate if device is still "new" (within 24 hours)
+                try:
+                    first_seen_dt = datetime.fromisoformat(device['first_seen'])
+                    time_diff = datetime.now() - first_seen_dt
+                    device['is_new'] = time_diff.total_seconds() < 86400  # 24 hours in seconds
+                    device['age_hours'] = int(time_diff.total_seconds() / 3600)
+                except:
+                    device['is_new'] = False
+                    device['age_hours'] = 0
+            else:
+                # New device - mark as new with current timestamp
+                device['first_seen'] = current_time
+                device['last_seen'] = current_time
+                device['is_new'] = True
+                device['age_hours'] = 0
+                log_debug(f"New device detected: {device.get('ip', 'unknown')} / {device.get('mac', 'unknown')}")
+
+            # Update cache
+            updated_cache[device_key] = {
+                'first_seen': device['first_seen'],
+                'last_seen': device['last_seen'],
+                'ip': device.get('ip', ''),
+                'mac': device.get('mac', ''),
+                'hostname': device.get('hostname', '')
+            }
+
+        # Save updated cache
+        cache_data = {
+            'devices': updated_cache,
+            'last_update': current_time
+        }
+
+        with open(CONNECTED_DEVICES_CACHE_FILE, 'w') as f:
+            json.dump(cache_data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+
+        log_debug(f"Cache updated with {len(updated_cache)} devices")
+
+        return current_devices
+
+    except Exception as e:
+        log_debug(f"Error updating connected devices cache: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        # Return devices without cache updates if error occurs
+        return current_devices
 
 def get_policy_hit_counts():
     """Fetch security policy hit counts from Palo Alto firewall"""
@@ -1831,6 +2467,170 @@ def policies():
     data = get_policy_hit_counts()
     return jsonify(data)
 
+@app.route('/api/nat-policies')
+def nat_policies():
+    """API endpoint for NAT policy rules"""
+    data = get_nat_policies()
+    return jsonify(data)
+
+def get_nat_policies():
+    """Fetch NAT policy rules from Palo Alto firewall"""
+    try:
+        firewall_ip, api_key, base_url = get_firewall_config()
+
+        log_debug(f"\n=== NAT Policy API Request ===")
+
+        nat_rules = []
+
+        # Use config API to get NAT rules from /config/devices
+        xpath = "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys1']/rulebase/nat/rules"
+        params = {
+            'type': 'config',
+            'action': 'get',
+            'xpath': xpath,
+            'key': api_key
+        }
+
+        log_debug(f"API URL: {base_url}")
+        log_debug(f"XPath: {xpath}")
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=15)
+        log_debug(f"NAT Policy Status: {response.status_code}")
+        log_debug(f"Response content-type: {response.headers.get('content-type', 'unknown')}")
+
+        if response.status_code == 200:
+            try:
+                # Parse XML response
+                root = ET.fromstring(response.text)
+                log_debug(f"NAT Response XML (first 2000 chars):\n{response.text[:2000]}")
+
+                # Check if the response was successful
+                status = root.get('status')
+                if status != 'success':
+                    error_msg = root.find('.//msg')
+                    error_text = error_msg.text if error_msg is not None else 'Unknown error'
+                    log_debug(f"NAT config API failed: {error_text}")
+                    return {
+                        'status': 'error',
+                        'message': f'NAT policy query failed: {error_text}',
+                        'nat_policies': []
+                    }
+
+                # Find all NAT rule entries from the result
+                # The response will be: <response status="success"><result><rules><entry>...</entry></rules></result></response>
+                entries = root.findall('.//result/rules/entry')
+                if not entries:
+                    # Fallback to just looking for any entry elements
+                    entries = root.findall('.//entry')
+
+                log_debug(f"Found {len(entries)} NAT policy entries")
+                if len(entries) > 0:
+                    log_debug(f"First entry name: {entries[0].get('name', 'N/A')}")
+
+                # Helper function to get text from member elements
+                def get_members_text(parent_element, tag_path):
+                    """Extract member values from XML element"""
+                    members = parent_element.findall(f'{tag_path}/member')
+                    if members:
+                        return ', '.join([m.text for m in members if m.text])
+                    return 'Any'
+
+                # Parse each NAT rule entry
+                for entry in entries:
+                    rule_name = entry.get('name', 'Unknown')
+
+                    # Extract rule details
+                    source_zone = get_members_text(entry, './from')
+                    destination_zone = get_members_text(entry, './to')
+                    source_address = get_members_text(entry, './source')
+                    destination_address = get_members_text(entry, './destination')
+
+                    service_elem = entry.find('./service')
+                    service = service_elem.text if service_elem is not None and service_elem.text else 'Any'
+
+                    # Determine NAT type and translation info
+                    nat_type = 'Source NAT'
+                    translated_address = 'N/A'
+                    translated_port = 'N/A'
+
+                    # Check for destination translation
+                    dest_trans_addr = entry.find('.//destination-translation/translated-address')
+                    dest_trans_port = entry.find('.//destination-translation/translated-port')
+
+                    if dest_trans_addr is not None:
+                        nat_type = 'Destination NAT'
+                        translated_address = dest_trans_addr.text if dest_trans_addr.text else 'N/A'
+                        translated_port = dest_trans_port.text if dest_trans_port is not None and dest_trans_port.text else 'N/A'
+
+                    # Check for source translation (only if not destination NAT)
+                    elif entry.find('.//source-translation') is not None:
+                        # Dynamic IP and Port (interface-based)
+                        interface_elem = entry.find('.//source-translation/dynamic-ip-and-port/interface-address/interface')
+                        if interface_elem is not None:
+                            nat_type = 'Dynamic IP & Port'
+                            translated_address = f"Interface: {interface_elem.text}" if interface_elem.text else 'N/A'
+
+                        # Dynamic IP and Port (translated address)
+                        else:
+                            trans_members = entry.findall('.//source-translation/dynamic-ip-and-port/translated-address/member')
+                            if trans_members:
+                                nat_type = 'Dynamic IP & Port'
+                                translated_address = ', '.join([m.text for m in trans_members if m.text])
+
+                            # Dynamic IP
+                            else:
+                                trans_members = entry.findall('.//source-translation/dynamic-ip/translated-address/member')
+                                if trans_members:
+                                    nat_type = 'Dynamic IP'
+                                    translated_address = ', '.join([m.text for m in trans_members if m.text])
+
+                                # Static IP
+                                else:
+                                    static_ip = entry.find('.//source-translation/static-ip/translated-address')
+                                    if static_ip is not None:
+                                        nat_type = 'Static IP'
+                                        translated_address = static_ip.text if static_ip.text else 'N/A'
+
+                    nat_rules.append({
+                        'name': rule_name,
+                        'type': nat_type,
+                        'source_zone': source_zone,
+                        'destination_zone': destination_zone,
+                        'source_address': source_address,
+                        'destination_address': destination_address,
+                        'service': service,
+                        'translated_address': translated_address,
+                        'translated_port': translated_port
+                    })
+
+                log_debug(f"Parsed {len(nat_rules)} NAT rules")
+
+            except ET.ParseError as pe:
+                log_debug(f"XML parse error: {str(pe)}")
+                log_debug(f"Response text (first 1000 chars): {response.text[:1000]}")
+                return {
+                    'status': 'error',
+                    'message': 'Failed to parse NAT policies XML response',
+                    'nat_policies': []
+                }
+
+        return {
+            'status': 'success',
+            'nat_policies': nat_rules,
+            'count': len(nat_rules),
+            'timestamp': datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        log_debug(f"Error fetching NAT policies: {str(e)}")
+        import traceback
+        log_debug(traceback.format_exc())
+        return {
+            'status': 'error',
+            'message': str(e),
+            'nat_policies': []
+        }
+
 def get_software_updates():
     """Fetch system software version information from Palo Alto firewall"""
     try:
@@ -1951,12 +2751,89 @@ def software_updates():
     data = get_software_updates()
     return jsonify(data)
 
+@app.route('/api/mac-vendor-db', methods=['POST'])
+def upload_mac_vendor_db():
+    """Upload MAC vendor database JSON file"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'status': 'error', 'message': 'No file provided'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'status': 'error', 'message': 'No file selected'}), 400
+
+        if not file.filename.endswith('.json'):
+            return jsonify({'status': 'error', 'message': 'File must be a JSON file'}), 400
+
+        # Read and validate JSON
+        content = file.read().decode('utf-8')
+        try:
+            data = json.loads(content)
+            if not isinstance(data, list):
+                return jsonify({'status': 'error', 'message': 'JSON must be an array of objects'}), 400
+
+            # Validate structure - check first few entries
+            if len(data) > 0:
+                sample = data[0]
+                if not isinstance(sample, dict):
+                    return jsonify({'status': 'error', 'message': 'JSON entries must be objects'}), 400
+        except json.JSONDecodeError as e:
+            return jsonify({'status': 'error', 'message': f'Invalid JSON: {str(e)}'}), 400
+
+        # Save to data directory
+        os.makedirs(DATA_DIR, exist_ok=True)
+        db_path = os.path.join(DATA_DIR, 'mac-vendors-export.json')
+
+        with open(db_path, 'w') as f:
+            f.write(content)
+
+        # Get file stats
+        file_stats = os.stat(db_path)
+        file_size = file_stats.st_size
+        upload_time = datetime.now().isoformat()
+
+        log_debug(f"MAC vendor database uploaded: {len(data)} entries, {file_size} bytes")
+
+        # Save metadata to settings
+        settings_data = load_settings()
+        settings_data['mac_vendor_db'] = {
+            'uploaded': True,
+            'filename': file.filename,
+            'entries': len(data),
+            'file_size': file_size,
+            'upload_time': upload_time
+        }
+        save_settings(settings_data)
+        log_debug(f"MAC vendor database metadata saved to settings")
+
+        # Reload the database and clear cache
+        global mac_vendor_database_loaded, mac_vendor_cache
+        mac_vendor_database_loaded = False
+        mac_vendor_cache = {}
+        load_mac_vendor_database()
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Database uploaded successfully with {len(data)} entries',
+            'entries': len(data),
+            'filename': file.filename,
+            'file_size': file_size,
+            'upload_time': upload_time
+        })
+
+    except Exception as e:
+        log_debug(f"Error uploading MAC vendor database: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/api/settings', methods=['GET', 'POST'])
 def settings():
     """API endpoint for settings"""
     if request.method == 'GET':
         # Return current settings
         settings_data = load_settings()
+
         return jsonify({
             'status': 'success',
             'settings': settings_data

@@ -1,6 +1,6 @@
 # PANfm: Palo Alto Networks - firewall monitor
 
-A light weight real-time monitoring dashboard for Palo Alto Networks firewalls built with Flask and Chart.js.
+A light weight real-time monitoring dashboard for a small number of Palo Alto Networks firewalls in a home lab or simlar.
 
 ## Features
 
@@ -60,9 +60,6 @@ The application will be available at http://localhost:8189
 https://docs.paloaltonetworks.com/pan-os/11-0/pan-os-panorama-api/get-started-with-the-pan-os-xml-api/get-your-api-key
 
 
-# Generate an API key via SSH or the web interface
-curl -k 'https:///api/?type=keygen&user=<username>&password=<password>'
-
 ### Settings
 
 Access the Settings page to configure:
@@ -95,23 +92,8 @@ Access the Settings page to configure:
 
 - API keys are stored encrypted locally
 - SSL verification is disabled for self-signed certificates
-- Consider using environment variables for sensitive data in production
 - Run behind a reverse proxy (nginx) in production
 - Use HTTPS for the web interface in production
-
-## Troubleshooting
-
-### Enable Debug Logging
-
-1. Go to Settings page
-2. Enable "Debug Logging"
-3. Check \`debug.log\` file for detailed information
-
-### Docker Issues
-
-\`\`\`bash
-# View container logs
-docker-compose logs panfm
 
 # Restart containers
 docker-compose restart

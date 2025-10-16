@@ -520,7 +520,7 @@ async function updateTrafficPage() {
 
 // Parse Palo Alto time format to readable format
 function parsePaloAltoTime(timeStr) {
-    if (!timeStr) return '-';
+    if (!timeStr || timeStr === '-' || timeStr === '') return '<span style="color: #999;">No time</span>';
 
     try {
         let date;
@@ -531,31 +531,46 @@ function parsePaloAltoTime(timeStr) {
             const timestamp = timeStr.length === 10 ? parseInt(timeStr) * 1000 : parseInt(timeStr);
             date = new Date(timestamp);
         } else if (timeStr.includes('/')) {
-            // Palo Alto format: 2025/01/13 10:30:45
+            // Palo Alto format: 2025/01/13 10:30:45 or 2025/01/13
             const normalized = timeStr.replace(/\//g, '-');
             date = new Date(normalized);
         } else if (timeStr.includes('-')) {
-            // Already in ISO-like format
+            // Already in ISO-like format (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+            date = new Date(timeStr);
+        } else if (timeStr.includes(' ') && timeStr.match(/\d{4}/)) {
+            // Try to parse as general date time string
             date = new Date(timeStr);
         } else {
-            return timeStr; // Return original if format unknown
+            // Return original with styling if format unknown
+            return `<span style="color: #999;">${timeStr}</span>`;
         }
 
         if (isNaN(date.getTime())) {
-            return timeStr; // Return original if parsing fails
+            // Return original with styling if parsing fails
+            return `<span style="color: #999;">${timeStr}</span>`;
         }
 
-        return date.toLocaleString('en-US', {
+        // Format the date nicely
+        const dateStr = date.toLocaleDateString('en-US', {
             month: '2-digit',
             day: '2-digit',
-            year: 'numeric',
+            year: 'numeric'
+        });
+
+        const timeStr24 = date.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
             hour12: false
         });
+
+        return `<div style="white-space: nowrap;">
+                    <div style="font-weight: 600; color: #333;">${dateStr}</div>
+                    <div style="font-size: 0.85em; color: #666;">${timeStr24}</div>
+                </div>`;
     } catch (e) {
-        return timeStr;
+        console.error('Error parsing time:', timeStr, e);
+        return `<span style="color: #999;">${timeStr}</span>`;
     }
 }
 
@@ -714,6 +729,824 @@ function filterTrafficLogs(searchTerm) {
     if (footer) {
         footer.innerHTML = `Showing ${filteredLogs.length} of ${allTrafficLogs.length} logs | Last updated: ${new Date().toLocaleString()}`;
     }
+}
+
+// ============================================================================
+// Connected Devices Functions
+// ============================================================================
+
+let allConnectedDevices = [];
+let currentDeviceLimit = 50;
+let connectedDevicesListenersSetup = false;
+
+async function loadConnectedDevices() {
+    const tableDiv = document.getElementById('connectedDevicesTable');
+    const errorDiv = document.getElementById('connectedDevicesErrorMessage');
+
+    try {
+        console.log('Fetching connected devices...');
+        // Add timestamp to prevent caching
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/connected-devices?_=${timestamp}`, {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Connected devices data:', data);
+        console.log('Sample device with vendor:', data.devices.find(d => d.mac));
+
+        if (data.status === 'success' && data.devices) {
+            errorDiv.style.display = 'none';
+
+            // Store devices for filtering
+            allConnectedDevices = data.devices;
+
+            // Populate VLAN filter dropdown
+            populateVlanFilter();
+
+            // Render the connected devices table
+            renderConnectedDevicesTable(allConnectedDevices, data.timestamp);
+
+            // Set up event listeners only once
+            if (!connectedDevicesListenersSetup) {
+                setupConnectedDevicesEventListeners();
+                connectedDevicesListenersSetup = true;
+            }
+        } else {
+            errorDiv.textContent = data.message || 'No connected devices available';
+            errorDiv.style.display = 'block';
+            tableDiv.innerHTML = '';
+        }
+    } catch (error) {
+        console.error('Error loading connected devices:', error);
+        errorDiv.textContent = 'Failed to load connected devices: ' + error.message;
+        errorDiv.style.display = 'block';
+    }
+}
+
+function renderConnectedDevicesTable(devices, timestamp) {
+    const tableDiv = document.getElementById('connectedDevicesTable');
+
+    // Apply limit
+    const devicesToShow = currentDeviceLimit === -1 ? devices : devices.slice(0, currentDeviceLimit);
+
+    // Create table HTML
+    let tableHtml = `
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ff6600;">
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Hostname</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">MAC Address</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Interface</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">VLAN</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Status</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Age</th>
+                    </tr>
+                </thead>
+                <tbody id="connectedDevicesTableBody">
+    `;
+
+    // Add rows for each device
+    devicesToShow.forEach((device, index) => {
+        // Highlight new devices with a gradient background
+        let bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+        let rowStyle = `background: ${bgColor}; border-bottom: 1px solid #eee;`;
+        let newBadge = '';
+
+        if (device.is_new) {
+            // Gradient from orange to transparent for new devices
+            rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
+            newBadge = '<span style="background: #ff6600; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; margin-left: 8px;">NEW</span>';
+        }
+
+        // Determine status display and color
+        let statusText = device.status || '-';
+        let statusColor = '#666';
+
+        if (device.status === 'c' || device.status === 'complete') {
+            statusText = 'c';
+            statusColor = '#10b981';
+        } else if (device.status === 'active_session') {
+            statusText = 's';
+            statusColor = '#dc2626';
+        }
+
+        // Show MAC or indicate if learned from session
+        let macDisplay;
+        if (device.mac) {
+            macDisplay = `
+                <div style="font-family: 'Courier New', monospace; color: #333; font-weight: 600;">${device.mac}</div>
+                ${device.vendor ? `<div style="font-size: 0.85em; color: #666; margin-top: 2px;">${device.vendor}</div>` : ''}
+            `;
+        } else {
+            macDisplay = '<span style="color: #999; font-style: italic;">N/A</span>';
+        }
+        const vlanDisplay = device.vlan || '-';
+
+        // Format age display - use TTL from firewall or calculated age
+        let ageDisplay = '-';
+        if (device.ttl) {
+            // Show TTL from firewall (in seconds)
+            const ttlSeconds = parseInt(device.ttl);
+            if (!isNaN(ttlSeconds)) {
+                const ttlMinutes = Math.floor(ttlSeconds / 60);
+                const ttlHours = Math.floor(ttlMinutes / 60);
+                if (ttlHours > 0) {
+                    ageDisplay = `${ttlHours}h ${ttlMinutes % 60}m`;
+                } else {
+                    ageDisplay = `${ttlMinutes}m`;
+                }
+                ageDisplay = `<span title="ARP TTL from firewall">${ageDisplay}</span>`;
+            }
+        } else if (device.age_hours !== undefined && device.age_hours >= 0) {
+            // Show calculated age from first seen
+            const hours = device.age_hours;
+            if (hours < 1) {
+                ageDisplay = '<span style="color: #ff6600; font-weight: 600;" title="First seen in cache">New</span>';
+            } else if (hours < 24) {
+                ageDisplay = `<span title="Hours since first seen in cache">${hours}h</span>`;
+            } else {
+                const days = Math.floor(hours / 24);
+                ageDisplay = `<span title="Days since first seen in cache">${days}d</span>`;
+            }
+        }
+
+        tableHtml += `
+            <tr style="${rowStyle}">
+                <td style="padding: 10px; color: #333; font-weight: 600;">
+                    ${device.hostname || device.ip}${newBadge}
+                </td>
+                <td style="padding: 10px; color: #333; font-family: 'Courier New', monospace;">
+                    ${device.ip ? `<a href="#" class="client-ip-link" data-ip="${device.ip}" style="color: #2563eb; text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.2s; font-weight: 600;" onmouseover="this.style.borderBottomColor='#2563eb'" onmouseout="this.style.borderBottomColor='transparent'">${device.ip}</a>` : '-'}
+                </td>
+                <td style="padding: 10px;">${macDisplay}</td>
+                <td style="padding: 10px; color: #666;">${device.interface || '-'}</td>
+                <td style="padding: 10px; color: #666; font-weight: 600;">${vlanDisplay}</td>
+                <td style="padding: 10px; color: ${statusColor}; font-weight: 600;">${statusText}</td>
+                <td style="padding: 10px; color: #666; font-weight: 600;">${ageDisplay}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+                </tbody>
+            </table>
+            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em;" id="connectedDevicesFooter">
+                Showing ${devicesToShow.length} of ${devices.length} devices | Last updated: ${new Date(timestamp).toLocaleString()}
+            </div>
+        </div>
+    `;
+
+    tableDiv.innerHTML = tableHtml;
+}
+
+function filterConnectedDevices(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+
+    if (!term) {
+        // Show all devices if search is empty
+        renderConnectedDevicesTable(allConnectedDevices, new Date().toISOString());
+        return;
+    }
+
+    // Filter devices by searching across multiple fields including VLAN and vendor
+    const filteredDevices = allConnectedDevices.filter(device => {
+        return (
+            (device.hostname && device.hostname.toLowerCase().includes(term)) ||
+            (device.ip && device.ip.toLowerCase().includes(term)) ||
+            (device.mac && device.mac.toLowerCase().includes(term)) ||
+            (device.interface && device.interface.toLowerCase().includes(term)) ||
+            (device.vlan && device.vlan.toLowerCase().includes(term)) ||
+            (device.vendor && device.vendor.toLowerCase().includes(term)) ||
+            (device.status && device.status.toLowerCase().includes(term))
+        );
+    });
+
+    // Re-render table with filtered devices
+    const tableDiv = document.getElementById('connectedDevicesTable');
+
+    // Apply limit to filtered results
+    const devicesToShow = currentDeviceLimit === -1 ? filteredDevices : filteredDevices.slice(0, currentDeviceLimit);
+
+    let tableHtml = `
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ff6600;">
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Hostname</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">MAC Address</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Interface</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">VLAN</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Status</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Age</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    devicesToShow.forEach((device, index) => {
+        // Highlight new devices with a gradient background
+        let bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+        let rowStyle = `background: ${bgColor}; border-bottom: 1px solid #eee;`;
+        let newBadge = '';
+
+        if (device.is_new) {
+            // Gradient from orange to transparent for new devices
+            rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
+            newBadge = '<span style="background: #ff6600; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; margin-left: 8px;">NEW</span>';
+        }
+
+        // Determine status display and color
+        let statusText = device.status || '-';
+        let statusColor = '#666';
+
+        if (device.status === 'c' || device.status === 'complete') {
+            statusText = 'c';
+            statusColor = '#10b981';
+        } else if (device.status === 'active_session') {
+            statusText = 's';
+            statusColor = '#dc2626';
+        }
+
+        // Show MAC or indicate if learned from session
+        let macDisplay;
+        if (device.mac) {
+            macDisplay = `
+                <div style="font-family: 'Courier New', monospace; color: #333; font-weight: 600;">${device.mac}</div>
+                ${device.vendor ? `<div style="font-size: 0.85em; color: #666; margin-top: 2px;">${device.vendor}</div>` : ''}
+            `;
+        } else {
+            macDisplay = '<span style="color: #999; font-style: italic;">N/A</span>';
+        }
+        const vlanDisplay = device.vlan || '-';
+
+        // Format age display - use TTL from firewall or calculated age
+        let ageDisplay = '-';
+        if (device.ttl) {
+            // Show TTL from firewall (in seconds)
+            const ttlSeconds = parseInt(device.ttl);
+            if (!isNaN(ttlSeconds)) {
+                const ttlMinutes = Math.floor(ttlSeconds / 60);
+                const ttlHours = Math.floor(ttlMinutes / 60);
+                if (ttlHours > 0) {
+                    ageDisplay = `${ttlHours}h ${ttlMinutes % 60}m`;
+                } else {
+                    ageDisplay = `${ttlMinutes}m`;
+                }
+                ageDisplay = `<span title="ARP TTL from firewall">${ageDisplay}</span>`;
+            }
+        } else if (device.age_hours !== undefined && device.age_hours >= 0) {
+            // Show calculated age from first seen
+            const hours = device.age_hours;
+            if (hours < 1) {
+                ageDisplay = '<span style="color: #ff6600; font-weight: 600;" title="First seen in cache">New</span>';
+            } else if (hours < 24) {
+                ageDisplay = `<span title="Hours since first seen in cache">${hours}h</span>`;
+            } else {
+                const days = Math.floor(hours / 24);
+                ageDisplay = `<span title="Days since first seen in cache">${days}d</span>`;
+            }
+        }
+
+        tableHtml += `
+            <tr style="${rowStyle}">
+                <td style="padding: 10px; color: #333; font-weight: 600;">
+                    ${device.hostname || device.ip}${newBadge}
+                </td>
+                <td style="padding: 10px; color: #333; font-family: 'Courier New', monospace;">
+                    ${device.ip ? `<a href="#" class="client-ip-link" data-ip="${device.ip}" style="color: #2563eb; text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.2s; font-weight: 600;" onmouseover="this.style.borderBottomColor='#2563eb'" onmouseout="this.style.borderBottomColor='transparent'">${device.ip}</a>` : '-'}
+                </td>
+                <td style="padding: 10px;">${macDisplay}</td>
+                <td style="padding: 10px; color: #666;">${device.interface || '-'}</td>
+                <td style="padding: 10px; color: #666; font-weight: 600;">${vlanDisplay}</td>
+                <td style="padding: 10px; color: ${statusColor}; font-weight: 600;">${statusText}</td>
+                <td style="padding: 10px; color: #666; font-weight: 600;">${ageDisplay}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+                </tbody>
+            </table>
+            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em;">
+                Showing ${devicesToShow.length} of ${filteredDevices.length} devices | Last updated: ${new Date().toLocaleString()}
+            </div>
+        </div>
+    `;
+
+    tableDiv.innerHTML = tableHtml;
+}
+
+// Get currently filtered devices based on all active filters
+function getFilteredDevices() {
+    let filtered = [...allConnectedDevices];
+
+    // Apply general search filter
+    const searchInput = document.getElementById('connectedDevicesSearchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    if (searchTerm) {
+        filtered = filtered.filter(device => {
+            return (
+                (device.hostname && device.hostname.toLowerCase().includes(searchTerm)) ||
+                (device.ip && device.ip.toLowerCase().includes(searchTerm)) ||
+                (device.mac && device.mac.toLowerCase().includes(searchTerm)) ||
+                (device.interface && device.interface.toLowerCase().includes(searchTerm)) ||
+                (device.vlan && device.vlan.toLowerCase().includes(searchTerm)) ||
+                (device.vendor && device.vendor.toLowerCase().includes(searchTerm)) ||
+                (device.status && device.status.toLowerCase().includes(searchTerm))
+            );
+        });
+    }
+
+    // Apply VLAN filter
+    const vlanFilter = document.getElementById('connectedDevicesVlanFilter');
+    const selectedVlan = vlanFilter ? vlanFilter.value : '';
+
+    if (selectedVlan) {
+        filtered = filtered.filter(device => device.vlan === selectedVlan);
+    }
+
+    // Apply status filter
+    const statusFilter = document.getElementById('connectedDevicesStatusFilter');
+    const selectedStatus = statusFilter ? statusFilter.value : '';
+
+    if (selectedStatus) {
+        filtered = filtered.filter(device => device.status === selectedStatus);
+    }
+
+    return filtered;
+}
+
+// Populate VLAN filter dropdown with unique VLANs
+function populateVlanFilter() {
+    const vlanFilter = document.getElementById('connectedDevicesVlanFilter');
+    if (!vlanFilter) return;
+
+    // Get unique VLANs from all devices
+    const vlans = [...new Set(allConnectedDevices.map(d => d.vlan).filter(v => v && v !== '-'))].sort((a, b) => {
+        return parseInt(a) - parseInt(b);
+    });
+
+    // Keep the "All VLANs" option and add unique VLANs
+    const currentValue = vlanFilter.value;
+    vlanFilter.innerHTML = '<option value="">All VLANs</option>';
+
+    vlans.forEach(vlan => {
+        const option = document.createElement('option');
+        option.value = vlan;
+        option.textContent = `VLAN ${vlan}`;
+        vlanFilter.appendChild(option);
+    });
+
+    // Restore previous selection if it still exists
+    if (currentValue && vlans.includes(currentValue)) {
+        vlanFilter.value = currentValue;
+    }
+}
+
+// Export devices to CSV
+function exportDevicesCSV() {
+    const devices = getFilteredDevices();
+
+    if (devices.length === 0) {
+        alert('No devices to export!');
+        return;
+    }
+
+    // CSV header
+    const headers = ['Hostname', 'IP Address', 'MAC Address', 'Vendor', 'Country', 'Interface', 'VLAN', 'Status', 'Age (hours)', 'First Seen', 'Last Seen', 'Is New'];
+
+    // CSV rows
+    const rows = devices.map(device => {
+        return [
+            device.hostname || '',
+            device.ip || '',
+            device.mac || '',
+            device.vendor || '',
+            device.country || '',
+            device.interface || '',
+            device.vlan || '',
+            device.status || '',
+            device.age_hours !== undefined ? device.age_hours : '',
+            device.first_seen || '',
+            device.last_seen || '',
+            device.is_new ? 'Yes' : 'No'
+        ].map(field => {
+            // Escape quotes and wrap in quotes if contains comma
+            const escaped = String(field).replace(/"/g, '""');
+            return escaped.includes(',') || escaped.includes('"') ? `"${escaped}"` : escaped;
+        }).join(',');
+    });
+
+    // Combine into CSV content
+    const csvContent = [headers.join(','), ...rows].join('\n');
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `connected-devices-${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Export devices to XML
+function exportDevicesXML() {
+    const devices = getFilteredDevices();
+
+    if (devices.length === 0) {
+        alert('No devices to export!');
+        return;
+    }
+
+    // Build XML content
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<ConnectedDevices>\n';
+    xml += `  <ExportInfo>\n`;
+    xml += `    <Timestamp>${new Date().toISOString()}</Timestamp>\n`;
+    xml += `    <DeviceCount>${devices.length}</DeviceCount>\n`;
+    xml += `  </ExportInfo>\n`;
+    xml += '  <Devices>\n';
+
+    devices.forEach(device => {
+        xml += '    <Device>\n';
+        xml += `      <Hostname>${escapeXml(device.hostname || '')}</Hostname>\n`;
+        xml += `      <IPAddress>${escapeXml(device.ip || '')}</IPAddress>\n`;
+        xml += `      <MACAddress>${escapeXml(device.mac || '')}</MACAddress>\n`;
+        xml += `      <Vendor>${escapeXml(device.vendor || '')}</Vendor>\n`;
+        xml += `      <Country>${escapeXml(device.country || '')}</Country>\n`;
+        xml += `      <Interface>${escapeXml(device.interface || '')}</Interface>\n`;
+        xml += `      <VLAN>${escapeXml(device.vlan || '')}</VLAN>\n`;
+        xml += `      <Status>${escapeXml(device.status || '')}</Status>\n`;
+        xml += `      <AgeHours>${device.age_hours !== undefined ? device.age_hours : ''}</AgeHours>\n`;
+        xml += `      <FirstSeen>${escapeXml(device.first_seen || '')}</FirstSeen>\n`;
+        xml += `      <LastSeen>${escapeXml(device.last_seen || '')}</LastSeen>\n`;
+        xml += `      <IsNew>${device.is_new ? 'true' : 'false'}</IsNew>\n`;
+        xml += '    </Device>\n';
+    });
+
+    xml += '  </Devices>\n';
+    xml += '</ConnectedDevices>';
+
+    // Create download link
+    const blob = new Blob([xml], { type: 'text/xml;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `connected-devices-${timestamp}.xml`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Helper function to escape XML special characters
+function escapeXml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+// Enhanced filter function that applies all filters
+function applyAllFilters() {
+    const filteredDevices = getFilteredDevices();
+
+    // Update the table with filtered results
+    const tableDiv = document.getElementById('connectedDevicesTable');
+    const devicesToShow = currentDeviceLimit === -1 ? filteredDevices : filteredDevices.slice(0, currentDeviceLimit);
+
+    let tableHtml = `
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ff6600;">
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Hostname</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">MAC Address</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Interface</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">VLAN</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Status</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Age</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    devicesToShow.forEach((device, index) => {
+        let bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+        let rowStyle = `background: ${bgColor}; border-bottom: 1px solid #eee;`;
+        let newBadge = '';
+
+        if (device.is_new) {
+            rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
+            newBadge = '<span style="background: #ff6600; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; margin-left: 8px;">NEW</span>';
+        }
+
+        let statusText = device.status || '-';
+        let statusColor = '#666';
+
+        if (device.status === 'c' || device.status === 'complete') {
+            statusText = 'c';
+            statusColor = '#10b981';
+        } else if (device.status === 'active_session') {
+            statusText = 's';
+            statusColor = '#dc2626';
+        }
+
+        let macDisplay;
+        if (device.mac) {
+            macDisplay = `
+                <div style="font-family: 'Courier New', monospace; color: #333; font-weight: 600;">${device.mac}</div>
+                ${device.vendor ? `<div style="font-size: 0.85em; color: #666; margin-top: 2px;">${device.vendor}</div>` : ''}
+            `;
+        } else {
+            macDisplay = '<span style="color: #999; font-style: italic;">N/A</span>';
+        }
+
+        const vlanDisplay = device.vlan || '-';
+
+        let ageDisplay = '-';
+        if (device.ttl) {
+            const ttlSeconds = parseInt(device.ttl);
+            if (!isNaN(ttlSeconds)) {
+                const ttlMinutes = Math.floor(ttlSeconds / 60);
+                const ttlHours = Math.floor(ttlMinutes / 60);
+                if (ttlHours > 0) {
+                    ageDisplay = `${ttlHours}h ${ttlMinutes % 60}m`;
+                } else {
+                    ageDisplay = `${ttlMinutes}m`;
+                }
+                ageDisplay = `<span title="ARP TTL from firewall">${ageDisplay}</span>`;
+            }
+        } else if (device.age_hours !== undefined && device.age_hours >= 0) {
+            const hours = device.age_hours;
+            if (hours < 1) {
+                ageDisplay = '<span style="color: #ff6600; font-weight: 600;" title="First seen in cache">New</span>';
+            } else if (hours < 24) {
+                ageDisplay = `<span title="Hours since first seen in cache">${hours}h</span>`;
+            } else {
+                const days = Math.floor(hours / 24);
+                ageDisplay = `<span title="Days since first seen in cache">${days}d</span>`;
+            }
+        }
+
+        tableHtml += `
+            <tr style="${rowStyle}">
+                <td style="padding: 10px; color: #333; font-weight: 600;">
+                    ${device.hostname || device.ip}${newBadge}
+                </td>
+                <td style="padding: 10px; color: #333; font-family: 'Courier New', monospace;">
+                    ${device.ip ? `<a href="#" class="client-ip-link" data-ip="${device.ip}" style="color: #2563eb; text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.2s; font-weight: 600;" onmouseover="this.style.borderBottomColor='#2563eb'" onmouseout="this.style.borderBottomColor='transparent'">${device.ip}</a>` : '-'}
+                </td>
+                <td style="padding: 10px;">${macDisplay}</td>
+                <td style="padding: 10px; color: #666;">${device.interface || '-'}</td>
+                <td style="padding: 10px; color: #666; font-weight: 600;">${vlanDisplay}</td>
+                <td style="padding: 10px; color: ${statusColor}; font-weight: 600;">${statusText}</td>
+                <td style="padding: 10px; color: #666; font-weight: 600;">${ageDisplay}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+                </tbody>
+            </table>
+            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em;">
+                Showing ${devicesToShow.length} of ${filteredDevices.length} filtered devices (${allConnectedDevices.length} total) | Last updated: ${new Date().toLocaleString()}
+            </div>
+        </div>
+    `;
+
+    tableDiv.innerHTML = tableHtml;
+}
+
+function setupConnectedDevicesEventListeners() {
+    // Search input listener
+    const searchInput = document.getElementById('connectedDevicesSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            applyAllFilters();
+        });
+    }
+
+    // VLAN filter listener
+    const vlanFilter = document.getElementById('connectedDevicesVlanFilter');
+    if (vlanFilter) {
+        vlanFilter.addEventListener('change', () => {
+            applyAllFilters();
+        });
+    }
+
+    // Status filter listener
+    const statusFilter = document.getElementById('connectedDevicesStatusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            applyAllFilters();
+        });
+    }
+
+    // Limit selector listener
+    const limitSelect = document.getElementById('connectedDevicesLimit');
+    if (limitSelect) {
+        limitSelect.addEventListener('change', (e) => {
+            currentDeviceLimit = parseInt(e.target.value);
+            applyAllFilters();
+        });
+    }
+
+    // Refresh button listener
+    const refreshBtn = document.getElementById('refreshConnectedDevicesBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            loadConnectedDevices();
+        });
+    }
+
+    // Export CSV button listener
+    const exportCSVBtn = document.getElementById('exportDevicesCSV');
+    if (exportCSVBtn) {
+        exportCSVBtn.addEventListener('click', exportDevicesCSV);
+    }
+
+    // Export XML button listener
+    const exportXMLBtn = document.getElementById('exportDevicesXML');
+    if (exportXMLBtn) {
+        exportXMLBtn.addEventListener('click', exportDevicesXML);
+    }
+
+    // Set up client IP click handlers using event delegation
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('client-ip-link')) {
+            e.preventDefault();
+            const clientIp = e.target.getAttribute('data-ip');
+            if (clientIp) {
+                showClientApplications(clientIp);
+            }
+        }
+    });
+}
+
+// ============================================================================
+// Client Applications Modal Functions
+// ============================================================================
+
+async function showClientApplications(clientIp) {
+    const modal = document.getElementById('clientAppsModal');
+    const loading = document.getElementById('clientAppsLoading');
+    const content = document.getElementById('clientAppsContent');
+    const error = document.getElementById('clientAppsError');
+    const subtitle = document.getElementById('clientAppsModalSubtitle');
+
+    // Show modal and loading state
+    modal.style.display = 'flex';
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    error.style.display = 'none';
+    subtitle.textContent = `Client: ${clientIp}`;
+
+    try {
+        console.log(`Fetching applications for client ${clientIp}`);
+        const response = await fetch(`/api/client-apps/${clientIp}`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            loading.style.display = 'none';
+            content.style.display = 'block';
+
+            // Update summary stats
+            document.getElementById('clientAppsTotalSessions').textContent = data.total_sessions.toLocaleString();
+
+            // Format total bytes
+            const totalBytes = data.total_bytes;
+            let dataDisplay;
+            if (totalBytes >= 1073741824) {
+                dataDisplay = (totalBytes / 1073741824).toFixed(2) + ' GB';
+            } else if (totalBytes >= 1048576) {
+                dataDisplay = (totalBytes / 1048576).toFixed(2) + ' MB';
+            } else if (totalBytes >= 1024) {
+                dataDisplay = (totalBytes / 1024).toFixed(2) + ' KB';
+            } else {
+                dataDisplay = totalBytes + ' B';
+            }
+            document.getElementById('clientAppsTotalData').textContent = dataDisplay;
+            document.getElementById('clientAppsCount').textContent = data.applications.length;
+
+            // Render applications table
+            renderClientApplicationsTable(data.applications);
+        } else {
+            loading.style.display = 'none';
+            error.style.display = 'block';
+            error.textContent = 'Error: ' + (data.message || 'Unknown error');
+        }
+    } catch (err) {
+        console.error('Error fetching client applications:', err);
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        error.textContent = 'Failed to load application data: ' + err.message;
+    }
+}
+
+function renderClientApplicationsTable(applications) {
+    const tableDiv = document.getElementById('clientAppsTable');
+
+    if (applications.length === 0) {
+        tableDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No application data found for this client.</p>';
+        return;
+    }
+
+    let tableHtml = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+            <thead>
+                <tr style="border-bottom: 2px solid #ff6600;">
+                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Application</th>
+                    <th style="padding: 10px; text-align: center; color: #333; font-weight: 600;">Sessions</th>
+                    <th style="padding: 10px; text-align: right; color: #333; font-weight: 600;">Sent</th>
+                    <th style="padding: 10px; text-align: right; color: #333; font-weight: 600;">Received</th>
+                    <th style="padding: 10px; text-align: right; color: #333; font-weight: 600;">Total</th>
+                    <th style="padding: 10px; text-align: center; color: #333; font-weight: 600;">Destinations</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    applications.forEach((app, index) => {
+        const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+
+        // Format bytes
+        const formatBytes = (bytes) => {
+            if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return bytes + ' B';
+        };
+
+        tableHtml += `
+            <tr style="background: ${bgColor}; border-bottom: 1px solid #eee;">
+                <td style="padding: 10px; color: #333; font-weight: 600;">${app.app}</td>
+                <td style="padding: 10px; text-align: center; color: #666;">${app.sessions}</td>
+                <td style="padding: 10px; text-align: right; color: #666; font-family: 'Courier New', monospace;">${formatBytes(app.bytes_sent)}</td>
+                <td style="padding: 10px; text-align: right; color: #666; font-family: 'Courier New', monospace;">${formatBytes(app.bytes_received)}</td>
+                <td style="padding: 10px; text-align: right; color: #ff6600; font-family: 'Courier New', monospace; font-weight: 600;">${formatBytes(app.total_bytes)}</td>
+                <td style="padding: 10px; text-align: center; color: #666;">${app.destinations_count}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+    tableDiv.innerHTML = tableHtml;
+}
+
+function initClientAppsModal() {
+    const closeBtn = document.getElementById('closeClientAppsModalBtn');
+    const modal = document.getElementById('clientAppsModal');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    // Close modal when clicking outside
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            modal.style.display = 'none';
+        }
+    });
 }
 
 // Update threat log display
@@ -979,6 +1812,9 @@ async function init() {
         updateInterfaceBtn.addEventListener('click', updateMonitoredInterface);
     }
 
+    // Initialize client applications modal
+    initClientAppsModal();
+
     // Initial fetch
     fetchThroughputData();
 
@@ -1028,6 +1864,7 @@ function initPageNavigation() {
         'software-updates': document.getElementById('software-updates-content'),
         'site-monitor': document.getElementById('site-monitor-content'),
         'devices': document.getElementById('devices-content'),
+        'connected-devices': document.getElementById('connected-devices-content'),
         'settings': document.getElementById('settings-content')
     };
 
@@ -1055,6 +1892,8 @@ function initPageNavigation() {
                         loadSiteMonitor();
                     } else if (pageKey === 'devices') {
                         loadDevices();
+                    } else if (pageKey === 'connected-devices') {
+                        loadConnectedDevices();
                     } else if (pageKey === 'settings') {
                         loadSettings();
                     }
@@ -1114,28 +1953,63 @@ function displayPolicies(policies) {
     const container = document.getElementById('policiesTable');
 
     if (policies.length === 0) {
-        container.innerHTML = '<div style="color: white; padding: 20px; text-align: center;">No policies found</div>';
+        container.innerHTML = `
+            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+                <div style="font-size: 1.2em; color: #666; margin-bottom: 10px;">No security policies found</div>
+                <div style="font-size: 0.9em; color: #999;">Security policies will appear here once configured on the firewall.</div>
+            </div>
+        `;
         return;
     }
 
+    // Calculate summary stats
+    const totalHits = policies.reduce((sum, p) => sum + p.hit_count, 0);
+    const activeRules = policies.filter(p => p.hit_count > 0).length;
+    const unusedRules = policies.filter(p => p.hit_count === 0).length;
+
     let html = `
         <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); border-left: 4px solid #ff6600; border-radius: 6px;">
+                <div style="font-weight: 600; color: #9a3412; margin-bottom: 5px;">
+                    Total Security Policies: ${policies.length} | Active: ${activeRules} | Unused: ${unusedRules} | Total Hits: ${totalHits.toLocaleString()}
+                </div>
+                <div style="font-size: 0.85em; color: #c2410c;">Security rules controlling access between zones and applications</div>
+            </div>
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #ff6600;">
+                    <tr style="border-bottom: 2px solid #ff6600; background: #f9f9f9;">
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Policy Name</th>
+                        <th style="padding: 12px; text-align: center; color: #333; font-weight: 600;">Status</th>
                         <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Hit Count</th>
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">First Hit</th>
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Latest Hit</th>
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Type</th>
+                        <th style="padding: 12px; text-align: center; color: #333; font-weight: 600;">Type</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
 
     policies.forEach((policy, index) => {
-        const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
-        const hitCountColor = policy.hit_count > 1000 ? '#ff6600' : '#333';
+        const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+        const hitCountColor = policy.hit_count > 1000 ? '#ff6600' : policy.hit_count > 0 ? '#333' : '#999';
+
+        // Status badge
+        let statusBadge = '';
+        let statusColor = '#10b981';
+        let statusBgColor = '#d1fae5';
+        let statusText = 'Active';
+
+        if (policy.hit_count === 0) {
+            statusText = 'Unused';
+            statusColor = '#ef4444';
+            statusBgColor = '#fee2e2';
+        } else if (policy.hit_count > 10000) {
+            statusText = 'High Traffic';
+            statusColor = '#f59e0b';
+            statusBgColor = '#fef3c7';
+        }
+
+        statusBadge = `<span style="background: ${statusBgColor}; color: ${statusColor}; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600;">${statusText}</span>`;
 
         // Show trend indicator if available
         let trendIcon = '';
@@ -1143,19 +2017,29 @@ function displayPolicies(policies) {
             if (policy.trend === 'up') {
                 trendIcon = '<span style="color: #ff6600; margin-left: 5px;">▲</span>';
             } else if (policy.trend === 'down') {
-                trendIcon = '<span style="color: #28a745; margin-left: 5px;">▼</span>';
+                trendIcon = '<span style="color: #10b981; margin-left: 5px;">▼</span>';
             } else {
                 trendIcon = '<span style="color: #999; margin-left: 5px;">━</span>';
             }
         }
 
         html += `
-            <tr style="background: ${bgColor}; border-bottom: 1px solid #eee;">
-                <td style="padding: 12px; color: #333; font-weight: 500;">${policy.name}</td>
-                <td style="padding: 12px; text-align: right; color: ${hitCountColor}; font-weight: 600; font-size: 1.1em;">${policy.hit_count.toLocaleString()}${trendIcon}</td>
-                <td style="padding: 12px; color: #666; font-size: 0.9em;">${formatTimestamp(policy.first_hit)}</td>
-                <td style="padding: 12px; color: #666; font-size: 0.9em;">${formatTimestamp(policy.latest_hit)}</td>
-                <td style="padding: 12px; color: #666;">${policy.type}</td>
+            <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='${bgColor}'">
+                <td style="padding: 12px; color: #333; font-weight: 500;">
+                    <div style="display: flex; align-items: center;">
+                        <div style="width: 4px; height: 24px; background: ${hitCountColor}; margin-right: 10px; border-radius: 2px;"></div>
+                        ${policy.name}
+                    </div>
+                </td>
+                <td style="padding: 12px; text-align: center;">${statusBadge}</td>
+                <td style="padding: 12px; text-align: right; color: ${hitCountColor}; font-weight: 600; font-size: 1.1em; font-family: monospace;">${policy.hit_count.toLocaleString()}${trendIcon}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.85em; font-family: monospace;">${formatTimestamp(policy.first_hit)}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.85em; font-family: monospace;">${formatTimestamp(policy.latest_hit)}</td>
+                <td style="padding: 12px; text-align: center;">
+                    <span style="background: #f3f4f6; color: #666; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; white-space: nowrap;">
+                        ${policy.type}
+                    </span>
+                </td>
             </tr>
         `;
     });
@@ -1224,6 +2108,172 @@ function showPoliciesError(message) {
     setTimeout(() => {
         errorDiv.style.display = 'none';
     }, 5000);
+}
+
+// ============================================================================
+// NAT Policies Functions
+// ============================================================================
+
+async function loadNatPolicies() {
+    try {
+        const response = await fetch('/api/nat-policies');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            displayNatPolicies(data.nat_policies);
+        } else {
+            showNatPoliciesError(data.message || 'Failed to load NAT policies');
+        }
+    } catch (error) {
+        console.error('Error loading NAT policies:', error);
+        showNatPoliciesError('Connection error: ' + error.message);
+    }
+}
+
+function displayNatPolicies(natPolicies) {
+    const container = document.getElementById('natPoliciesTable');
+
+    if (natPolicies.length === 0) {
+        container.innerHTML = `
+            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+                <div style="font-size: 1.2em; color: #666; margin-bottom: 10px;">No NAT policies found</div>
+                <div style="font-size: 0.9em; color: #999;">NAT policies will appear here once configured on the firewall.</div>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; border-radius: 6px;">
+                <div style="font-weight: 600; color: #1e40af; margin-bottom: 5px;">Total NAT Policies: ${natPolicies.length}</div>
+                <div style="font-size: 0.85em; color: #3b82f6;">Source NAT, Destination NAT, and Dynamic IP & Port rules</div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ff6600; background: #f9f9f9;">
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Rule Name</th>
+                        <th style="padding: 12px; text-align: center; color: #333; font-weight: 600;">Type</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Source Zone</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Destination Zone</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Source Address</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Destination Address</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Service</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Translation</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    natPolicies.forEach((policy, index) => {
+        const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+
+        // Color code the NAT type
+        let typeColor = '#3b82f6';
+        let typeBgColor = '#dbeafe';
+        if (policy.type.includes('Destination')) {
+            typeColor = '#059669';
+            typeBgColor = '#d1fae5';
+        } else if (policy.type.includes('Dynamic')) {
+            typeColor = '#f59e0b';
+            typeBgColor = '#fef3c7';
+        }
+
+        // Format translation info
+        let translationInfo = policy.translated_address;
+        if (policy.translated_port && policy.translated_port !== 'N/A') {
+            translationInfo += `:${policy.translated_port}`;
+        }
+
+        html += `
+            <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='${bgColor}'">
+                <td style="padding: 12px; color: #333; font-weight: 500;">
+                    <div style="display: flex; align-items: center;">
+                        <div style="width: 4px; height: 24px; background: #ff6600; margin-right: 10px; border-radius: 2px;"></div>
+                        ${policy.name}
+                    </div>
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <span style="background: ${typeBgColor}; color: ${typeColor}; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; white-space: nowrap;">
+                        ${policy.type}
+                    </span>
+                </td>
+                <td style="padding: 12px; color: #666; font-size: 0.9em;">
+                    <span style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-family: monospace;">
+                        ${policy.source_zone}
+                    </span>
+                </td>
+                <td style="padding: 12px; color: #666; font-size: 0.9em;">
+                    <span style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-family: monospace;">
+                        ${policy.destination_zone}
+                    </span>
+                </td>
+                <td style="padding: 12px; color: #666; font-size: 0.85em; font-family: monospace;">${policy.source_address}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.85em; font-family: monospace;">${policy.destination_address}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.85em;">
+                    <span style="background: #fef3c7; color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: 500;">
+                        ${policy.service}
+                    </span>
+                </td>
+                <td style="padding: 12px; color: #059669; font-size: 0.85em; font-family: monospace; font-weight: 600;">${translationInfo}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+function showNatPoliciesError(message) {
+    const container = document.getElementById('natPoliciesTable');
+    container.innerHTML = `
+        <div style="background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 8px; padding: 20px; color: #991b1b;">
+            <div style="font-weight: 600; margin-bottom: 5px;">Error Loading NAT Policies</div>
+            <div style="font-size: 0.9em;">${message}</div>
+        </div>
+    `;
+}
+
+// Setup policy tab switching
+function setupPolicyTabs() {
+    const tabs = document.querySelectorAll('.policy-tab');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.getAttribute('data-tab');
+
+            // Update tab buttons
+            tabs.forEach(t => {
+                if (t === tab) {
+                    t.style.background = 'linear-gradient(135deg, #ff6600 0%, #ff9933 100%)';
+                    t.classList.add('active');
+                } else {
+                    t.style.background = '#666';
+                    t.classList.remove('active');
+                }
+            });
+
+            // Update tab content
+            const securityTab = document.getElementById('security-policies-tab');
+            const natTab = document.getElementById('nat-policies-tab');
+
+            if (tabName === 'security') {
+                securityTab.style.display = 'block';
+                natTab.style.display = 'none';
+            } else if (tabName === 'nat') {
+                natTab.style.display = 'block';
+                securityTab.style.display = 'none';
+
+                // Load NAT policies if not already loaded
+                loadNatPolicies();
+            }
+        });
+    });
 }
 
 // Sort system logs based on criteria
@@ -1513,6 +2563,18 @@ async function loadSettings() {
             document.getElementById('topAppsCount').value = data.settings.top_apps_count || 5;
             document.getElementById('debugLogging').checked = data.settings.debug_logging || false;
 
+            // Display MAC vendor database info if available
+            console.log('MAC vendor DB info from settings:', data.settings.mac_vendor_db);
+            if (data.settings.mac_vendor_db) {
+                updateMacVendorDbInfo(data.settings.mac_vendor_db);
+            } else {
+                // Hide the info div if no database is uploaded
+                const infoDiv = document.getElementById('macVendorDbInfo');
+                if (infoDiv) {
+                    infoDiv.style.display = 'none';
+                }
+            }
+
             // Monitored interface will be loaded from the selected device in updateDeviceSelector
         }
     } catch (error) {
@@ -1734,6 +2796,11 @@ async function initSettings() {
             } else {
                 debugAlert.style.display = 'none';
             }
+
+            // Load MAC vendor database info on startup (for settings page)
+            if (data.settings.mac_vendor_db) {
+                updateMacVendorDbInfo(data.settings.mac_vendor_db);
+            }
         }
     } catch (error) {
         console.error('Error loading initial settings:', error);
@@ -1742,6 +2809,142 @@ async function initSettings() {
     // Setup event listeners
     document.getElementById('saveSettings').addEventListener('click', saveSettingsData);
     document.getElementById('resetSettings').addEventListener('click', resetSettingsData);
+    document.getElementById('uploadMacVendorDb').addEventListener('click', uploadMacVendorDatabase);
+}
+
+async function uploadMacVendorDatabase() {
+    const fileInput = document.getElementById('macVendorDbFile');
+    const statusElement = document.getElementById('macVendorDbStatus');
+    const uploadButton = document.getElementById('uploadMacVendorDb');
+
+    try {
+        if (!fileInput.files || fileInput.files.length === 0) {
+            statusElement.textContent = 'Please select a file first';
+            statusElement.style.color = '#dc2626';
+            statusElement.style.display = 'block';
+            return;
+        }
+
+        const file = fileInput.files[0];
+        if (!file.name.endsWith('.json')) {
+            statusElement.textContent = 'Please select a JSON file';
+            statusElement.style.color = '#dc2626';
+            statusElement.style.display = 'block';
+            return;
+        }
+
+        // Show uploading status
+        uploadButton.disabled = true;
+        uploadButton.textContent = 'Uploading...';
+        statusElement.textContent = 'Uploading database...';
+        statusElement.style.color = '#ff6600';
+        statusElement.style.display = 'block';
+
+        // Upload file
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/mac-vendor-db', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            statusElement.textContent = data.message;
+            statusElement.style.color = '#10b981';
+            fileInput.value = ''; // Clear file input
+
+            // Update the database info display
+            updateMacVendorDbInfo({
+                uploaded: true,
+                filename: data.filename,
+                entries: data.entries,
+                file_size: data.file_size,
+                upload_time: data.upload_time
+            });
+        } else {
+            statusElement.textContent = 'Error: ' + data.message;
+            statusElement.style.color = '#dc2626';
+        }
+
+    } catch (error) {
+        console.error('Error uploading MAC vendor database:', error);
+        statusElement.textContent = 'Upload failed: ' + error.message;
+        statusElement.style.color = '#dc2626';
+        statusElement.style.display = 'block';
+    } finally {
+        uploadButton.disabled = false;
+        uploadButton.textContent = 'Upload';
+    }
+}
+
+function updateMacVendorDbInfo(dbInfo) {
+    const infoDiv = document.getElementById('macVendorDbInfo');
+    const statusElement = document.getElementById('macVendorDbStatus');
+
+    if (!dbInfo || !dbInfo.uploaded) {
+        infoDiv.style.display = 'none';
+        // Clear any previous status message
+        if (statusElement) {
+            statusElement.style.display = 'none';
+            statusElement.textContent = '';
+        }
+        return;
+    }
+
+    // Show the info box
+    infoDiv.style.display = 'block';
+
+    // Show a success status message
+    if (statusElement) {
+        statusElement.style.display = 'block';
+        statusElement.style.color = '#10b981';
+        statusElement.textContent = '✓ Database loaded and active';
+    }
+
+    // Update fields
+    document.getElementById('dbFilename').textContent = dbInfo.filename || '-';
+    document.getElementById('dbEntries').textContent = dbInfo.entries ? dbInfo.entries.toLocaleString() : '-';
+
+    // Format file size
+    const sizeInKB = dbInfo.file_size ? (dbInfo.file_size / 1024).toFixed(2) : 0;
+    const sizeInMB = dbInfo.file_size ? (dbInfo.file_size / (1024 * 1024)).toFixed(2) : 0;
+    const sizeDisplay = sizeInMB > 1 ? `${sizeInMB} MB` : `${sizeInKB} KB`;
+    document.getElementById('dbFileSize').textContent = sizeDisplay;
+
+    // Format upload time and age
+    if (dbInfo.upload_time) {
+        const uploadDate = new Date(dbInfo.upload_time);
+        document.getElementById('dbUploadTime').textContent = uploadDate.toLocaleString();
+
+        // Calculate and display age
+        const now = new Date();
+        const diffMs = now - uploadDate;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        let ageText = '';
+        if (diffMins < 1) {
+            ageText = '(just now)';
+        } else if (diffMins < 60) {
+            ageText = `(${diffMins} min${diffMins !== 1 ? 's' : ''} ago)`;
+        } else if (diffHours < 24) {
+            ageText = `(${diffHours} hour${diffHours !== 1 ? 's' : ''} ago)`;
+        } else if (diffDays < 30) {
+            ageText = `(${diffDays} day${diffDays !== 1 ? 's' : ''} ago)`;
+        } else {
+            const diffMonths = Math.floor(diffDays / 30);
+            ageText = `(${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago)`;
+        }
+
+        document.getElementById('dbAge').textContent = ageText;
+    } else {
+        document.getElementById('dbUploadTime').textContent = '-';
+        document.getElementById('dbAge').textContent = '';
+    }
 }
 
 // Start when DOM is ready
@@ -1751,12 +2954,14 @@ if (document.readyState === 'loading') {
         initSidebarResize();
         initPageNavigation();
         initDeviceSelector();
+        setupPolicyTabs();
     });
 } else {
     init();
     initSidebarResize();
     initPageNavigation();
     initDeviceSelector();
+    setupPolicyTabs();
 }
 
 function initDeviceSelector() {
@@ -2083,6 +3288,9 @@ async function onDeviceChange() {
                     updateTrafficPage();
                 } else if (pageId === 'software-updates-content') {
                     loadSoftwareUpdates();
+                } else if (pageId === 'connected-devices-content') {
+                    console.log('Reloading connected devices for new device...');
+                    loadConnectedDevices();
                 }
             }
         }
