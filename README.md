@@ -15,27 +15,7 @@ A light weight real-time monitoring dashboard for a small number of Palo Alto Ne
 - **Per-Device Configuration**: Each device can monitor a different interface
 - **Responsive UI**: Modern, gradient-based design with real-time updates
 
-## Prerequisites
 
-- Docker and Docker Compose (recommended)
-- OR Python 3.9+ with pip
-
-## Quick Start with Docker (Recommended)
-
-### 1. Clone the Repository
-
-
-git clone https://github.com/csmblade/PANfm
-
-
-
-### 2. Run with Docker Compose
-
-To run the container:
-
-docker-compose build
-
-docker-compose up
 
 The application will be available at http://localhost:8189
 
@@ -88,21 +68,10 @@ Access the Settings page to configure:
 - **settings.json**: Application settings (refresh interval, match count, etc.)
 - **debug.log**: Debug logging (when enabled)
 
-## Security Considerations
-
-- API keys are stored encrypted locally
-- SSL verification is disabled for self-signed certificates
-- Run behind a reverse proxy (nginx) in production
-- Use HTTPS for the web interface in production
-
-# Restart containers
-docker-compose restart
-
-# Rebuild from scratch
-docker-compose down -v
-docker-compose build --no-cache
-docker-compose up -d
-\`\`\`
+## Additional Notes: 
+- This is a POC designed by a human but coded with AI agents. 
+- There is currently no authentication for the project, that will be added later
+- Create a read-only user on the firewall with enough permission to read data.
 
 ## License
 
