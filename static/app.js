@@ -53,8 +53,8 @@ const chart = new Chart(ctx, {
             {
                 label: 'Inbound',
                 data: chartData.inbound,
-                borderColor: '#ff6600',
-                backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                borderColor: '#FA582D',
+                backgroundColor: 'rgba(250, 88, 45, 0.1)',
                 borderWidth: 3,
                 tension: 0.4,
                 fill: true,
@@ -64,7 +64,7 @@ const chart = new Chart(ctx, {
             {
                 label: 'Outbound',
                 data: chartData.outbound,
-                borderColor: '#ff9933',
+                borderColor: '#FDB7A6',
                 backgroundColor: 'rgba(255, 153, 51, 0.1)',
                 borderWidth: 3,
                 tension: 0.4,
@@ -286,7 +286,7 @@ function updateStats(data) {
         if (miniChartData.sessions.length > MAX_MINI_POINTS) {
             miniChartData.sessions.shift();
         }
-        updateMiniChart(sessionChart, miniChartData.sessions, '#ff6600');
+        updateMiniChart(sessionChart, miniChartData.sessions, '#FA582D');
     }
 
     // Update CPU metrics and mini charts
@@ -608,13 +608,13 @@ function renderTrafficLogsTable(logs, timestamp) {
             <input type="text"
                 id="trafficLogsSearchInput"
                 placeholder="Search by source, destination, app, protocol, or action..."
-                style="width: 100%; padding: 12px 15px; border: 2px solid #ff6600; border-radius: 8px; font-size: 0.95em; box-sizing: border-box;"
+                style="width: 100%; padding: 12px 15px; border: 2px solid #FA582D; border-radius: 8px; font-size: 0.95em; box-sizing: border-box;"
             />
         </div>
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #ff6600;">
+                    <tr style="border-bottom: 2px solid #FA582D;">
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Time</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Source</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Destination</th>
@@ -816,28 +816,28 @@ function renderConnectedDevicesTable(devices, timestamp) {
     let tableHtml = `
         <!-- Summary Stats -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
-            <div style="background: linear-gradient(135deg, #cc5200 0%, #b34700 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #FA582D 0%, #FB6B45 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Devices</div>
                 <div style="font-size: 2.5em; font-weight: 700;">${totalDevices.toLocaleString()}</div>
             </div>
-            <div style="background: linear-gradient(135deg, #e67300 0%, #cc6600 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #FB7E5D 0%, #FC9175 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Active Devices</div>
                 <div style="font-size: 2.5em; font-weight: 700;">${activeDevices.toLocaleString()}</div>
             </div>
-            <div style="background: linear-gradient(135deg, #ff8c00 0%, #e67d00 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #FDA48E 0%, #FDB7A6 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">VLANs Detected</div>
                 <div style="font-size: 2.5em; font-weight: 700;">${uniqueVlans.toLocaleString()}</div>
             </div>
-            <div style="background: linear-gradient(135deg, #ffa64d 0%, #ff9933 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #FECABE 0%, #FDB7A6 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">New Devices</div>
                 <div style="font-size: 2.5em; font-weight: 700;">${newDevices.toLocaleString()}</div>
             </div>
         </div>
 
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #ff6600;">
+                    <tr style="border-bottom: 2px solid #FA582D;">
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Hostname</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">MAC Address</th>
@@ -859,7 +859,7 @@ function renderConnectedDevicesTable(devices, timestamp) {
 
         if (device.is_new) {
             // Gradient from orange to transparent for new devices
-            rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
+            rowStyle = `background: linear-gradient(90deg, rgba(250, 88, 45, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #FA582D;`;
         }
 
         // Determine status display and color
@@ -905,7 +905,7 @@ function renderConnectedDevicesTable(devices, timestamp) {
             // Show calculated age from first seen
             const hours = device.age_hours;
             if (hours < 1) {
-                ageDisplay = '<span style="color: #ff6600; font-weight: 600;" title="First seen in cache">New</span>';
+                ageDisplay = '<span style="color: #FA582D; font-weight: 600;" title="First seen in cache">New</span>';
             } else if (hours < 24) {
                 ageDisplay = `<span title="Hours since first seen in cache">${hours}h</span>`;
             } else {
@@ -972,10 +972,10 @@ function filterConnectedDevices(searchTerm) {
     const devicesToShow = currentDeviceLimit === -1 ? filteredDevices : filteredDevices.slice(0, currentDeviceLimit);
 
     let tableHtml = `
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #ff6600;">
+                    <tr style="border-bottom: 2px solid #FA582D;">
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Hostname</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">MAC Address</th>
@@ -996,7 +996,7 @@ function filterConnectedDevices(searchTerm) {
 
         if (device.is_new) {
             // Gradient from orange to transparent for new devices
-            rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
+            rowStyle = `background: linear-gradient(90deg, rgba(250, 88, 45, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #FA582D;`;
         }
 
         // Determine status display and color
@@ -1042,7 +1042,7 @@ function filterConnectedDevices(searchTerm) {
             // Show calculated age from first seen
             const hours = device.age_hours;
             if (hours < 1) {
-                ageDisplay = '<span style="color: #ff6600; font-weight: 600;" title="First seen in cache">New</span>';
+                ageDisplay = '<span style="color: #FA582D; font-weight: 600;" title="First seen in cache">New</span>';
             } else if (hours < 24) {
                 ageDisplay = `<span title="Hours since first seen in cache">${hours}h</span>`;
             } else {
@@ -1270,10 +1270,10 @@ function applyAllFilters() {
     const devicesToShow = currentDeviceLimit === -1 ? filteredDevices : filteredDevices.slice(0, currentDeviceLimit);
 
     let tableHtml = `
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #ff6600;">
+                    <tr style="border-bottom: 2px solid #FA582D;">
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Hostname</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
                         <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">MAC Address</th>
@@ -1292,8 +1292,8 @@ function applyAllFilters() {
         let newBadge = '';
 
         if (device.is_new) {
-            rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
-            newBadge = '<span style="background: #ff6600; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; margin-left: 8px;">NEW</span>';
+            rowStyle = `background: linear-gradient(90deg, rgba(250, 88, 45, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #FA582D;`;
+            newBadge = '<span style="background: #FA582D; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; margin-left: 8px;">NEW</span>';
         }
 
         let statusText = device.status || '-';
@@ -1335,7 +1335,7 @@ function applyAllFilters() {
         } else if (device.age_hours !== undefined && device.age_hours >= 0) {
             const hours = device.age_hours;
             if (hours < 1) {
-                ageDisplay = '<span style="color: #ff6600; font-weight: 600;" title="First seen in cache">New</span>';
+                ageDisplay = '<span style="color: #FA582D; font-weight: 600;" title="First seen in cache">New</span>';
             } else if (hours < 24) {
                 ageDisplay = `<span title="Hours since first seen in cache">${hours}h</span>`;
             } else {
@@ -1510,7 +1510,7 @@ function renderClientApplicationsTable(applications) {
     let tableHtml = `
         <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
             <thead>
-                <tr style="border-bottom: 2px solid #ff6600;">
+                <tr style="border-bottom: 2px solid #FA582D;">
                     <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Application</th>
                     <th style="padding: 10px; text-align: center; color: #333; font-weight: 600;">Sessions</th>
                     <th style="padding: 10px; text-align: right; color: #333; font-weight: 600;">Sent</th>
@@ -1539,7 +1539,7 @@ function renderClientApplicationsTable(applications) {
                 <td style="padding: 10px; text-align: center; color: #666;">${app.sessions}</td>
                 <td style="padding: 10px; text-align: right; color: #666; font-family: 'Courier New', monospace;">${formatBytes(app.bytes_sent)}</td>
                 <td style="padding: 10px; text-align: right; color: #666; font-family: 'Courier New', monospace;">${formatBytes(app.bytes_received)}</td>
-                <td style="padding: 10px; text-align: right; color: #ff6600; font-family: 'Courier New', monospace; font-weight: 600;">${formatBytes(app.total_bytes)}</td>
+                <td style="padding: 10px; text-align: right; color: #FA582D; font-family: 'Courier New', monospace; font-weight: 600;">${formatBytes(app.total_bytes)}</td>
                 <td style="padding: 10px; text-align: center; color: #666;">${app.destinations_count}</td>
             </tr>
         `;
@@ -1835,7 +1835,7 @@ async function init() {
     await initSettings();
 
     // Initialize mini charts
-    sessionChart = createMiniChart('sessionChart', '#ff6600');
+    sessionChart = createMiniChart('sessionChart', '#FA582D');
 
     // Set up interface update button
     const updateInterfaceBtn = document.getElementById('updateInterfaceBtn');
@@ -2055,8 +2055,8 @@ function displayTrafficByCategoryChart(trafficByType) {
 
     // Generate colors - orange gradient from dark to light
     const colors = [
-        '#cc5200', '#d96500', '#e67300', '#f28000', '#ff8c00',
-        '#ff9933', '#ffa64d', '#ffb366', '#ffc180', '#ffce99'
+        '#FA582D', '#FB6B45', '#FB7E5D', '#FC9175', '#FDA48E',
+        '#FDB7A6', '#FECABE', '#FEDDD6', '#FFF0EE', '#FFF7F5'
     ];
 
     trafficByCategoryChart = new Chart(ctx, {
@@ -2110,7 +2110,7 @@ function displayApplicationsTable(applications) {
 
     if (applications.length === 0) {
         container.innerHTML = `
-            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
                 <p style="color: #999; font-size: 1.2em;">No application traffic data available</p>
             </div>
         `;
@@ -2210,45 +2210,45 @@ function displayApplicationsTable(applications) {
     const displayedApps = limit === -1 ? filtered : filtered.slice(0, limit);
 
     let html = `
-        <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+        <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
             <div style="margin-bottom: 20px; color: #666; font-size: 0.95em;">
                 Showing ${displayedApps.length.toLocaleString()} of ${filtered.length.toLocaleString()} applications
             </div>
             <div style="overflow-x: auto;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                     <thead>
-                        <tr style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white;">
-                            <th onclick="sortApplicationsTable('app')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                        <tr style="background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white;">
+                            <th onclick="sortApplicationsTable('app')" style="padding: 15px; text-align: left; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Application ${applicationsSortColumn === 'app' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('category')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s; min-width: 150px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('category')" style="padding: 15px; text-align: left; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s; min-width: 150px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Category ${applicationsSortColumn === 'category' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('sessions')" style="padding: 15px; text-align: center; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('sessions')" style="padding: 15px; text-align: center; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Sessions ${applicationsSortColumn === 'sessions' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('bytes_sent')" style="padding: 15px; text-align: right; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('bytes_sent')" style="padding: 15px; text-align: right; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Bytes Sent ${applicationsSortColumn === 'bytes_sent' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('bytes_received')" style="padding: 15px; text-align: right; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('bytes_received')" style="padding: 15px; text-align: right; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Bytes Received ${applicationsSortColumn === 'bytes_received' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('total_bytes')" style="padding: 15px; text-align: right; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('total_bytes')" style="padding: 15px; text-align: right; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Total Volume ${applicationsSortColumn === 'total_bytes' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('sources_count')" style="padding: 15px; text-align: center; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('sources_count')" style="padding: 15px; text-align: center; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Sources ${applicationsSortColumn === 'sources_count' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('destinations_count')" style="padding: 15px; text-align: center; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('destinations_count')" style="padding: 15px; text-align: center; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Destinations ${applicationsSortColumn === 'destinations_count' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('protocols')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('protocols')" style="padding: 15px; text-align: left; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Protocols ${applicationsSortColumn === 'protocols' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('ports')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('ports')" style="padding: 15px; text-align: left; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 Top Ports ${applicationsSortColumn === 'ports' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
-                            <th onclick="sortApplicationsTable('vlans')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <th onclick="sortApplicationsTable('vlans')" style="padding: 15px; text-align: left; border-bottom: 2px solid #FA582D; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 VLANs ${applicationsSortColumn === 'vlans' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
                             </th>
                         </tr>
@@ -2263,10 +2263,10 @@ function displayApplicationsTable(applications) {
         html += `
             <tr style="background: ${rowColor}; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.background='#fff3e6'" onmouseout="this.style.background='${rowColor}'">
                 <td style="padding: 15px;">
-                    <div style="font-weight: 600; color: #ff6600; margin-bottom: 3px; cursor: pointer; text-decoration: underline;" onclick="showApplicationDetails('${escapeHtml(app.app).replace(/'/g, "\\'")}', ${index})">${escapeHtml(app.app)}</div>
+                    <div style="font-weight: 600; color: #FA582D; margin-bottom: 3px; cursor: pointer; text-decoration: underline;" onclick="showApplicationDetails('${escapeHtml(app.app).replace(/'/g, "\\'")}', ${index})">${escapeHtml(app.app)}</div>
                 </td>
                 <td style="padding: 15px; min-width: 150px;">
-                    <span onclick="showCategoryDestinations('${app.category}', '${escapeHtml(app.app).replace(/'/g, "\\'")}', ${index})" style="background: #ff6600; color: white; padding: 5px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-block; white-space: nowrap;" onmouseover="this.style.background='#ff9933'" onmouseout="this.style.background='#ff6600'">
+                    <span onclick="showCategoryDestinations('${app.category}', '${escapeHtml(app.app).replace(/'/g, "\\'")}', ${index})" style="background: #FA582D; color: white; padding: 5px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-block; white-space: nowrap;" onmouseover="this.style.background='#FDB7A6'" onmouseout="this.style.background='#FA582D'">
                         ${categoryLabel}
                     </span>
                 </td>
@@ -2279,7 +2279,7 @@ function displayApplicationsTable(applications) {
                 <td style="padding: 15px; text-align: right; color: #666;">
                     ${formatBytes(app.bytes_received)}
                 </td>
-                <td style="padding: 15px; text-align: right; font-weight: 700; color: #ff6600;">
+                <td style="padding: 15px; text-align: right; font-weight: 700; color: #FA582D;">
                     ${formatBytes(app.total_bytes)}
                 </td>
                 <td style="padding: 15px; text-align: center; color: #666;">
@@ -2483,7 +2483,7 @@ function showApplicationDetails(appName, index) {
         let sourceHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;">';
         app.sources.forEach(ip => {
             sourceHTML += `
-                <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #ff6600; font-family: 'Courier New', monospace; font-size: 0.9em; color: #333;">
+                <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #FA582D; font-family: 'Courier New', monospace; font-size: 0.9em; color: #333;">
                     ${escapeHtml(ip)}
                 </div>
             `;
@@ -2786,7 +2786,7 @@ function displayPolicies(policies) {
 
     if (policies.length === 0) {
         container.innerHTML = `
-            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
                 <div style="font-size: 1.2em; color: #666; margin-bottom: 10px;">No security policies found</div>
                 <div style="font-size: 0.9em; color: #999;">Security policies will appear here once configured on the firewall.</div>
             </div>
@@ -2800,8 +2800,8 @@ function displayPolicies(policies) {
     const unusedRules = policies.filter(p => p.hit_count === 0).length;
 
     let html = `
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
-            <div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); border-left: 4px solid #ff6600; border-radius: 6px;">
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
+            <div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); border-left: 4px solid #FA582D; border-radius: 6px;">
                 <div style="font-weight: 600; color: #9a3412; margin-bottom: 5px;">
                     Total Security Policies: ${policies.length} | Active: ${activeRules} | Unused: ${unusedRules} | Total Hits: ${totalHits.toLocaleString()}
                 </div>
@@ -2809,7 +2809,7 @@ function displayPolicies(policies) {
             </div>
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #ff6600; background: #f9f9f9;">
+                    <tr style="border-bottom: 2px solid #FA582D; background: #f9f9f9;">
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Policy Name</th>
                         <th style="padding: 12px; text-align: center; color: #333; font-weight: 600;">Status</th>
                         <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Hit Count</th>
@@ -2823,7 +2823,7 @@ function displayPolicies(policies) {
 
     policies.forEach((policy, index) => {
         const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
-        const hitCountColor = policy.hit_count > 1000 ? '#ff6600' : policy.hit_count > 0 ? '#333' : '#999';
+        const hitCountColor = policy.hit_count > 1000 ? '#FA582D' : policy.hit_count > 0 ? '#333' : '#999';
 
         // Status badge
         let statusBadge = '';
@@ -2847,7 +2847,7 @@ function displayPolicies(policies) {
         let trendIcon = '';
         if (policy.trend) {
             if (policy.trend === 'up') {
-                trendIcon = '<span style="color: #ff6600; margin-left: 5px;">▲</span>';
+                trendIcon = '<span style="color: #FA582D; margin-left: 5px;">▲</span>';
             } else if (policy.trend === 'down') {
                 trendIcon = '<span style="color: #10b981; margin-left: 5px;">▼</span>';
             } else {
@@ -2967,7 +2967,7 @@ function displayNatPolicies(natPolicies) {
 
     if (natPolicies.length === 0) {
         container.innerHTML = `
-            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
                 <div style="font-size: 1.2em; color: #666; margin-bottom: 10px;">No NAT policies found</div>
                 <div style="font-size: 0.9em; color: #999;">NAT policies will appear here once configured on the firewall.</div>
             </div>
@@ -2976,14 +2976,14 @@ function displayNatPolicies(natPolicies) {
     }
 
     let html = `
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
             <div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; border-radius: 6px;">
                 <div style="font-weight: 600; color: #1e40af; margin-bottom: 5px;">Total NAT Policies: ${natPolicies.length}</div>
                 <div style="font-size: 0.85em; color: #3b82f6;">Source NAT, Destination NAT, and Dynamic IP & Port rules</div>
             </div>
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #ff6600; background: #f9f9f9;">
+                    <tr style="border-bottom: 2px solid #FA582D; background: #f9f9f9;">
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Rule Name</th>
                         <th style="padding: 12px; text-align: center; color: #333; font-weight: 600;">Type</th>
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Source Zone</th>
@@ -3021,7 +3021,7 @@ function displayNatPolicies(natPolicies) {
             <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='${bgColor}'">
                 <td style="padding: 12px; color: #333; font-weight: 500;">
                     <div style="display: flex; align-items: center;">
-                        <div style="width: 4px; height: 24px; background: #ff6600; margin-right: 10px; border-radius: 2px;"></div>
+                        <div style="width: 4px; height: 24px; background: #FA582D; margin-right: 10px; border-radius: 2px;"></div>
                         ${policy.name}
                     </div>
                 </td>
@@ -3082,7 +3082,7 @@ function setupPolicyTabs() {
             // Update tab buttons
             tabs.forEach(t => {
                 if (t === tab) {
-                    t.style.background = 'linear-gradient(135deg, #ff6600 0%, #ff9933 100%)';
+                    t.style.background = 'linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%)';
                     t.classList.add('active');
                 } else {
                     t.style.background = '#666';
@@ -3263,10 +3263,10 @@ function renderSystemLogsTable() {
 
             // Create table HTML
             let tableHtml = `
-                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr style="border-bottom: 2px solid #ff6600;">
+                            <tr style="border-bottom: 2px solid #FA582D;">
                                 <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Time</th>
                                 <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Event ID</th>
                                 <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Severity</th>
@@ -3335,7 +3335,7 @@ async function loadSoftwareUpdates() {
             let tableHtml = `
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white;">
+                        <tr style="background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white;">
                             <th style="padding: 15px; text-align: left; font-size: 1.1em;">Component</th>
                             <th style="padding: 15px; text-align: left; font-size: 1.1em;">Version</th>
                             <th style="padding: 15px; text-align: center; font-size: 1.1em;">Downloaded</th>
@@ -3576,7 +3576,7 @@ async function updateMonitoredInterface() {
 
                 setTimeout(() => {
                     btn.textContent = originalText;
-                    btn.style.background = 'linear-gradient(135deg, #ff6600 0%, #ff9933 100%)';
+                    btn.style.background = 'linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%)';
                 }, 2000);
 
                 // Refresh data
@@ -3672,7 +3672,7 @@ async function uploadMacVendorDatabase() {
         uploadButton.disabled = true;
         uploadButton.textContent = 'Uploading...';
         statusElement.textContent = 'Uploading database...';
-        statusElement.style.color = '#ff6600';
+        statusElement.style.color = '#FA582D';
         statusElement.style.display = 'block';
 
         // Upload file
@@ -4160,7 +4160,7 @@ function renderDevicesTable() {
                 </span>
             </td>
             <td style="padding: 12px; text-align: center;">
-                <button onclick="editDevice('${device.id}')" style="padding: 6px 12px; background: #ff6600; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">
+                <button onclick="editDevice('${device.id}')" style="padding: 6px 12px; background: #FA582D; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">
                     Edit
                 </button>
                 <button onclick="deleteDevice('${device.id}')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">

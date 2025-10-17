@@ -25,7 +25,7 @@
             min-width: 200px;
             max-width: 400px;
             background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
-            border-right: 3px solid #ff6600;
+            border-right: 3px solid #FA582D;
             display: flex;
             flex-direction: column;
             position: relative;
@@ -34,7 +34,7 @@
 
         .sidebar-header {
             padding: 10px;
-            border-bottom: 2px solid rgba(255, 102, 0, 0.3);
+            border-bottom: 2px solid rgba(250, 88, 45, 0.3);
             background: #ffffff;
             display: flex;
             align-items: center;
@@ -70,15 +70,15 @@
         }
 
         .menu-item:hover {
-            background: rgba(255, 102, 0, 0.1);
-            border-left-color: #ff6600;
+            background: rgba(250, 88, 45, 0.1);
+            border-left-color: #FA582D;
             color: #ffffff;
         }
 
         .menu-item.active {
-            background: rgba(255, 102, 0, 0.2);
-            border-left-color: #ff6600;
-            color: #ff6600;
+            background: rgba(250, 88, 45, 0.2);
+            border-left-color: #FA582D;
+            color: #FA582D;
             font-weight: 600;
         }
 
@@ -89,16 +89,16 @@
             display: inline-block;
         }
 
-        .menu-item:nth-child(1) .menu-icon { background: #cc5200; }
-        .menu-item:nth-child(2) .menu-icon { background: #d96500; }
-        .menu-item:nth-child(3) .menu-icon { background: #e67300; }
-        .menu-item:nth-child(4) .menu-icon { background: #f28000; }
-        .menu-item:nth-child(5) .menu-icon { background: #ff8c00; }
-        .menu-item:nth-child(6) .menu-icon { background: #ff9933; }
-        .menu-item:nth-child(7) .menu-icon { background: #ffa64d; }
-        .menu-item:nth-child(8) .menu-icon { background: #ffb366; }
-        .menu-item:nth-child(9) .menu-icon { background: #ffc180; }
-        .menu-item:nth-child(10) .menu-icon { background: #ffce99; }
+        .menu-item:nth-child(1) .menu-icon { background: #FA582D; }
+        .menu-item:nth-child(2) .menu-icon { background: #FB6B45; }
+        .menu-item:nth-child(3) .menu-icon { background: #FB7E5D; }
+        .menu-item:nth-child(4) .menu-icon { background: #FC9175; }
+        .menu-item:nth-child(5) .menu-icon { background: #FDA48E; }
+        .menu-item:nth-child(6) .menu-icon { background: #FDB7A6; }
+        .menu-item:nth-child(7) .menu-icon { background: #FECABE; }
+        .menu-item:nth-child(8) .menu-icon { background: #FEDDD6; }
+        .menu-item:nth-child(9) .menu-icon { background: #FFF0EE; }
+        .menu-item:nth-child(10) .menu-icon { background: #FFF7F5; }
 
         .resize-handle {
             position: absolute;
@@ -112,7 +112,7 @@
         }
 
         .resize-handle:hover {
-            background: rgba(255, 102, 0, 0.5);
+            background: rgba(250, 88, 45, 0.5);
         }
 
         .main-content {
@@ -164,13 +164,13 @@
             flex-direction: column;
             height: 120px;
             max-height: 120px;
-            border-left: 4px solid #ff6600;
+            border-left: 4px solid #FA582D;
         }
 
         .stat-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(255, 102, 0, 0.4);
-            border-left-color: #ff9933;
+            box-shadow: 0 8px 25px rgba(250, 88, 45, 0.4);
+            border-left-color: #FDB7A6;
         }
 
         .stat-icon {
@@ -194,7 +194,7 @@
         .stat-value {
             font-size: clamp(1.2em, 3vw, 1.8em);
             font-weight: bold;
-            color: #ff6600;
+            color: #FA582D;
             margin-bottom: 3px;
             word-break: break-word;
             line-height: 1.1;
@@ -336,7 +336,7 @@
             padding: 20px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.15);
             animation: slideUp 0.6s ease-out;
-            border-top: 4px solid #ff6600;
+            border-top: 4px solid #FA582D;
         }
 
         .chart-wrapper {
@@ -366,7 +366,7 @@
         }
 
         .status-dot.online {
-            background: #ff6600;
+            background: #FA582D;
         }
 
         .status-dot.offline {
@@ -436,7 +436,7 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <div style="font-size: 1.5em; font-weight: 700; letter-spacing: 1px; text-align: center;">
-                <span style="color: #ff6600;">PAN</span><span style="color: #000000;">fm</span>
+                <span style="color: #FA582D;">PAN</span><span style="color: #000000;">fm</span>
                 <div style="font-size: 0.5em; color: #666; font-weight: 400; margin-top: 5px; letter-spacing: 0.5px;">firewall monitor</div>
             </div>
         </div>
@@ -484,48 +484,48 @@
         </div>
 
         <!-- Packets Per Second (PPS) -->
-        <div style="padding: 20px 15px; border-top: 1px solid rgba(255, 102, 0, 0.2);">
-            <div style="font-size: 0.75em; color: #ff6600; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Traffic</div>
+        <div style="padding: 20px 15px; border-top: 1px solid rgba(250, 88, 45, 0.2);">
+            <div style="font-size: 0.75em; color: #FA582D; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Traffic</div>
             <div style="margin-bottom: 8px;">
                 <div style="color: #999; font-size: 0.7em;">Total PPS</div>
-                <div id="sidebarTotalPps" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarTotalPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
             <div style="margin-bottom: 8px;">
                 <div style="color: #999; font-size: 0.7em;">Inbound PPS</div>
-                <div id="sidebarInboundPps" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarInboundPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
             <div style="margin-bottom: 8px;">
                 <div style="color: #999; font-size: 0.7em;">Outbound PPS</div>
-                <div id="sidebarOutboundPps" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarOutboundPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
         </div>
 
         <!-- Last Seen Stats -->
-        <div style="padding: 20px 15px; border-top: 1px solid rgba(255, 102, 0, 0.2);">
-            <div style="font-size: 0.75em; color: #ff6600; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Last Seen</div>
+        <div style="padding: 20px 15px; border-top: 1px solid rgba(250, 88, 45, 0.2);">
+            <div style="font-size: 0.75em; color: #FA582D; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Last Seen</div>
             <div style="margin-bottom: 8px;">
                 <div style="color: #999; font-size: 0.7em;">Critical Threat</div>
-                <div id="sidebarCriticalLastSeen" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarCriticalLastSeen" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
             <div style="margin-bottom: 8px;">
                 <div style="color: #999; font-size: 0.7em;">Medium Threat</div>
-                <div id="sidebarMediumLastSeen" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarMediumLastSeen" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
             <div style="margin-bottom: 15px;">
                 <div style="color: #999; font-size: 0.7em;">Blocked URL</div>
-                <div id="sidebarBlockedUrlLastSeen" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarBlockedUrlLastSeen" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
-            <div style="border-top: 1px solid rgba(255, 102, 0, 0.2); padding-top: 15px;">
+            <div style="border-top: 1px solid rgba(250, 88, 45, 0.2); padding-top: 15px;">
                 <div style="color: #999; font-size: 0.7em;">Firewall Uptime</div>
-                <div id="sidebarUptime" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarUptime" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
             <div style="margin-top: 15px;">
                 <div style="color: #999; font-size: 0.7em;">API Calls</div>
-                <div id="sidebarApiStats" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarApiStats" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
             <div style="margin-top: 15px;">
                 <div style="color: #999; font-size: 0.7em;">Last Updated</div>
-                <div id="sidebarLastUpdate" style="color: #ff6600; font-size: 0.75em; font-weight: 600;">-</div>
+                <div id="sidebarLastUpdate" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
             </div>
         </div>
 
@@ -543,7 +543,7 @@
             <!-- Device Selector -->
             <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
                 <label for="deviceSelector" style="color: #999; font-size: 0.9em; font-weight: 600;">Device:</label>
-                <select id="deviceSelector" style="padding: 8px 12px; border: 2px solid #ff6600; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer; min-width: 200px;">
+                <select id="deviceSelector" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer; min-width: 200px;">
                     <option value="">Loading devices...</option>
                 </select>
             </div>
@@ -556,10 +556,10 @@
             <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">
                 Dashboard Summary
             </h1>
-            <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Real-time monitoring for Palo Alto Networks firewalls</p>
+            <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Real-time monitoring for Palo Alto Networks firewalls</p>
         </div>
 
-        <div id="debugAlert" style="display: none; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); border-left: 5px solid #cc5200; border-radius: 8px; color: white; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div id="debugAlert" style="display: none; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); border-left: 5px solid #FA582D; border-radius: 8px; color: white; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             ⚠️ Debug Logging is Enabled - All API responses are being logged to debug.log
         </div>
 
@@ -612,15 +612,15 @@
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #d96500 0%, #a64f00 100%); border-left: 4px solid #ffffff;">
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #FB6B45 0%, #FA582D 100%); border-left: 4px solid #ffffff;">
                 <div class="stat-label" style="color: #ffffff;">Critical Threats</div>
                 <div class="stat-value" style="color: #ffffff;" id="criticalValue">-</div>
-                <div class="stat-unit" style="color: #ffcc99;">last 5 matches</div>
+                <div class="stat-unit" style="color: #FECABE;">last 5 matches</div>
                 <div class="threat-logs-container">
                     <div id="criticalLogs"></div>
                 </div>
             </div>
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #e67300 0%, #b35900 100%); border-left: 4px solid #ffffff;">
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #FB7E5D 0%, #FB6B45 100%); border-left: 4px solid #ffffff;">
                 <div class="stat-label" style="color: #ffffff;">Medium Threats</div>
                 <div class="stat-value" style="color: #ffffff;" id="mediumValue">-</div>
                 <div class="stat-unit" style="color: #ffffff;">last 5 matches</div>
@@ -628,7 +628,7 @@
                     <div id="mediumLogs"></div>
                 </div>
             </div>
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #ffffff;">
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #FC9175 0%, #FB7E5D 100%); border-left: 4px solid #ffffff;">
                 <div class="stat-label" style="color: #ffffff;">Blocked URLs</div>
                 <div class="stat-value" style="color: #ffffff;" id="blockedUrlValue">-</div>
                 <div class="stat-unit" style="color: #ffffff;">last 5 matches</div>
@@ -637,7 +637,7 @@
                 </div>
             </div>
 
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #ff6600;">
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #FC9175 0%, #FB7E5D 100%); border-left: 4px solid #FA582D;">
                 <div class="stat-label" style="color: #ffffff;">Top Applications</div>
                 <div class="stat-value" style="color: #ffffff;" id="topAppsValue">-</div>
                 <div class="stat-unit" style="color: #ffffff;" id="topAppsUnit">last 5 matches</div>
@@ -653,9 +653,9 @@
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <label style="color: #ffffff; font-weight: 600; font-size: 0.9em;">Interface:</label>
                     <input type="text" id="monitoredInterfaceInput" placeholder="ethernet1/12" value="ethernet1/12"
-                           style="padding: 8px 12px; border: 2px solid #ff6600; border-radius: 6px; font-size: 0.9em; width: 150px;">
+                           style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; font-size: 0.9em; width: 150px;">
                     <button id="updateInterfaceBtn"
-                            style="padding: 8px 16px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer;">
+                            style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white; border: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer;">
                         Update
                     </button>
                 </div>
@@ -672,14 +672,14 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Firewall Policies</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Security and NAT Policy Rules</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Security and NAT Policy Rules</p>
                 </div>
 
                 <div class="error-message" id="policiesErrorMessage"></div>
 
                 <!-- Tabs -->
-                <div style="margin-bottom: 20px; display: flex; gap: 10px; border-bottom: 3px solid rgba(255, 102, 0, 0.3);">
-                    <button class="policy-tab active" data-tab="security" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 8px 8px 0 0; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; border-bottom: 3px solid rgba(250, 88, 45, 0.3);">
+                    <button class="policy-tab active" data-tab="security" style="padding: 12px 24px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white; border: none; border-radius: 8px 8px 0 0; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                         Security Policies
                     </button>
                     <button class="policy-tab" data-tab="nat" style="padding: 12px 24px; background: #666; color: white; border: none; border-radius: 8px 8px 0 0; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.3s;">
@@ -704,7 +704,7 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">System Logs</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Recent System Events and Activities</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Recent System Events and Activities</p>
                 </div>
 
                 <div class="error-message" id="systemLogsErrorMessage"></div>
@@ -714,7 +714,7 @@
                     <input type="text"
                         id="systemLogsSearchInput"
                         placeholder="Search by time, severity, module, event ID, or description..."
-                        style="width: 100%; padding: 12px 15px; border: 2px solid #ff6600; border-radius: 8px; font-size: 0.95em; box-sizing: border-box;"
+                        style="width: 100%; padding: 12px 15px; border: 2px solid #FA582D; border-radius: 8px; font-size: 0.95em; box-sizing: border-box;"
                     />
                 </div>
 
@@ -722,7 +722,7 @@
                 <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <label style="color: #ffffff; font-weight: 600;">Sort by:</label>
-                        <select id="systemLogsSortBy" style="padding: 8px 12px; border: 2px solid #ff6600; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                        <select id="systemLogsSortBy" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
                             <option value="time">Time (Newest First)</option>
                             <option value="time-asc">Time (Oldest First)</option>
                             <option value="severity">Severity (High to Low)</option>
@@ -734,7 +734,7 @@
 
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <label style="color: #ffffff; font-weight: 600;">Filter by Severity:</label>
-                        <select id="systemLogsFilterSeverity" style="padding: 8px 12px; border: 2px solid #ff6600; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                        <select id="systemLogsFilterSeverity" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
                             <option value="all">All Severities</option>
                             <option value="critical">Critical Only</option>
                             <option value="high">High Only</option>
@@ -754,7 +754,7 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Traffic Logs</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Network Traffic Sessions and Connections</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Network Traffic Sessions and Connections</p>
                 </div>
 
                 <div class="error-message" id="trafficLogsErrorMessage"></div>
@@ -768,7 +768,7 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Software Versions</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">System and Content Version Information</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">System and Content Version Information</p>
                 </div>
 
                 <div class="error-message" id="softwareErrorMessage"></div>
@@ -788,7 +788,7 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Devices</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Manage Firewall Devices</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Manage Firewall Devices</p>
                 </div>
 
                 <div class="error-message" id="devicesErrorMessage"></div>
@@ -796,7 +796,7 @@
                 <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="color: #333; margin: 0;">Firewall Devices</h2>
-                        <button id="addDeviceBtn" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                        <button id="addDeviceBtn" style="padding: 12px 24px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
                             + Add Device
                         </button>
                     </div>
@@ -804,7 +804,7 @@
                     <div id="devicesTableContainer">
                         <table id="devicesTable" style="width: 100%; border-collapse: collapse;">
                             <thead>
-                                <tr style="background: #f5f5f5; border-bottom: 2px solid #ff6600;">
+                                <tr style="background: #f5f5f5; border-bottom: 2px solid #FA582D;">
                                     <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Name</th>
                                     <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
                                     <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Group</th>
@@ -872,7 +872,7 @@
                     <div id="connectionTestResult" style="display: none; padding: 12px; border-radius: 8px; margin-bottom: 20px;"></div>
 
                     <div style="display: flex; gap: 15px;">
-                        <button type="submit" style="flex: 1; padding: 15px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
+                        <button type="submit" style="flex: 1; padding: 15px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
                             Save Device
                         </button>
                         <button type="button" id="cancelModalBtn" style="flex: 1; padding: 15px; background: #666; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
@@ -886,7 +886,7 @@
         <!-- Client Applications Modal -->
         <div id="clientAppsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
             <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #ff6600; padding-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #FA582D; padding-bottom: 15px;">
                     <div>
                         <h2 id="clientAppsModalTitle" style="color: #333; margin: 0 0 5px 0;">Client Applications</h2>
                         <p id="clientAppsModalSubtitle" style="color: #666; margin: 0; font-size: 0.9em;">Loading...</p>
@@ -902,15 +902,15 @@
                 <div id="clientAppsContent" style="display: none;">
                     <!-- Summary Stats -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                        <div style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FA582D 0%, #FB6B45 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Sessions</div>
                             <div id="clientAppsTotalSessions" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
-                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FB7E5D 0%, #FC9175 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Data</div>
                             <div id="clientAppsTotalData" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
-                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FDA48E 0%, #FDB7A6 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Applications</div>
                             <div id="clientAppsCount" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
@@ -932,7 +932,7 @@
         <!-- Application Details Modal -->
         <div id="appDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
             <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #ff6600; padding-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #FA582D; padding-bottom: 15px;">
                     <div>
                         <h2 id="appDetailsModalTitle" style="color: #333; margin: 0 0 5px 0;">Application Details</h2>
                         <p id="appDetailsModalSubtitle" style="color: #666; margin: 0; font-size: 0.9em;">Detailed traffic information</p>
@@ -948,19 +948,19 @@
                 <div id="appDetailsContent" style="display: none;">
                     <!-- Summary Stats -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                        <div style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FA582D 0%, #FB6B45 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Sessions</div>
                             <div id="appDetailsSessions" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
-                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FB7E5D 0%, #FC9175 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Volume</div>
                             <div id="appDetailsTotalBytes" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
-                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FDA48E 0%, #FDB7A6 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Source IPs</div>
                             <div id="appDetailsSourcesCount" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
-                        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FECABE 0%, #FEDDD6 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Destinations</div>
                             <div id="appDetailsDestsCount" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
@@ -998,7 +998,7 @@
         <!-- Category Destinations Modal -->
         <div id="categoryDestinationsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
             <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #ff6600; padding-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #FA582D; padding-bottom: 15px;">
                     <div>
                         <h2 id="categoryDestinationsModalTitle" style="color: #333; margin: 0 0 5px 0;">Destination IP Addresses</h2>
                         <p id="categoryDestinationsModalSubtitle" style="color: #666; margin: 0; font-size: 0.9em;">Traffic destinations</p>
@@ -1009,15 +1009,15 @@
                 <div id="categoryDestinationsContent">
                     <!-- Summary Stats -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                        <div style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FA582D 0%, #FB6B45 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Application</div>
                             <div id="categoryDestApp" style="font-size: 1.5em; font-weight: 700; word-break: break-word;">-</div>
                         </div>
-                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FB7E5D 0%, #FC9175 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Destinations</div>
                             <div id="categoryDestCount" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
-                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="background: linear-gradient(135deg, #FDA48E 0%, #FDB7A6 100%); border-radius: 8px; padding: 15px; color: white;">
                             <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Volume</div>
                             <div id="categoryDestVolume" style="font-size: 1.8em; font-weight: 700;">-</div>
                         </div>
@@ -1037,13 +1037,13 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Connected Devices</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Devices Connected to the Firewall Network</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Devices Connected to the Firewall Network</p>
                 </div>
 
                 <div class="error-message" id="connectedDevicesErrorMessage"></div>
 
                 <!-- Search and Filter Bar -->
-                <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #ff6600;">
+                <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D;">
                     <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                         <div>
                             <label style="display: block; color: #333; font-weight: 600; margin-bottom: 5px; font-size: 0.9em;">General Search</label>
@@ -1051,7 +1051,7 @@
                                 id="connectedDevicesSearchInput"
                                 placeholder="Search by hostname, IP, MAC, vendor..."
                                 style="width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; transition: border-color 0.3s;"
-                                onfocus="this.style.borderColor='#ff6600'"
+                                onfocus="this.style.borderColor='#FA582D'"
                                 onblur="this.style.borderColor='#ddd'"
                             />
                         </div>
@@ -1087,16 +1087,16 @@
                                     <option value="-1">All devices</option>
                                 </select>
                             </div>
-                            <button id="refreshConnectedDevicesBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                🔄 Refresh
+                            <button id="refreshConnectedDevicesBtn" style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Refresh
                             </button>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button id="exportDevicesCSV" style="padding: 10px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                📊 Export CSV
+                            <button id="exportDevicesCSV" style="padding: 8px 16px; background: linear-gradient(135deg, #FDA48E 0%, #FDB7A6 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Export CSV
                             </button>
-                            <button id="exportDevicesXML" style="padding: 10px 20px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                📄 Export XML
+                            <button id="exportDevicesXML" style="padding: 8px 16px; background: linear-gradient(135deg, #FECABE 0%, #FEDDD6 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Export XML
                             </button>
                         </div>
                     </div>
@@ -1111,26 +1111,26 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Application Traffic Analysis</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Comprehensive application traffic metrics and volume analysis</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Comprehensive application traffic metrics and volume analysis</p>
                 </div>
 
                 <div class="error-message" id="applicationsErrorMessage"></div>
 
                 <!-- Summary Stats -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                    <div style="background: linear-gradient(135deg, #cc5200 0%, #b34700 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="background: linear-gradient(135deg, #FA582D 0%, #FB6B45 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Applications</div>
                         <div id="appsTotalApps" style="font-size: 2.5em; font-weight: 700;">-</div>
                     </div>
-                    <div style="background: linear-gradient(135deg, #e67300 0%, #cc6600 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="background: linear-gradient(135deg, #FB7E5D 0%, #FC9175 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Sessions</div>
                         <div id="appsTotalSessions" style="font-size: 2.5em; font-weight: 700;">-</div>
                     </div>
-                    <div style="background: linear-gradient(135deg, #ff8c00 0%, #e67d00 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="background: linear-gradient(135deg, #FDA48E 0%, #FDB7A6 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Traffic Volume</div>
                         <div id="appsTotalBytes" style="font-size: 2.5em; font-weight: 700;">-</div>
                     </div>
-                    <div style="background: linear-gradient(135deg, #ffa64d 0%, #ff9933 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="background: linear-gradient(135deg, #FECABE 0%, #FEDDD6 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">VLANs Detected</div>
                         <div id="appsVlanCount" style="font-size: 2.5em; font-weight: 700;">-</div>
                     </div>
@@ -1153,7 +1153,7 @@
                                 id="applicationsSearchInput"
                                 placeholder="Search by name, category, protocol, port, zone..."
                                 style="width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95em; box-sizing: border-box; transition: border-color 0.3s;"
-                                onfocus="this.style.borderColor='#ff6600'"
+                                onfocus="this.style.borderColor='#FA582D'"
                                 onblur="this.style.borderColor='#ddd'"
                             />
                         </div>
@@ -1182,16 +1182,16 @@
                                     <option value="-1">All apps</option>
                                 </select>
                             </div>
-                            <button id="refreshApplicationsBtn" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                🔄 Refresh
+                            <button id="refreshApplicationsBtn" style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Refresh
                             </button>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button id="exportApplicationsCSV" style="padding: 12px 24px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                📊 Export CSV
+                            <button id="exportApplicationsCSV" style="padding: 8px 16px; background: linear-gradient(135deg, #FDA48E 0%, #FDB7A6 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Export CSV
                             </button>
-                            <button id="exportApplicationsJSON" style="padding: 12px 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                📄 Export JSON
+                            <button id="exportApplicationsJSON" style="padding: 8px 16px; background: linear-gradient(135deg, #FECABE 0%, #FEDDD6 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Export JSON
                             </button>
                         </div>
                     </div>
@@ -1211,7 +1211,7 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Site Monitor</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Real-time status monitoring for all firewalls</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Real-time status monitoring for all firewalls</p>
                 </div>
 
                 <div class="error-message" id="siteMonitorErrorMessage"></div>
@@ -1219,8 +1219,8 @@
                 <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="color: #333; font-size: 1.3em; font-weight: 600; margin: 0;">Firewall Status</h2>
-                        <button onclick="refreshSiteMonitor()" style="background: #ff6600; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                            🔄 Refresh
+                        <button onclick="refreshSiteMonitor()" style="background: #FA582D; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85em;">
+                            Refresh
                         </button>
                     </div>
 
@@ -1231,7 +1231,7 @@
                     <div id="siteMonitorTable" style="display: none;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
-                                <tr style="background: #f8f9fa; border-bottom: 2px solid #ff6600;">
+                                <tr style="background: #f8f9fa; border-bottom: 2px solid #FA582D;">
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Status</th>
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Name</th>
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">IP Address</th>
@@ -1253,7 +1253,7 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 20px; padding: 15px; background: rgba(255, 102, 0, 0.1); border-left: 4px solid #ff6600; border-radius: 6px;">
+                <div style="margin-top: 20px; padding: 15px; background: rgba(250, 88, 45, 0.1); border-left: 4px solid #FA582D; border-radius: 6px;">
                     <p style="color: #ffffff; font-size: 0.9em; margin: 0;">
                         <strong>Note:</strong> The Site Monitor page shows real-time status for all enabled firewalls. Status checks are performed when you load or refresh this page.
                     </p>
@@ -1265,7 +1265,7 @@
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
                     <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Settings</h1>
-                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Configure Dashboard Parameters</p>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Configure Dashboard Parameters</p>
                 </div>
 
                 <div class="error-message" id="settingsErrorMessage"></div>
@@ -1347,7 +1347,7 @@
 
                     <div style="display: flex; gap: 15px;">
                         <button id="saveSettings"
-                                style="flex: 1; padding: 15px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                                style="flex: 1; padding: 15px; background: linear-gradient(135deg, #FA582D 0%, #FDB7A6 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
                             Save Settings
                         </button>
                         <button id="resetSettings"
