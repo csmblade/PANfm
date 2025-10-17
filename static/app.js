@@ -591,6 +591,13 @@ function formatBytes(bytes) {
     }
 }
 
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Render traffic logs table with optional filtering
 function renderTrafficLogsTable(logs, timestamp) {
     const tableDiv = document.getElementById('trafficLogsTable');
@@ -799,8 +806,34 @@ function renderConnectedDevicesTable(devices, timestamp) {
     // Apply limit
     const devicesToShow = currentDeviceLimit === -1 ? devices : devices.slice(0, currentDeviceLimit);
 
-    // Create table HTML
+    // Calculate summary stats
+    const totalDevices = devices.length;
+    const uniqueVlans = new Set(devices.map(d => d.vlan).filter(v => v && v !== '-')).size;
+    const activeDevices = devices.filter(d => d.status === 'active' || d.status === 'active_session').length;
+    const newDevices = devices.filter(d => d.is_new).length;
+
+    // Create table HTML with summary tiles
     let tableHtml = `
+        <!-- Summary Stats -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div style="background: linear-gradient(135deg, #cc5200 0%, #b34700 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Devices</div>
+                <div style="font-size: 2.5em; font-weight: 700;">${totalDevices.toLocaleString()}</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #e67300 0%, #cc6600 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Active Devices</div>
+                <div style="font-size: 2.5em; font-weight: 700;">${activeDevices.toLocaleString()}</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #ff8c00 0%, #e67d00 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">VLANs Detected</div>
+                <div style="font-size: 2.5em; font-weight: 700;">${uniqueVlans.toLocaleString()}</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #ffa64d 0%, #ff9933 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">New Devices</div>
+                <div style="font-size: 2.5em; font-weight: 700;">${newDevices.toLocaleString()}</div>
+            </div>
+        </div>
+
         <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead>
@@ -827,7 +860,6 @@ function renderConnectedDevicesTable(devices, timestamp) {
         if (device.is_new) {
             // Gradient from orange to transparent for new devices
             rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
-            newBadge = '<span style="background: #ff6600; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; margin-left: 8px;">NEW</span>';
         }
 
         // Determine status display and color
@@ -965,7 +997,6 @@ function filterConnectedDevices(searchTerm) {
         if (device.is_new) {
             // Gradient from orange to transparent for new devices
             rowStyle = `background: linear-gradient(90deg, rgba(255, 102, 0, 0.15) 0%, ${bgColor} 100%); border-bottom: 1px solid #eee; border-left: 4px solid #ff6600;`;
-            newBadge = '<span style="background: #ff6600; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; margin-left: 8px;">NEW</span>';
         }
 
         // Determine status display and color
@@ -1865,6 +1896,7 @@ function initPageNavigation() {
         'site-monitor': document.getElementById('site-monitor-content'),
         'devices': document.getElementById('devices-content'),
         'connected-devices': document.getElementById('connected-devices-content'),
+        'applications': document.getElementById('applications-content'),
         'settings': document.getElementById('settings-content')
     };
 
@@ -1894,6 +1926,8 @@ function initPageNavigation() {
                         loadDevices();
                     } else if (pageKey === 'connected-devices') {
                         loadConnectedDevices();
+                    } else if (pageKey === 'applications') {
+                        loadApplications();
                     } else if (pageKey === 'settings') {
                         loadSettings();
                     }
@@ -1930,6 +1964,804 @@ function initPageNavigation() {
         testConnectionBtn.addEventListener('click', testConnection);
     }
 }
+
+// ============================================================================
+// Applications Page Functions
+// ============================================================================
+
+let applicationsData = [];
+let trafficByCategoryChart = null;
+let applicationsSortColumn = 'total_bytes';
+let applicationsSortDirection = 'desc';
+
+async function loadApplications() {
+    try {
+        // Show loading state
+        document.getElementById('applicationsTableLoading').style.display = 'block';
+        document.getElementById('applicationsTable').style.display = 'none';
+
+        // Get VLAN filter if any
+        const vlanFilter = document.getElementById('applicationsVlanFilter')?.value || '';
+
+        // Fetch applications data
+        const url = vlanFilter ? `/api/applications?vlan=${encodeURIComponent(vlanFilter)}` : '/api/applications';
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            applicationsData = data.applications;
+
+            // Update summary stats
+            document.getElementById('appsTotalApps').textContent = data.total_applications.toLocaleString();
+            document.getElementById('appsTotalSessions').textContent = data.total_sessions.toLocaleString();
+            document.getElementById('appsTotalBytes').textContent = formatBytes(data.total_bytes);
+            document.getElementById('appsVlanCount').textContent = data.vlans.length;
+
+            // Populate VLAN filter dropdown
+            const vlanSelect = document.getElementById('applicationsVlanFilter');
+            vlanSelect.innerHTML = '<option value="">All VLANs</option>';
+            data.vlans.forEach(vlan => {
+                const option = document.createElement('option');
+                option.value = vlan;
+                option.textContent = `VLAN ${vlan}`;
+                if (vlan === vlanFilter) option.selected = true;
+                vlanSelect.appendChild(option);
+            });
+
+            // Populate category filter dropdown
+            const categories = [...new Set(data.applications.map(app => app.category))].sort();
+            const categorySelect = document.getElementById('applicationsCategoryFilter');
+            categorySelect.innerHTML = '<option value="">All Categories</option>';
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                categorySelect.appendChild(option);
+            });
+
+            // Display traffic by category chart
+            displayTrafficByCategoryChart(data.traffic_by_type);
+
+            // Display applications table
+            displayApplicationsTable(applicationsData);
+
+            // Hide loading, show table
+            document.getElementById('applicationsTableLoading').style.display = 'none';
+            document.getElementById('applicationsTable').style.display = 'block';
+        } else {
+            throw new Error(data.message || 'Failed to load applications');
+        }
+    } catch (error) {
+        console.error('Error loading applications:', error);
+        document.getElementById('applicationsTableLoading').style.display = 'none';
+        document.getElementById('applicationsErrorMessage').textContent = 'Error loading applications: ' + error.message;
+        document.getElementById('applicationsErrorMessage').style.display = 'block';
+    }
+}
+
+function displayTrafficByCategoryChart(trafficByType) {
+    const ctx = document.getElementById('trafficByCategoryChart');
+    if (!ctx) return;
+
+    // Destroy existing chart if it exists
+    if (trafficByCategoryChart) {
+        trafficByCategoryChart.destroy();
+    }
+
+    // Prepare data
+    const categories = Object.keys(trafficByType);
+    const bytes = categories.map(cat => trafficByType[cat].total_bytes);
+    const sessions = categories.map(cat => trafficByType[cat].sessions);
+
+    // Generate colors - orange gradient from dark to light
+    const colors = [
+        '#cc5200', '#d96500', '#e67300', '#f28000', '#ff8c00',
+        '#ff9933', '#ffa64d', '#ffb366', '#ffc180', '#ffce99'
+    ];
+
+    trafficByCategoryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: categories.map(cat => cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')),
+            datasets: [{
+                label: 'Traffic Volume (Bytes)',
+                data: bytes,
+                backgroundColor: colors,
+                borderColor: colors,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const index = context.dataIndex;
+                            return [
+                                `Volume: ${formatBytes(bytes[index])}`,
+                                `Sessions: ${sessions[index].toLocaleString()}`,
+                                `Apps: ${trafficByType[categories[index]].app_count}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatBytes(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function displayApplicationsTable(applications) {
+    const container = document.getElementById('applicationsTable');
+
+    if (applications.length === 0) {
+        container.innerHTML = `
+            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+                <p style="color: #999; font-size: 1.2em;">No application traffic data available</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Apply filters and limits
+    const searchTerm = document.getElementById('applicationsSearchInput')?.value.toLowerCase() || '';
+    const categoryFilter = document.getElementById('applicationsCategoryFilter')?.value || '';
+    const limit = parseInt(document.getElementById('applicationsLimit')?.value || '50');
+
+    let filtered = applications;
+
+    // Apply search filter
+    if (searchTerm) {
+        filtered = filtered.filter(app =>
+            app.app.toLowerCase().includes(searchTerm) ||
+            app.category.toLowerCase().includes(searchTerm) ||
+            app.protocols.some(p => p.toLowerCase().includes(searchTerm)) ||
+            app.ports.some(p => p.includes(searchTerm)) ||
+            app.zones_from.some(z => z.toLowerCase().includes(searchTerm)) ||
+            app.zones_to.some(z => z.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    // Apply category filter
+    if (categoryFilter) {
+        filtered = filtered.filter(app => app.category === categoryFilter);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+        let aVal, bVal;
+
+        switch(applicationsSortColumn) {
+            case 'app':
+                aVal = a.app.toLowerCase();
+                bVal = b.app.toLowerCase();
+                break;
+            case 'category':
+                aVal = a.category.toLowerCase();
+                bVal = b.category.toLowerCase();
+                break;
+            case 'sessions':
+                aVal = a.sessions;
+                bVal = b.sessions;
+                break;
+            case 'bytes_sent':
+                aVal = a.bytes_sent;
+                bVal = b.bytes_sent;
+                break;
+            case 'bytes_received':
+                aVal = a.bytes_received;
+                bVal = b.bytes_received;
+                break;
+            case 'total_bytes':
+                aVal = a.total_bytes;
+                bVal = b.total_bytes;
+                break;
+            case 'sources_count':
+                aVal = a.sources_count;
+                bVal = b.sources_count;
+                break;
+            case 'destinations_count':
+                aVal = a.destinations_count;
+                bVal = b.destinations_count;
+                break;
+            case 'protocols':
+                aVal = a.protocols.join(',').toLowerCase();
+                bVal = b.protocols.join(',').toLowerCase();
+                break;
+            case 'ports':
+                aVal = a.ports.join(',');
+                bVal = b.ports.join(',');
+                break;
+            case 'vlans':
+                aVal = a.vlans.join(',');
+                bVal = b.vlans.join(',');
+                break;
+            default:
+                aVal = a.total_bytes;
+                bVal = b.total_bytes;
+        }
+
+        if (typeof aVal === 'string') {
+            return applicationsSortDirection === 'asc'
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        } else {
+            return applicationsSortDirection === 'asc'
+                ? aVal - bVal
+                : bVal - aVal;
+        }
+    });
+
+    // Apply limit
+    const displayedApps = limit === -1 ? filtered : filtered.slice(0, limit);
+
+    let html = `
+        <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <div style="margin-bottom: 20px; color: #666; font-size: 0.95em;">
+                Showing ${displayedApps.length.toLocaleString()} of ${filtered.length.toLocaleString()} applications
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white;">
+                            <th onclick="sortApplicationsTable('app')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Application ${applicationsSortColumn === 'app' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('category')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s; min-width: 150px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Category ${applicationsSortColumn === 'category' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('sessions')" style="padding: 15px; text-align: center; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Sessions ${applicationsSortColumn === 'sessions' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('bytes_sent')" style="padding: 15px; text-align: right; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Bytes Sent ${applicationsSortColumn === 'bytes_sent' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('bytes_received')" style="padding: 15px; text-align: right; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Bytes Received ${applicationsSortColumn === 'bytes_received' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('total_bytes')" style="padding: 15px; text-align: right; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Total Volume ${applicationsSortColumn === 'total_bytes' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('sources_count')" style="padding: 15px; text-align: center; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Sources ${applicationsSortColumn === 'sources_count' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('destinations_count')" style="padding: 15px; text-align: center; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Destinations ${applicationsSortColumn === 'destinations_count' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('protocols')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Protocols ${applicationsSortColumn === 'protocols' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('ports')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                Top Ports ${applicationsSortColumn === 'ports' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                            <th onclick="sortApplicationsTable('vlans')" style="padding: 15px; text-align: left; border-bottom: 2px solid #ff6600; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                VLANs ${applicationsSortColumn === 'vlans' ? (applicationsSortDirection === 'asc' ? '▲' : '▼') : ''}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    displayedApps.forEach((app, index) => {
+        const categoryLabel = app.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        const rowColor = index % 2 === 0 ? '#f9f9f9' : 'white';
+
+        html += `
+            <tr style="background: ${rowColor}; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.background='#fff3e6'" onmouseout="this.style.background='${rowColor}'">
+                <td style="padding: 15px;">
+                    <div style="font-weight: 600; color: #ff6600; margin-bottom: 3px; cursor: pointer; text-decoration: underline;" onclick="showApplicationDetails('${escapeHtml(app.app).replace(/'/g, "\\'")}', ${index})">${escapeHtml(app.app)}</div>
+                </td>
+                <td style="padding: 15px; min-width: 150px;">
+                    <span onclick="showCategoryDestinations('${app.category}', '${escapeHtml(app.app).replace(/'/g, "\\'")}', ${index})" style="background: #ff6600; color: white; padding: 5px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-block; white-space: nowrap;" onmouseover="this.style.background='#ff9933'" onmouseout="this.style.background='#ff6600'">
+                        ${categoryLabel}
+                    </span>
+                </td>
+                <td style="padding: 15px; text-align: center; font-weight: 600; color: #666;">
+                    ${app.sessions.toLocaleString()}
+                </td>
+                <td style="padding: 15px; text-align: right; color: #666;">
+                    ${formatBytes(app.bytes_sent)}
+                </td>
+                <td style="padding: 15px; text-align: right; color: #666;">
+                    ${formatBytes(app.bytes_received)}
+                </td>
+                <td style="padding: 15px; text-align: right; font-weight: 700; color: #ff6600;">
+                    ${formatBytes(app.total_bytes)}
+                </td>
+                <td style="padding: 15px; text-align: center; color: #666;">
+                    ${app.sources_count}
+                </td>
+                <td style="padding: 15px; text-align: center; color: #666;">
+                    ${app.destinations_count}
+                </td>
+                <td style="padding: 15px;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #666;">
+                        ${app.protocols.join(', ')}
+                    </div>
+                </td>
+                <td style="padding: 15px;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #666;">
+                        ${app.ports.slice(0, 5).join(', ')}
+                    </div>
+                </td>
+                <td style="padding: 15px;">
+                    <div style="font-size: 0.85em; color: #666;">
+                        ${app.vlans.length > 0 ? app.vlans.join(', ') : '-'}
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+function sortApplicationsTable(column) {
+    // If clicking the same column, toggle direction
+    if (applicationsSortColumn === column) {
+        applicationsSortDirection = applicationsSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        // New column, default to descending for numeric, ascending for text
+        applicationsSortColumn = column;
+        applicationsSortDirection = ['app', 'category', 'protocols', 'ports', 'vlans'].includes(column) ? 'asc' : 'desc';
+    }
+    displayApplicationsTable(applicationsData);
+}
+
+function applyApplicationsFilters() {
+    displayApplicationsTable(applicationsData);
+}
+
+function exportApplicationsCSV() {
+    if (!applicationsData || applicationsData.length === 0) {
+        alert('No data to export');
+        return;
+    }
+
+    let csv = 'Application,Category,Sessions,Bytes Sent,Bytes Received,Total Volume,Sources,Destinations,Protocols,Top Ports,VLANs\n';
+
+    applicationsData.forEach(app => {
+        csv += `"${app.app}","${app.category}",${app.sessions},${app.bytes_sent},${app.bytes_received},${app.total_bytes},${app.sources_count},${app.destinations_count},"${app.protocols.join(', ')}","${app.ports.join(', ')}","${app.vlans.join(', ')}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `applications_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function exportApplicationsJSON() {
+    if (!applicationsData || applicationsData.length === 0) {
+        alert('No data to export');
+        return;
+    }
+
+    const json = JSON.stringify(applicationsData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `applications_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function showApplicationDetails(appName, index) {
+    // Get the application data from the filtered/displayed list
+    const searchTerm = document.getElementById('applicationsSearchInput')?.value.toLowerCase() || '';
+    const categoryFilter = document.getElementById('applicationsCategoryFilter')?.value || '';
+    const limit = parseInt(document.getElementById('applicationsLimit')?.value || '50');
+
+    let filtered = applicationsData;
+
+    // Apply same filters as table
+    if (searchTerm) {
+        filtered = filtered.filter(app =>
+            app.app.toLowerCase().includes(searchTerm) ||
+            app.category.toLowerCase().includes(searchTerm) ||
+            app.protocols.some(p => p.toLowerCase().includes(searchTerm)) ||
+            app.ports.some(p => p.includes(searchTerm)) ||
+            app.zones_from.some(z => z.toLowerCase().includes(searchTerm)) ||
+            app.zones_to.some(z => z.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    if (categoryFilter) {
+        filtered = filtered.filter(app => app.category === categoryFilter);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+        let aVal, bVal;
+        switch(applicationsSortColumn) {
+            case 'app':
+                aVal = a.app.toLowerCase();
+                bVal = b.app.toLowerCase();
+                break;
+            case 'category':
+                aVal = a.category.toLowerCase();
+                bVal = b.category.toLowerCase();
+                break;
+            case 'sessions':
+                aVal = a.sessions;
+                bVal = b.sessions;
+                break;
+            case 'bytes_sent':
+                aVal = a.bytes_sent;
+                bVal = b.bytes_sent;
+                break;
+            case 'bytes_received':
+                aVal = a.bytes_received;
+                bVal = b.bytes_received;
+                break;
+            case 'total_bytes':
+                aVal = a.total_bytes;
+                bVal = b.total_bytes;
+                break;
+            case 'sources_count':
+                aVal = a.sources_count;
+                bVal = b.sources_count;
+                break;
+            case 'destinations_count':
+                aVal = a.destinations_count;
+                bVal = b.destinations_count;
+                break;
+            default:
+                aVal = a.total_bytes;
+                bVal = b.total_bytes;
+        }
+
+        if (typeof aVal === 'string') {
+            return applicationsSortDirection === 'asc'
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        } else {
+            return applicationsSortDirection === 'asc'
+                ? aVal - bVal
+                : bVal - aVal;
+        }
+    });
+
+    const displayedApps = limit === -1 ? filtered : filtered.slice(0, limit);
+    const app = displayedApps[index];
+
+    if (!app) {
+        console.error('Application not found');
+        return;
+    }
+
+    // Show modal
+    const modal = document.getElementById('appDetailsModal');
+    modal.style.display = 'flex';
+
+    // Set title
+    document.getElementById('appDetailsModalTitle').textContent = app.app;
+    const categoryLabel = app.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    document.getElementById('appDetailsModalSubtitle').textContent = `Category: ${categoryLabel}`;
+
+    // Hide loading, show content
+    document.getElementById('appDetailsLoading').style.display = 'none';
+    document.getElementById('appDetailsContent').style.display = 'block';
+
+    // Update stats
+    document.getElementById('appDetailsSessions').textContent = app.sessions.toLocaleString();
+    document.getElementById('appDetailsTotalBytes').textContent = formatBytes(app.total_bytes);
+    document.getElementById('appDetailsSourcesCount').textContent = app.sources_count;
+    document.getElementById('appDetailsDestsCount').textContent = app.destinations_count;
+
+    // Display source IPs
+    const sourceIPsContainer = document.getElementById('appDetailsSourceIPs');
+    if (app.sources && app.sources.length > 0) {
+        let sourceHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;">';
+        app.sources.forEach(ip => {
+            sourceHTML += `
+                <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #ff6600; font-family: 'Courier New', monospace; font-size: 0.9em; color: #333;">
+                    ${escapeHtml(ip)}
+                </div>
+            `;
+        });
+        sourceHTML += '</div>';
+        sourceIPsContainer.innerHTML = sourceHTML;
+    } else {
+        sourceIPsContainer.innerHTML = '<p style="color: #999; text-align: center;">No source IP data available</p>';
+    }
+
+    // Display other details
+    document.getElementById('appDetailsProtocols').textContent = app.protocols.join(', ') || '-';
+    document.getElementById('appDetailsPorts').textContent = app.ports.join(', ') || '-';
+    document.getElementById('appDetailsVlans').textContent = app.vlans.join(', ') || '-';
+}
+
+function showCategoryDestinations(category, appName, index) {
+    // Get the application data from the filtered/displayed list
+    const searchTerm = document.getElementById('applicationsSearchInput')?.value.toLowerCase() || '';
+    const categoryFilter = document.getElementById('applicationsCategoryFilter')?.value || '';
+    const limit = parseInt(document.getElementById('applicationsLimit')?.value || '50');
+
+    let filtered = applicationsData;
+
+    // Apply same filters as table
+    if (searchTerm) {
+        filtered = filtered.filter(app =>
+            app.app.toLowerCase().includes(searchTerm) ||
+            app.category.toLowerCase().includes(searchTerm) ||
+            app.protocols.some(p => p.toLowerCase().includes(searchTerm)) ||
+            app.ports.some(p => p.includes(searchTerm)) ||
+            app.zones_from.some(z => z.toLowerCase().includes(searchTerm)) ||
+            app.zones_to.some(z => z.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    if (categoryFilter) {
+        filtered = filtered.filter(app => app.category === categoryFilter);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+        let aVal, bVal;
+        switch(applicationsSortColumn) {
+            case 'app':
+                aVal = a.app.toLowerCase();
+                bVal = b.app.toLowerCase();
+                break;
+            case 'category':
+                aVal = a.category.toLowerCase();
+                bVal = b.category.toLowerCase();
+                break;
+            case 'sessions':
+                aVal = a.sessions;
+                bVal = b.sessions;
+                break;
+            case 'bytes_sent':
+                aVal = a.bytes_sent;
+                bVal = b.bytes_sent;
+                break;
+            case 'bytes_received':
+                aVal = a.bytes_received;
+                bVal = b.bytes_received;
+                break;
+            case 'total_bytes':
+                aVal = a.total_bytes;
+                bVal = b.total_bytes;
+                break;
+            case 'sources_count':
+                aVal = a.sources_count;
+                bVal = b.sources_count;
+                break;
+            case 'destinations_count':
+                aVal = a.destinations_count;
+                bVal = b.destinations_count;
+                break;
+            default:
+                aVal = a.total_bytes;
+                bVal = b.total_bytes;
+        }
+
+        if (typeof aVal === 'string') {
+            return applicationsSortDirection === 'asc'
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        } else {
+            return applicationsSortDirection === 'asc'
+                ? aVal - bVal
+                : bVal - aVal;
+        }
+    });
+
+    const displayedApps = limit === -1 ? filtered : filtered.slice(0, limit);
+    const app = displayedApps[index];
+
+    if (!app) {
+        console.error('Application not found');
+        return;
+    }
+
+    // Show modal
+    const modal = document.getElementById('categoryDestinationsModal');
+    modal.style.display = 'flex';
+
+    // Set title
+    const categoryLabel = category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    document.getElementById('categoryDestinationsModalTitle').textContent = `${categoryLabel} - Destinations`;
+    document.getElementById('categoryDestinationsModalSubtitle').textContent = `Traffic destinations for ${app.app}`;
+
+    // Update stats
+    document.getElementById('categoryDestApp').textContent = app.app;
+    document.getElementById('categoryDestCount').textContent = app.destinations_count;
+    document.getElementById('categoryDestVolume').textContent = formatBytes(app.total_bytes);
+
+    // Display destination IPs (with DNS lookup if enabled)
+    const destinationsContainer = document.getElementById('categoryDestinationIPs');
+    if (app.destinations && app.destinations.length > 0) {
+        // Check if DNS lookup is enabled
+        const enableDnsLookup = document.getElementById('enableDnsLookup')?.checked || false;
+
+        if (enableDnsLookup) {
+            // Show loading state
+            destinationsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;"><div style="margin-bottom: 10px;">Performing DNS lookups...</div><div style="font-size: 0.9em;">This may take a moment</div></div>';
+
+            // Perform DNS lookups
+            fetch('/api/dns-lookup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ ips: app.destinations })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    let destHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">';
+                    app.destinations.forEach(ip => {
+                        const lookupResult = data.results[ip];
+                        const hostname = lookupResult?.hostname || ip;
+                        const isResolved = lookupResult?.success || false;
+
+                        destHTML += `
+                            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #10b981; font-family: 'Courier New', monospace; font-size: 0.9em; color: #333; display: flex; flex-direction: column; gap: 5px;">
+                                <div style="font-weight: 600; color: #10b981; word-break: break-all;">${escapeHtml(hostname)}</div>
+                                ${isResolved && hostname !== ip ? `<div style="font-size: 0.8em; color: #999;">${escapeHtml(ip)}</div>` : ''}
+                                <div style="font-size: 0.8em; color: #666;">Port: ${app.ports[0] || 'N/A'}</div>
+                            </div>
+                        `;
+                    });
+                    destHTML += '</div>';
+
+                    if (app.destinations_count > app.destinations.length) {
+                        destHTML += `<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 6px; color: #856404; font-size: 0.9em;">
+                            <strong>Note:</strong> Showing top ${app.destinations.length} of ${app.destinations_count} total destinations
+                        </div>`;
+                    }
+
+                    destinationsContainer.innerHTML = destHTML;
+                } else {
+                    // On error, fall back to showing IPs only
+                    displayDestinationsWithoutDns(app, destinationsContainer);
+                }
+            })
+            .catch(error => {
+                console.error('Error performing DNS lookups:', error);
+                // On error, fall back to showing IPs only
+                displayDestinationsWithoutDns(app, destinationsContainer);
+            });
+        } else {
+            // DNS lookup disabled, show IPs only
+            displayDestinationsWithoutDns(app, destinationsContainer);
+        }
+    } else {
+        destinationsContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No destination data available</p>';
+    }
+}
+
+// Helper function to display destinations without DNS lookup
+function displayDestinationsWithoutDns(app, container) {
+    let destHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">';
+    app.destinations.forEach(ip => {
+        destHTML += `
+            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #10b981; font-family: 'Courier New', monospace; font-size: 0.9em; color: #333; display: flex; flex-direction: column; gap: 5px;">
+                <div style="font-weight: 600; color: #10b981;">${escapeHtml(ip)}</div>
+                <div style="font-size: 0.8em; color: #666;">Port: ${app.ports[0] || 'N/A'}</div>
+            </div>
+        `;
+    });
+    destHTML += '</div>';
+
+    if (app.destinations_count > app.destinations.length) {
+        destHTML += `<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 6px; color: #856404; font-size: 0.9em;">
+            <strong>Note:</strong> Showing top ${app.destinations.length} of ${app.destinations_count} total destinations
+        </div>`;
+    }
+
+    container.innerHTML = destHTML;
+}
+
+// Initialize applications page event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Search input
+    const searchInput = document.getElementById('applicationsSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', applyApplicationsFilters);
+    }
+
+    // VLAN filter
+    const vlanFilter = document.getElementById('applicationsVlanFilter');
+    if (vlanFilter) {
+        vlanFilter.addEventListener('change', loadApplications);
+    }
+
+    // Category filter
+    const categoryFilter = document.getElementById('applicationsCategoryFilter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', applyApplicationsFilters);
+    }
+
+    // Limit selector
+    const limitSelector = document.getElementById('applicationsLimit');
+    if (limitSelector) {
+        limitSelector.addEventListener('change', applyApplicationsFilters);
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshApplicationsBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadApplications);
+    }
+
+    // Export buttons
+    const exportCSVBtn = document.getElementById('exportApplicationsCSV');
+    if (exportCSVBtn) {
+        exportCSVBtn.addEventListener('click', exportApplicationsCSV);
+    }
+
+    const exportJSONBtn = document.getElementById('exportApplicationsJSON');
+    if (exportJSONBtn) {
+        exportJSONBtn.addEventListener('click', exportApplicationsJSON);
+    }
+
+    // App details modal close button
+    const closeAppDetailsBtn = document.getElementById('closeAppDetailsModalBtn');
+    if (closeAppDetailsBtn) {
+        closeAppDetailsBtn.addEventListener('click', function() {
+            document.getElementById('appDetailsModal').style.display = 'none';
+        });
+    }
+
+    // Close modal when clicking outside
+    const appDetailsModal = document.getElementById('appDetailsModal');
+    if (appDetailsModal) {
+        appDetailsModal.addEventListener('click', function(e) {
+            if (e.target === appDetailsModal) {
+                appDetailsModal.style.display = 'none';
+            }
+        });
+    }
+
+    // Category destinations modal close button
+    const closeCategoryDestBtn = document.getElementById('closeCategoryDestinationsModalBtn');
+    if (closeCategoryDestBtn) {
+        closeCategoryDestBtn.addEventListener('click', function() {
+            document.getElementById('categoryDestinationsModal').style.display = 'none';
+        });
+    }
+
+    // Close category destinations modal when clicking outside
+    const categoryDestModal = document.getElementById('categoryDestinationsModal');
+    if (categoryDestModal) {
+        categoryDestModal.addEventListener('click', function(e) {
+            if (e.target === categoryDestModal) {
+                categoryDestModal.style.display = 'none';
+            }
+        });
+    }
+});
 
 // Load policies data
 async function loadPolicies() {
@@ -2562,6 +3394,7 @@ async function loadSettings() {
             document.getElementById('matchCount').value = data.settings.match_count;
             document.getElementById('topAppsCount').value = data.settings.top_apps_count || 5;
             document.getElementById('debugLogging').checked = data.settings.debug_logging || false;
+            document.getElementById('enableDnsLookup').checked = data.settings.enable_dns_lookup || false;
 
             // Display MAC vendor database info if available
             console.log('MAC vendor DB info from settings:', data.settings.mac_vendor_db);
@@ -2588,6 +3421,7 @@ async function saveSettingsData() {
         const matchCount = parseInt(document.getElementById('matchCount').value);
         const topAppsCount = parseInt(document.getElementById('topAppsCount').value);
         const debugLogging = document.getElementById('debugLogging').checked;
+        const enableDnsLookup = document.getElementById('enableDnsLookup').checked;
 
         // Get current settings to preserve selected_device_id and monitored_interface
         const currentSettings = await fetch('/api/settings').then(r => r.json());
@@ -2595,7 +3429,8 @@ async function saveSettingsData() {
             refresh_interval: refreshInterval,
             match_count: matchCount,
             top_apps_count: topAppsCount,
-            debug_logging: debugLogging
+            debug_logging: debugLogging,
+            enable_dns_lookup: enableDnsLookup
         };
 
         // Preserve selected_device_id and monitored_interface from current settings

@@ -98,6 +98,7 @@
         .menu-item:nth-child(7) .menu-icon { background: #ffa64d; }
         .menu-item:nth-child(8) .menu-icon { background: #ffb366; }
         .menu-item:nth-child(9) .menu-icon { background: #ffc180; }
+        .menu-item:nth-child(10) .menu-icon { background: #ffce99; }
 
         .resize-handle {
             position: absolute;
@@ -447,6 +448,10 @@
             <div class="menu-item" data-page="connected-devices">
                 <span class="menu-icon"></span>
                 <span>Connected Devices</span>
+            </div>
+            <div class="menu-item" data-page="applications">
+                <span class="menu-icon"></span>
+                <span>Applications</span>
             </div>
             <div class="menu-item" data-page="policies">
                 <span class="menu-icon"></span>
@@ -924,6 +929,109 @@
             </div>
         </div>
 
+        <!-- Application Details Modal -->
+        <div id="appDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #ff6600; padding-bottom: 15px;">
+                    <div>
+                        <h2 id="appDetailsModalTitle" style="color: #333; margin: 0 0 5px 0;">Application Details</h2>
+                        <p id="appDetailsModalSubtitle" style="color: #666; margin: 0; font-size: 0.9em;">Detailed traffic information</p>
+                    </div>
+                    <button id="closeAppDetailsModalBtn" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1;">&times;</button>
+                </div>
+
+                <div id="appDetailsLoading" style="text-align: center; padding: 40px;">
+                    <div style="margin: 0 auto 20px auto; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #ff6600; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="color: #666;">Loading application details...</p>
+                </div>
+
+                <div id="appDetailsContent" style="display: none;">
+                    <!-- Summary Stats -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                        <div style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); border-radius: 8px; padding: 15px; color: white;">
+                            <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Sessions</div>
+                            <div id="appDetailsSessions" style="font-size: 1.8em; font-weight: 700;">-</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 15px; color: white;">
+                            <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Volume</div>
+                            <div id="appDetailsTotalBytes" style="font-size: 1.8em; font-weight: 700;">-</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px; padding: 15px; color: white;">
+                            <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Source IPs</div>
+                            <div id="appDetailsSourcesCount" style="font-size: 1.8em; font-weight: 700;">-</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 8px; padding: 15px; color: white;">
+                            <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Destinations</div>
+                            <div id="appDetailsDestsCount" style="font-size: 1.8em; font-weight: 700;">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Source IPs Table -->
+                    <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 1.1em;">Source IP Addresses</h3>
+                        <div id="appDetailsSourceIPs" style="max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+
+                    <!-- Additional Details -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #666; font-size: 0.9em; text-transform: uppercase;">Protocols</h4>
+                            <div id="appDetailsProtocols" style="font-family: 'Courier New', monospace; color: #333; font-size: 0.95em;">-</div>
+                        </div>
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #666; font-size: 0.9em; text-transform: uppercase;">Top Ports</h4>
+                            <div id="appDetailsPorts" style="font-family: 'Courier New', monospace; color: #333; font-size: 0.95em;">-</div>
+                        </div>
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #666; font-size: 0.9em; text-transform: uppercase;">VLANs</h4>
+                            <div id="appDetailsVlans" style="font-family: 'Courier New', monospace; color: #333; font-size: 0.95em;">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="appDetailsError" style="display: none; padding: 20px; background: #fee2e2; color: #991b1b; border-radius: 8px; text-align: center;">
+                    Error loading application details
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Destinations Modal -->
+        <div id="categoryDestinationsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #ff6600; padding-bottom: 15px;">
+                    <div>
+                        <h2 id="categoryDestinationsModalTitle" style="color: #333; margin: 0 0 5px 0;">Destination IP Addresses</h2>
+                        <p id="categoryDestinationsModalSubtitle" style="color: #666; margin: 0; font-size: 0.9em;">Traffic destinations</p>
+                    </div>
+                    <button id="closeCategoryDestinationsModalBtn" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1;">&times;</button>
+                </div>
+
+                <div id="categoryDestinationsContent">
+                    <!-- Summary Stats -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                        <div style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); border-radius: 8px; padding: 15px; color: white;">
+                            <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Application</div>
+                            <div id="categoryDestApp" style="font-size: 1.5em; font-weight: 700; word-break: break-word;">-</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 15px; color: white;">
+                            <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Destinations</div>
+                            <div id="categoryDestCount" style="font-size: 1.8em; font-weight: 700;">-</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px; padding: 15px; color: white;">
+                            <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px;">Total Volume</div>
+                            <div id="categoryDestVolume" style="font-size: 1.8em; font-weight: 700;">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Destinations List -->
+                    <div style="background: #f9f9f9; border-radius: 8px; padding: 20px;">
+                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 1.1em;">Destination IP Addresses / Hosts</h3>
+                        <div id="categoryDestinationIPs" style="max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Connected Devices Content -->
         <div id="connected-devices-content" class="page-content" style="display: none;">
             <div class="container">
@@ -995,6 +1103,107 @@
                 </div>
 
                 <div id="connectedDevicesTable"></div>
+            </div>
+        </div>
+
+        <!-- Applications Content -->
+        <div id="applications-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Application Traffic Analysis</h1>
+                    <p style="color: #ff6600; font-size: 0.9em; margin: 0;">Comprehensive application traffic metrics and volume analysis</p>
+                </div>
+
+                <div class="error-message" id="applicationsErrorMessage"></div>
+
+                <!-- Summary Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: linear-gradient(135deg, #cc5200 0%, #b34700 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Applications</div>
+                        <div id="appsTotalApps" style="font-size: 2.5em; font-weight: 700;">-</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #e67300 0%, #cc6600 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Sessions</div>
+                        <div id="appsTotalSessions" style="font-size: 2.5em; font-weight: 700;">-</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #ff8c00 0%, #e67d00 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">Total Traffic Volume</div>
+                        <div id="appsTotalBytes" style="font-size: 2.5em; font-weight: 700;">-</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #ffa64d 0%, #ff9933 100%); border-radius: 10px; padding: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; font-weight: 600;">VLANs Detected</div>
+                        <div id="appsVlanCount" style="font-size: 2.5em; font-weight: 700;">-</div>
+                    </div>
+                </div>
+
+                <!-- Traffic by Type Chart -->
+                <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 4px solid #ff6600;">
+                    <h2 style="color: #333; font-size: 1.3em; font-weight: 600; margin: 0 0 20px 0;">Traffic by Category</h2>
+                    <div style="height: 300px;">
+                        <canvas id="trafficByCategoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Search and Filter Bar -->
+                <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 4px solid #ff6600;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px; font-size: 0.95em;">Search Applications</label>
+                            <input type="text"
+                                id="applicationsSearchInput"
+                                placeholder="Search by name, category, protocol, port, zone..."
+                                style="width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95em; box-sizing: border-box; transition: border-color 0.3s;"
+                                onfocus="this.style.borderColor='#ff6600'"
+                                onblur="this.style.borderColor='#ddd'"
+                            />
+                        </div>
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px; font-size: 0.95em;">Filter by VLAN</label>
+                            <select id="applicationsVlanFilter" style="width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; background: white; color: #333; font-size: 0.95em; cursor: pointer; transition: border-color 0.3s;" onfocus="this.style.borderColor='#ff6600'" onblur="this.style.borderColor='#ddd'">
+                                <option value="">All VLANs</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px; font-size: 0.95em;">Filter by Category</label>
+                            <select id="applicationsCategoryFilter" style="width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; background: white; color: #333; font-size: 0.95em; cursor: pointer; transition: border-color 0.3s;" onfocus="this.style.borderColor='#ff6600'" onblur="this.style.borderColor='#ddd'">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="color: #333; font-weight: 600; font-size: 0.9em;">Show:</label>
+                                <select id="applicationsLimit" style="padding: 10px 15px; border: 2px solid #ddd; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                                    <option value="25">25 apps</option>
+                                    <option value="50" selected>50 apps</option>
+                                    <option value="100">100 apps</option>
+                                    <option value="250">250 apps</option>
+                                    <option value="-1">All apps</option>
+                                </select>
+                            </div>
+                            <button id="refreshApplicationsBtn" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white; border: none; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="exportApplicationsCSV" style="padding: 12px 24px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                📊 Export CSV
+                            </button>
+                            <button id="exportApplicationsJSON" style="padding: 12px 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                📄 Export JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Applications Table -->
+                <div id="applicationsTableLoading" style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="margin: 0 auto 20px auto; width: 60px; height: 60px; border: 5px solid #f3f3f3; border-top: 5px solid #ff6600; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="color: #666; font-size: 1.1em;">Loading application traffic data...</p>
+                </div>
+
+                <div id="applicationsTable" style="display: none;"></div>
             </div>
         </div>
 
@@ -1095,6 +1304,14 @@
                             Enable Debug Logging
                         </label>
                         <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Log detailed API responses and debugging information to debug.log file</p>
+                    </div>
+
+                    <div style="margin-bottom: 30px;">
+                        <label style="display: block; color: #333; font-weight: 600; margin-bottom: 10px; font-size: 1.1em;">
+                            <input type="checkbox" id="enableDnsLookup" style="margin-right: 10px; width: 18px; height: 18px; vertical-align: middle; cursor: pointer;">
+                            Enable DNS Reverse Lookup
+                        </label>
+                        <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Perform reverse DNS lookups on destination IPs (may slow down display)</p>
                     </div>
 
                     <div style="margin-bottom: 30px;">

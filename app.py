@@ -1631,6 +1631,99 @@ def client_apps_api(client_ip):
             'applications': []
         })
 
+@app.route('/api/dns-lookup', methods=['POST'])
+def dns_lookup_api():
+    """API endpoint to perform reverse DNS lookups on IP addresses"""
+    try:
+        data = request.get_json()
+        ip_addresses = data.get('ips', [])
+
+        if not ip_addresses:
+            return jsonify({
+                'status': 'error',
+                'message': 'No IP addresses provided'
+            })
+
+        import socket
+        results = {}
+
+        for ip in ip_addresses:
+            try:
+                # Perform reverse DNS lookup with timeout
+                hostname = socket.gethostbyaddr(ip)[0]
+                results[ip] = {
+                    'hostname': hostname,
+                    'success': True
+                }
+                log_debug(f"DNS lookup for {ip}: {hostname}")
+            except (socket.herror, socket.gaierror, socket.timeout) as e:
+                results[ip] = {
+                    'hostname': ip,  # Fall back to IP if lookup fails
+                    'success': False,
+                    'error': str(e)
+                }
+                log_debug(f"DNS lookup failed for {ip}: {e}")
+            except Exception as e:
+                results[ip] = {
+                    'hostname': ip,
+                    'success': False,
+                    'error': str(e)
+                }
+                log_debug(f"DNS lookup error for {ip}: {e}")
+
+        return jsonify({
+            'status': 'success',
+            'results': results
+        })
+    except Exception as e:
+        log_debug(f"Error in dns_lookup_api: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/applications')
+def applications_api():
+    """
+    API endpoint to get comprehensive application traffic data with VLAN support.
+    Returns all applications with traffic metrics, source IPs, VLANs, and volume stats.
+    """
+    try:
+        log_debug("=== Applications API called ===")
+
+        # Get query parameters
+        max_logs = int(request.args.get('max_logs', 500))
+        vlan_filter = request.args.get('vlan', '')
+
+        log_debug(f"Max logs: {max_logs}, VLAN filter: {vlan_filter}")
+
+        # Get application data with VLAN information
+        app_data = get_all_applications_with_vlans(max_logs=max_logs, vlan_filter=vlan_filter)
+
+        return jsonify({
+            'status': 'success',
+            'applications': app_data['applications'],
+            'vlans': app_data['vlans'],
+            'total_applications': app_data['total_applications'],
+            'total_sessions': app_data['total_sessions'],
+            'total_bytes': app_data['total_bytes'],
+            'traffic_by_type': app_data['traffic_by_type'],
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        log_debug(f"Error in applications_api: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'applications': [],
+            'vlans': [],
+            'traffic_by_type': {}
+        })
+
 # Cache for MAC vendor lookups and database
 mac_vendor_cache = {}
 mac_vendor_database = None
@@ -1867,6 +1960,279 @@ def get_client_applications(client_ip, max_logs=100):
             'applications': [],
             'total_sessions': 0,
             'total_bytes': 0
+        }
+
+def categorize_application(app_name):
+    """
+    Categorize application by type based on common patterns.
+    Returns a category string for grouping similar applications.
+    """
+    app_lower = app_name.lower()
+
+    # Web and browsing
+    if any(x in app_lower for x in ['web', 'http', 'ssl', 'google', 'facebook', 'twitter', 'instagram', 'youtube', 'netflix', 'tiktok']):
+        return 'web-browsing'
+
+    # Collaboration and productivity
+    if any(x in app_lower for x in ['zoom', 'teams', 'slack', 'webex', 'skype', 'office365', 'sharepoint', 'onedrive', 'dropbox', 'box']):
+        return 'collaboration'
+
+    # Email
+    if any(x in app_lower for x in ['smtp', 'imap', 'pop3', 'exchange', 'gmail', 'outlook']):
+        return 'email'
+
+    # Database
+    if any(x in app_lower for x in ['sql', 'mysql', 'postgres', 'oracle', 'mongodb', 'redis', 'database']):
+        return 'database'
+
+    # DNS
+    if 'dns' in app_lower:
+        return 'dns'
+
+    # File transfer
+    if any(x in app_lower for x in ['ftp', 'sftp', 'scp', 'rsync', 'smb', 'cifs', 'nfs']):
+        return 'file-transfer'
+
+    # VPN and remote access
+    if any(x in app_lower for x in ['vpn', 'ssh', 'rdp', 'vnc', 'telnet', 'remote']):
+        return 'remote-access'
+
+    # Messaging and chat
+    if any(x in app_lower for x in ['whatsapp', 'telegram', 'signal', 'discord', 'irc', 'jabber', 'xmpp']):
+        return 'messaging'
+
+    # Streaming media
+    if any(x in app_lower for x in ['spotify', 'pandora', 'apple-music', 'soundcloud', 'twitch', 'hulu', 'prime-video']):
+        return 'streaming-media'
+
+    # Cloud services
+    if any(x in app_lower for x in ['aws', 'azure', 'gcp', 'cloud', 's3', 'icloud']):
+        return 'cloud-services'
+
+    # Gaming
+    if any(x in app_lower for x in ['steam', 'xbox', 'playstation', 'fortnite', 'minecraft', 'game']):
+        return 'gaming'
+
+    # Default
+    return 'other'
+
+def get_all_applications_with_vlans(max_logs=500, vlan_filter=''):
+    """
+    Fetch and aggregate all application traffic with VLAN information.
+    Cross-references traffic logs with connected devices to get VLAN data.
+    Returns comprehensive application statistics grouped by type.
+    """
+    try:
+        _, api_key, base_url = get_firewall_config()
+
+        # Query traffic logs for all traffic
+        log_query = "(subtype eq end)"
+        params = {
+            'type': 'log',
+            'log-type': 'traffic',
+            'query': log_query,
+            'nlogs': str(max_logs),
+            'key': api_key
+        }
+
+        log_debug(f"Querying all application traffic logs (max: {max_logs})")
+        response = api_request_get(base_url, params=params, verify=False, timeout=20)
+        log_debug(f"Application traffic query status: {response.status_code}")
+
+        # Get connected devices for VLAN mapping
+        connected_devices = get_connected_devices()
+        ip_to_vlan = {}
+        for device in connected_devices:
+            if device.get('ip') and device.get('vlan'):
+                ip_to_vlan[device['ip']] = device['vlan']
+
+        log_debug(f"Built IP-to-VLAN mapping with {len(ip_to_vlan)} entries")
+
+        app_stats = {}
+        total_sessions = 0
+        total_bytes = 0
+        vlans_set = set()
+        traffic_by_type = {}
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+
+            # Check if this is a job response (async log query)
+            job_id = root.find('.//job')
+            if job_id is not None and job_id.text:
+                log_debug(f"Job ID received: {job_id.text}, fetching results...")
+
+                # Wait briefly and fetch job results
+                time.sleep(2)
+                result_params = {
+                    'type': 'log',
+                    'action': 'get',
+                    'job-id': job_id.text,
+                    'key': api_key
+                }
+
+                result_response = api_request_get(base_url, params=result_params, verify=False, timeout=20)
+                if result_response.status_code == 200:
+                    root = ET.fromstring(result_response.text)
+
+            # Parse log entries
+            log_entries = root.findall('.//entry')
+            log_debug(f"Found {len(log_entries)} application traffic log entries")
+
+            for entry in log_entries:
+                app = entry.find('app')
+                bytes_sent = entry.find('bytes_sent')
+                bytes_received = entry.find('bytes_received')
+                src = entry.find('src')
+                dst = entry.find('dst')
+                dport = entry.find('dport')
+                sport = entry.find('sport')
+                proto = entry.find('proto')
+                from_zone = entry.find('from')
+                to_zone = entry.find('to')
+
+                app_name = app.text if app is not None else 'unknown'
+                bytes_s = int(bytes_sent.text) if bytes_sent is not None and bytes_sent.text else 0
+                bytes_r = int(bytes_received.text) if bytes_received is not None and bytes_received.text else 0
+                total_bytes_session = bytes_s + bytes_r
+
+                src_ip = src.text if src is not None else ''
+                dst_ip = dst.text if dst is not None else ''
+                dst_port = dport.text if dport is not None else ''
+                src_port = sport.text if sport is not None else ''
+                protocol = proto.text if proto is not None else ''
+                from_zone_text = from_zone.text if from_zone is not None else ''
+                to_zone_text = to_zone.text if to_zone is not None else ''
+
+                # Get VLAN from source IP
+                vlan = ip_to_vlan.get(src_ip, '')
+
+                # Apply VLAN filter if specified
+                if vlan_filter and vlan != vlan_filter:
+                    continue
+
+                if vlan:
+                    vlans_set.add(vlan)
+
+                # Categorize application
+                app_category = categorize_application(app_name)
+
+                # Aggregate by application
+                if app_name not in app_stats:
+                    app_stats[app_name] = {
+                        'app': app_name,
+                        'category': app_category,
+                        'sessions': 0,
+                        'bytes_sent': 0,
+                        'bytes_received': 0,
+                        'total_bytes': 0,
+                        'sources': set(),
+                        'destinations': set(),
+                        'ports': set(),
+                        'protocols': set(),
+                        'vlans': set(),
+                        'zones_from': set(),
+                        'zones_to': set()
+                    }
+
+                app_stats[app_name]['sessions'] += 1
+                app_stats[app_name]['bytes_sent'] += bytes_s
+                app_stats[app_name]['bytes_received'] += bytes_r
+                app_stats[app_name]['total_bytes'] += total_bytes_session
+
+                if src_ip:
+                    app_stats[app_name]['sources'].add(src_ip)
+                if dst_ip:
+                    app_stats[app_name]['destinations'].add(dst_ip)
+                if dst_port:
+                    app_stats[app_name]['ports'].add(dst_port)
+                if protocol:
+                    # Convert protocol number to name
+                    proto_name = protocol
+                    if protocol == '6':
+                        proto_name = 'tcp'
+                    elif protocol == '17':
+                        proto_name = 'udp'
+                    elif protocol == '1':
+                        proto_name = 'icmp'
+                    app_stats[app_name]['protocols'].add(proto_name)
+                if vlan:
+                    app_stats[app_name]['vlans'].add(vlan)
+                if from_zone_text:
+                    app_stats[app_name]['zones_from'].add(from_zone_text)
+                if to_zone_text:
+                    app_stats[app_name]['zones_to'].add(to_zone_text)
+
+                total_sessions += 1
+                total_bytes += total_bytes_session
+
+                # Track traffic by category
+                if app_category not in traffic_by_type:
+                    traffic_by_type[app_category] = {
+                        'sessions': 0,
+                        'total_bytes': 0,
+                        'app_count': 0
+                    }
+                traffic_by_type[app_category]['sessions'] += 1
+                traffic_by_type[app_category]['total_bytes'] += total_bytes_session
+
+        # Convert sets to lists and format data
+        applications = []
+        categories_seen = set()
+
+        for app_name, stats in app_stats.items():
+            categories_seen.add(stats['category'])
+            applications.append({
+                'app': app_name,
+                'category': stats['category'],
+                'sessions': stats['sessions'],
+                'bytes_sent': stats['bytes_sent'],
+                'bytes_received': stats['bytes_received'],
+                'total_bytes': stats['total_bytes'],
+                'sources_count': len(stats['sources']),
+                'sources': sorted(list(stats['sources'])),  # Include full list of source IPs
+                'destinations_count': len(stats['destinations']),
+                'destinations': sorted(list(stats['destinations']))[:20],  # Top 20 destination IPs
+                'ports': sorted(list(stats['ports']), key=lambda x: int(x) if x.isdigit() else 0)[:10],  # Top 10 ports
+                'protocols': list(stats['protocols']),
+                'vlans': sorted(list(stats['vlans'])),
+                'zones_from': list(stats['zones_from']),
+                'zones_to': list(stats['zones_to'])
+            })
+
+        # Sort by total bytes descending
+        applications.sort(key=lambda x: x['total_bytes'], reverse=True)
+
+        # Update app_count for each category
+        for category in categories_seen:
+            if category in traffic_by_type:
+                traffic_by_type[category]['app_count'] = sum(1 for app in applications if app['category'] == category)
+
+        # Sort traffic_by_type by total_bytes
+        traffic_by_type = dict(sorted(traffic_by_type.items(), key=lambda x: x[1]['total_bytes'], reverse=True))
+
+        log_debug(f"Found {len(applications)} unique applications across {len(vlans_set)} VLANs")
+
+        return {
+            'applications': applications,
+            'vlans': sorted(list(vlans_set)),
+            'total_applications': len(applications),
+            'total_sessions': total_sessions,
+            'total_bytes': total_bytes,
+            'traffic_by_type': traffic_by_type
+        }
+
+    except Exception as e:
+        log_debug(f"Error fetching all applications: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return {
+            'applications': [],
+            'vlans': [],
+            'total_applications': 0,
+            'total_sessions': 0,
+            'total_bytes': 0,
+            'traffic_by_type': {}
         }
 
 def get_traffic_logs(max_logs=50):
@@ -2915,6 +3281,11 @@ def settings():
             if not isinstance(debug_logging, bool):
                 debug_logging = str(debug_logging).lower() in ('true', '1', 'yes')
 
+            # Get DNS lookup setting with type validation
+            enable_dns_lookup = new_settings.get('enable_dns_lookup', False)
+            if not isinstance(enable_dns_lookup, bool):
+                enable_dns_lookup = str(enable_dns_lookup).lower() in ('true', '1', 'yes')
+
             # Get selected device ID with validation
             selected_device_id = new_settings.get('selected_device_id', '')
             if not isinstance(selected_device_id, str):
@@ -2929,6 +3300,7 @@ def settings():
                 'match_count': match_count,
                 'top_apps_count': top_apps_count,
                 'debug_logging': debug_logging,
+                'enable_dns_lookup': enable_dns_lookup,
                 'selected_device_id': selected_device_id
             }
 
