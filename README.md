@@ -69,9 +69,8 @@ Access the Settings page to configure:
 - **debug.log**: Debug logging (when enabled)
 
 ## Additional Notes: 
-- This is a POC designed by a human but coded with AI agents. 
-- There is currently no authentication for the project, that will be added later
-- Create a read-only user on the firewall with enough permission to read data.
+- This was a proof-of-concept project to see what could be accomplished using ai agents. 
+- This tool provides real time information to help in troubleshooting of a small amount of firewalls.
 
 ## License
 
