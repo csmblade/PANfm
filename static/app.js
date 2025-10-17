@@ -444,9 +444,9 @@ function updateStats(data) {
         document.getElementById('blockedUrlValue').innerHTML = data.threats.blocked_urls.toLocaleString() + calculateTrend(historicalData.blockedUrls);
 
         // Update threat logs
-        updateThreatLogs('criticalLogs', data.threats.critical_logs, '#dc2626');
-        updateThreatLogs('mediumLogs', data.threats.medium_logs, '#f59e0b');
-        updateThreatLogs('blockedUrlLogs', data.threats.blocked_url_logs, '#2563eb');
+        updateThreatLogs('criticalLogs', data.threats.critical_logs, '#000000');
+        updateThreatLogs('mediumLogs', data.threats.medium_logs, '#000000');
+        updateThreatLogs('blockedUrlLogs', data.threats.blocked_url_logs, '#000000');
 
         // Update sidebar last seen stats
         const sidebarCritical = document.getElementById('sidebarCriticalLastSeen');
