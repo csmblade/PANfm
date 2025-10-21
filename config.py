@@ -31,6 +31,13 @@ def _get_logger():
     from logger import debug, error, warning
     return debug, error, warning
 
+def ensure_settings_file_exists():
+    """Create settings.json if it doesn't exist"""
+    if not os.path.exists(SETTINGS_FILE):
+        # Create with default settings
+        with open(SETTINGS_FILE, 'w') as f:
+            json.dump(DEFAULT_SETTINGS, f, indent=2)
+
 def load_settings():
     """
     Load settings from file or return defaults.
@@ -39,6 +46,9 @@ def load_settings():
     Note: This function does NOT use logging to avoid circular dependencies
     since logger.is_debug_enabled() calls load_settings().
     """
+    # Ensure file exists before loading
+    ensure_settings_file_exists()
+
     try:
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, 'r') as f:

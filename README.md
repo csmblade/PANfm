@@ -29,10 +29,24 @@ A real-time monitoring dashboard for Palo Alto Networks firewalls built with Fla
 
 \`\`\`bash
 git clone <your-repo-url>
-cd palo-alto-monitor
+cd panfm
 \`\`\`
 
-### 2. Run with Docker Compose
+### 2. Run Setup Script
+
+**IMPORTANT**: Run this before starting Docker to avoid file/directory conflicts:
+
+\`\`\`bash
+./setup.sh
+\`\`\`
+
+This creates required files:
+- `settings.json` - Application settings
+- `devices.json` - Device configurations
+- `encryption.key` - Encryption key for sensitive data
+- `data/` - Data directory
+
+### 3. Run with Docker Compose
 
 \`\`\`bash
 # Build and start the container
@@ -45,7 +59,7 @@ docker-compose logs -f
 docker-compose down
 \`\`\`
 
-The application will be available at http://localhost:5000
+The application will be available at http://localhost:3000
 
 ### Development Mode
 

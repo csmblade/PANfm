@@ -23,7 +23,7 @@ class DeviceManager:
         if not os.path.exists(self.devices_file):
             default_data = {
                 "devices": [],
-                "groups": ["Headquarters", "Branch Offices", "DMZ", "Remote Sites"]
+                "groups": ["Headquarters", "Branch Office", "Remote", "Standalone"]
             }
             with open(self.devices_file, 'w') as f:
                 json.dump(default_data, f, indent=2)
