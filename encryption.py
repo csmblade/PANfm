@@ -1,0 +1,235 @@
+"""
+Encryption utilities for PANfm application.
+Provides site-wide encryption for sensitive data including settings and credentials.
+
+Uses Fernet symmetric encryption (AES 128 in CBC mode with HMAC for authentication).
+"""
+
+import os
+import base64
+from cryptography.fernet import Fernet
+
+
+# Encryption key file location
+KEY_FILE = 'encryption.key'
+
+
+def generate_key():
+    """
+    Generate a new encryption key and save it to file.
+    This should only be called once during initial setup.
+
+    Returns:
+        bytes: The generated encryption key
+    """
+    key = Fernet.generate_key()
+
+    try:
+        with open(KEY_FILE, 'wb') as key_file:
+            key_file.write(key)
+    except Exception as e:
+        raise Exception(f"Failed to save encryption key: {e}")
+
+    return key
+
+
+def load_key():
+    """
+    Load the encryption key from file.
+    If the key file doesn't exist, generate a new one.
+
+    Returns:
+        bytes: The encryption key
+    """
+    if not os.path.exists(KEY_FILE):
+        return generate_key()
+
+    try:
+        with open(KEY_FILE, 'rb') as key_file:
+            key = key_file.read()
+        return key
+    except Exception as e:
+        raise Exception(f"Failed to load encryption key: {e}")
+
+
+def get_cipher():
+    """
+    Get a Fernet cipher instance using the loaded key.
+
+    Returns:
+        Fernet: Cipher instance for encryption/decryption
+    """
+    key = load_key()
+    return Fernet(key)
+
+
+def encrypt_string(plaintext):
+    """
+    Encrypt a string value.
+
+    Args:
+        plaintext (str): The string to encrypt
+
+    Returns:
+        str: Base64-encoded encrypted string, or empty string on error
+    """
+    if not plaintext:
+        return ""
+
+    try:
+        cipher = get_cipher()
+        encrypted_bytes = cipher.encrypt(plaintext.encode('utf-8'))
+        encrypted_string = base64.b64encode(encrypted_bytes).decode('utf-8')
+        return encrypted_string
+    except Exception:
+        return ""
+
+
+def decrypt_string(encrypted_text):
+    """
+    Decrypt an encrypted string value.
+
+    Args:
+        encrypted_text (str): Base64-encoded encrypted string
+
+    Returns:
+        str: Decrypted plaintext string, or empty string on error
+    """
+    if not encrypted_text:
+        return ""
+
+    try:
+        cipher = get_cipher()
+        encrypted_bytes = base64.b64decode(encrypted_text.encode('utf-8'))
+        decrypted_bytes = cipher.decrypt(encrypted_bytes)
+        decrypted_string = decrypted_bytes.decode('utf-8')
+        return decrypted_string
+    except Exception:
+        return ""
+
+
+def encrypt_dict(data_dict):
+    """
+    Encrypt all string values in a dictionary (recursive).
+    Non-string values are left unchanged.
+
+    Args:
+        data_dict (dict): Dictionary with values to encrypt
+
+    Returns:
+        dict: Dictionary with encrypted string values
+    """
+    if not isinstance(data_dict, dict):
+        return data_dict
+
+    encrypted_dict = {}
+
+    for key, value in data_dict.items():
+        if isinstance(value, str):
+            encrypted_dict[key] = encrypt_string(value)
+        elif isinstance(value, dict):
+            encrypted_dict[key] = encrypt_dict(value)
+        elif isinstance(value, list):
+            encrypted_dict[key] = [
+                encrypt_dict(item) if isinstance(item, dict)
+                else encrypt_string(item) if isinstance(item, str)
+                else item
+                for item in value
+            ]
+        else:
+            # Numbers, booleans, None, etc. are not encrypted
+            encrypted_dict[key] = value
+
+    return encrypted_dict
+
+
+def decrypt_dict(encrypted_dict):
+    """
+    Decrypt all string values in a dictionary (recursive).
+    Non-string values are left unchanged.
+
+    Args:
+        encrypted_dict (dict): Dictionary with encrypted string values
+
+    Returns:
+        dict: Dictionary with decrypted string values
+    """
+    if not isinstance(encrypted_dict, dict):
+        return encrypted_dict
+
+    decrypted_dict = {}
+
+    for key, value in encrypted_dict.items():
+        if isinstance(value, str):
+            decrypted_dict[key] = decrypt_string(value)
+        elif isinstance(value, dict):
+            decrypted_dict[key] = decrypt_dict(value)
+        elif isinstance(value, list):
+            decrypted_dict[key] = [
+                decrypt_dict(item) if isinstance(item, dict)
+                else decrypt_string(item) if isinstance(item, str)
+                else item
+                for item in value
+            ]
+        else:
+            # Numbers, booleans, None, etc. are not encrypted
+            decrypted_dict[key] = value
+
+    return decrypted_dict
+
+
+def is_encrypted(value):
+    """
+    Check if a string value appears to be encrypted.
+    This is a heuristic check based on the format of Fernet-encrypted data.
+
+    Args:
+        value (str): String to check
+
+    Returns:
+        bool: True if the value appears encrypted, False otherwise
+    """
+    if not isinstance(value, str) or not value:
+        return False
+
+    try:
+        # Encrypted values should be base64-encoded
+        base64.b64decode(value.encode('utf-8'))
+        # Fernet tokens start with 'gAAAAA' after base64 encoding
+        return len(value) > 50  # Encrypted values are typically longer
+    except Exception:
+        return False
+
+
+def migrate_unencrypted_data(data_dict):
+    """
+    Migrate unencrypted data to encrypted format.
+    Only encrypts values that don't appear to be already encrypted.
+
+    Args:
+        data_dict (dict): Dictionary that may contain unencrypted data
+
+    Returns:
+        dict: Dictionary with all string values encrypted
+    """
+    migrated_dict = {}
+
+    for key, value in data_dict.items():
+        if isinstance(value, str):
+            if is_encrypted(value):
+                migrated_dict[key] = value
+            else:
+                migrated_dict[key] = encrypt_string(value)
+        elif isinstance(value, dict):
+            migrated_dict[key] = migrate_unencrypted_data(value)
+        elif isinstance(value, list):
+            migrated_dict[key] = [
+                migrate_unencrypted_data(item) if isinstance(item, dict)
+                else encrypt_string(item) if isinstance(item, str) and not is_encrypted(item)
+                else item
+                for item in value
+            ]
+        else:
+            migrated_dict[key] = value
+
+    return migrated_dict

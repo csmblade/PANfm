@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANfm</title>
+    <!-- Google Fonts: Roboto and Open Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --font-primary: 'Roboto', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            --font-secondary: 'Open Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-secondary);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+        }
+
+        /* Typography - Use Roboto for headings, Open Sans for body */
+        h1, h2, h3, h4, h5, h6,
+        .header h1,
+        .stat-label,
+        .menu-item,
+        button {
+            font-family: var(--font-primary);
+        }
+
+        .sidebar {
+            width: 250px;
+            min-width: 200px;
+            max-width: 400px;
+            background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
+            border-right: 3px solid #FA582D;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: width 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 10px;
+            border-bottom: 2px solid rgba(255, 102, 0, 0.3);
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-logo {
+            width: auto;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .sidebar-subtitle {
+            color: #999;
+            font-size: 0.8em;
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .menu-item {
+            padding: 15px 20px;
+            color: #cccccc;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 102, 0, 0.1);
+            border-left-color: #FA582D;
+            color: #ffffff;
+        }
+
+        .menu-item.active {
+            background: rgba(255, 102, 0, 0.2);
+            border-left-color: #FA582D;
+            color: #FA582D;
+            font-weight: 600;
+        }
+
+        .menu-icon {
+            font-size: 1.2em;
+        }
+
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            cursor: ew-resize;
+            background: transparent;
+            transition: background 0.2s ease;
+        }
+
+        .resize-handle:hover {
+            background: rgba(255, 102, 0, 0.5);
+        }
+
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 15px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: slideUp 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 120px;
+            max-height: 120px;
+            border-left: 4px solid #FA582D;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 102, 0, 0.4);
+            border-left-color: #FF7A55;
+        }
+
+        .stat-icon {
+            font-size: 1.4em;
+            margin-bottom: 5px;
+            opacity: 0.7;
+        }
+
+        .stat-label {
+            font-size: 0.7em;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: clamp(1.2em, 3vw, 1.8em);
+            font-weight: bold;
+            color: #FA582D;
+            margin-bottom: 3px;
+            word-break: break-word;
+            line-height: 1.1;
+        }
+
+        .stat-unit {
+            font-size: 0.7em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .mini-chart {
+            margin-top: auto;
+            height: 30px;
+        }
+
+        .threat-card {
+            height: 280px !important;
+            max-height: 280px !important;
+        }
+
+        .threat-logs-container {
+            margin-top: 8px;
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 200px;
+        }
+
+        .threat-logs-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .threat-logs-container::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .threat-logs-container::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+        }
+
+        .threat-log-table {
+            width: 100%;
+            font-size: 0.7em;
+            border-collapse: separate;
+            border-spacing: 0 3px;
+        }
+
+        .threat-log-table th {
+            text-align: left;
+            padding: 6px 8px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.95);
+            text-transform: uppercase;
+            font-size: 0.75em;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.15);
+        }
+
+        .threat-log-table td {
+            padding: 6px 8px;
+            background: rgba(255,255,255,0.12);
+            border-left: 3px solid;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s ease;
+        }
+
+        .threat-log-table tr:hover td {
+            background: rgba(255,255,255,0.18);
+            transform: translateX(2px);
+        }
+
+        .threat-log-table tr td:first-child {
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+            font-weight: 500;
+        }
+
+        .threat-log-table tr td:last-child {
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+
+        .threat-name {
+            font-weight: 600;
+            color: rgba(255,255,255,0.95);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .threat-src {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: inherit;
+            opacity: 0.9;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .threat-time {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.9em;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            animation: slideUp 0.6s ease-out;
+            border-top: 4px solid #FA582D;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            font-size: 0.85em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: #FA582D;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .settings-tab:hover {
+            background: rgba(250, 88, 45, 0.05) !important;
+            color: #FA582D !important;
+        }
+
+        .settings-tab.active:hover {
+            background: white !important;
+            color: #333 !important;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .stat-value {
+                font-size: 2em;
+            }
+
+            .chart-wrapper {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div style="text-align: center;">
+                <div style="font-size: 2em; font-weight: 700; letter-spacing: 2px;">
+                    <span style="color: #FA582D;">PAN</span><span style="color: #000000;">fm</span>
+                </div>
+                <div style="font-size: 0.7em; color: #FA582D; font-weight: 500; margin-top: 2px; letter-spacing: 1px;">
+                    firewall monitor
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item active" data-page="homepage">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="menu-item" data-page="policies">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Policies</span>
+            </div>
+            <div class="menu-item" data-page="system-logs">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>System Logs</span>
+            </div>
+            <div class="menu-item" data-page="traffic">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Traffic</span>
+            </div>
+            <div class="menu-item" data-page="software-updates">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Software Updates</span>
+            </div>
+            <div class="menu-item" data-page="devices">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Devices</span>
+            </div>
+            <div class="menu-item" data-page="settings">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <!-- Packets Per Second (PPS) -->
+        <div style="padding: 20px 15px; border-top: 1px solid rgba(255, 102, 0, 0.2);">
+            <div style="font-size: 0.75em; color: #FA582D; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Traffic</div>
+            <div style="margin-bottom: 8px;">
+                <div style="color: #999; font-size: 0.7em;">Total PPS</div>
+                <div id="sidebarTotalPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <div style="color: #999; font-size: 0.7em;">Inbound PPS</div>
+                <div id="sidebarInboundPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <div style="color: #999; font-size: 0.7em;">Outbound PPS</div>
+                <div id="sidebarOutboundPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+        </div>
+
+        <!-- Last Seen Stats -->
+        <div style="padding: 20px 15px; border-top: 1px solid rgba(255, 102, 0, 0.2);">
+            <div style="font-size: 0.75em; color: #FA582D; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Last Seen</div>
+            <div style="margin-bottom: 8px;">
+                <div style="color: #999; font-size: 0.7em;">Critical Threat</div>
+                <div id="sidebarCriticalLastSeen" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <div style="color: #999; font-size: 0.7em;">Medium Threat</div>
+                <div id="sidebarMediumLastSeen" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <div style="color: #999; font-size: 0.7em;">Blocked URL</div>
+                <div id="sidebarBlockedUrlLastSeen" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="border-top: 1px solid rgba(255, 102, 0, 0.2); padding-top: 15px;">
+                <div style="color: #999; font-size: 0.7em;">Firewall Uptime</div>
+                <div id="sidebarUptime" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="margin-top: 15px;">
+                <div style="color: #999; font-size: 0.7em;">API Calls</div>
+                <div id="sidebarApiStats" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="margin-top: 15px;">
+                <div style="color: #999; font-size: 0.7em;">Last Updated</div>
+                <div id="sidebarLastUpdate" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+        </div>
+
+        <!-- License Information -->
+        <div style="padding: 20px 15px; border-top: 1px solid rgba(250, 88, 45, 0.2);">
+            <div style="font-size: 0.75em; color: #FA582D; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">License Info</div>
+            <div style="margin-bottom: 8px;">
+                <div style="color: #999; font-size: 0.7em;">Expired</div>
+                <div id="sidebarLicenseExpired" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <div style="color: #999; font-size: 0.7em;">Licensed</div>
+                <div id="sidebarLicenseLicensed" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
+            </div>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+
+        <div class="resize-handle"></div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="status-indicator">
+            <div class="status-dot online" id="statusDot"></div>
+            <span id="statusText">Connected</span>
+
+            <!-- Device Selector -->
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+                <label for="deviceSelector" style="color: #999; font-size: 0.9em; font-weight: 600;">Device:</label>
+                <select id="deviceSelector" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer; min-width: 200px;">
+                    <option value="">Loading devices...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Homepage Content -->
+        <div id="homepage-content" class="page-content">
+            <div class="container">
+        <div class="header" style="text-align: left; margin-bottom: 30px;">
+            <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">
+                Firewall Analytics
+            </h1>
+            <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Real-time monitoring and threat intelligence</p>
+        </div>
+
+        <div id="debugAlert" style="display: none; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); border-left: 5px solid #C44520; border-radius: 8px; color: white; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ⚠️ Debug Logging is Enabled - All API responses are being logged to debug.log
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📥</div>
+                <div class="stat-label">Inbound Traffic</div>
+                <div class="stat-value" id="inboundValue">-</div>
+                <div class="stat-unit">Mbps</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📤</div>
+                <div class="stat-label">Outbound Traffic</div>
+                <div class="stat-value" id="outboundValue">-</div>
+                <div class="stat-unit">Mbps</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-label">Total Traffic</div>
+                <div class="stat-value" id="totalValue">-</div>
+                <div class="stat-unit">Mbps</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔗</div>
+                <div class="stat-label">Active Sessions</div>
+                <div class="stat-value" id="sessionValue">-</div>
+                <div class="stat-unit">sessions</div>
+                <canvas class="mini-chart" id="sessionChart"></canvas>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🌐</div>
+                <div class="stat-label">TCP Sessions</div>
+                <div class="stat-value" id="tcpValue">-</div>
+                <div class="stat-unit">sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📡</div>
+                <div class="stat-label">UDP Sessions</div>
+                <div class="stat-value" id="udpValue">-</div>
+                <div class="stat-unit">sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📶</div>
+                <div class="stat-label">ICMP Sessions</div>
+                <div class="stat-value" id="icmpValue">-</div>
+                <div class="stat-unit">sessions</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #d96500 0%, #a64f00 100%); border-left: 4px solid #ffffff;">
+                <div class="stat-icon">🚨</div>
+                <div class="stat-label" style="color: #ffffff;">Critical Threats</div>
+                <div class="stat-value" style="color: #ffffff;" id="criticalValue">-</div>
+                <div class="stat-unit" style="color: #ffcc99;">last 5 matches</div>
+                <div class="threat-logs-container">
+                    <div id="criticalLogs"></div>
+                </div>
+            </div>
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #e67300 0%, #b35900 100%); border-left: 4px solid #ffffff;">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-label" style="color: #ffffff;">Medium Threats</div>
+                <div class="stat-value" style="color: #ffffff;" id="mediumValue">-</div>
+                <div class="stat-unit" style="color: #ffffff;">last 5 matches</div>
+                <div class="threat-logs-container">
+                    <div id="mediumLogs"></div>
+                </div>
+            </div>
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #ffffff;">
+                <div class="stat-icon">🛡️</div>
+                <div class="stat-label" style="color: #ffffff;">Blocked URLs</div>
+                <div class="stat-value" style="color: #ffffff;" id="blockedUrlValue">-</div>
+                <div class="stat-unit" style="color: #ffffff;">last 5 matches</div>
+                <div class="threat-logs-container">
+                    <div id="blockedUrlLogs"></div>
+                </div>
+            </div>
+
+            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #FA582D;">
+                <div class="stat-icon">📊</div>
+                <div class="stat-label" style="color: #ffffff;">Top Applications</div>
+                <div class="stat-value" style="color: #ffffff;" id="topAppsValue">-</div>
+                <div class="stat-unit" style="color: #ffffff;" id="topAppsUnit">last 5 matches</div>
+                <div class="threat-logs-container">
+                    <div id="topAppsContainer" style="padding: 10px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #ffffff; font-size: 1.5em; font-weight: 700; margin: 0;">Throughput Over Time</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="color: #ffffff; font-weight: 600; font-size: 0.9em;">Interface:</label>
+                    <input type="text" id="monitoredInterfaceInput" placeholder="ethernet1/12" value="ethernet1/12"
+                           style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; font-size: 0.9em; width: 150px;">
+                    <button id="updateInterfaceBtn"
+                            style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer;">
+                        Update
+                    </button>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="throughputChart"></canvas>
+            </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Policies Content -->
+        <div id="policies-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Security Policies</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Policy Hit Counts and Statistics</p>
+                </div>
+
+                <div class="error-message" id="policiesErrorMessage"></div>
+
+                <div id="policiesTable"></div>
+            </div>
+        </div>
+
+        <!-- System Logs Content -->
+        <div id="system-logs-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">System Logs</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Recent System Events and Activities</p>
+                </div>
+
+                <div class="error-message" id="systemLogsErrorMessage"></div>
+
+                <!-- Search Box -->
+                <div style="margin-bottom: 20px;">
+                    <input type="text"
+                        id="systemLogsSearchInput"
+                        placeholder="Search by time, severity, module, event ID, or description..."
+                        style="width: 100%; padding: 12px 15px; border: 2px solid #FA582D; border-radius: 8px; font-size: 0.95em; box-sizing: border-box;"
+                    />
+                </div>
+
+                <!-- Sort and Filter Controls -->
+                <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="color: #ffffff; font-weight: 600;">Sort by:</label>
+                        <select id="systemLogsSortBy" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                            <option value="time">Time (Newest First)</option>
+                            <option value="time-asc">Time (Oldest First)</option>
+                            <option value="severity">Severity (High to Low)</option>
+                            <option value="severity-asc">Severity (Low to High)</option>
+                            <option value="module">Module (A-Z)</option>
+                            <option value="eventid">Event ID</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="color: #ffffff; font-weight: 600;">Filter by Severity:</label>
+                        <select id="systemLogsFilterSeverity" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                            <option value="all">All Severities</option>
+                            <option value="critical">Critical Only</option>
+                            <option value="high">High Only</option>
+                            <option value="medium">Medium Only</option>
+                            <option value="low">Low Only</option>
+                            <option value="informational">Informational Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="systemLogsTable"></div>
+            </div>
+        </div>
+
+        <!-- Traffic Content -->
+        <div id="traffic-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Traffic Logs</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Network Traffic Sessions and Connections</p>
+                </div>
+
+                <div class="error-message" id="trafficLogsErrorMessage"></div>
+
+                <div id="trafficLogsTable"></div>
+            </div>
+        </div>
+
+        <!-- Software Updates Content -->
+        <div id="software-updates-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Software Updates</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">System and Content Version Information</p>
+                </div>
+
+                <div class="error-message" id="softwareErrorMessage"></div>
+
+                <div id="softwareLoading" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div class="spinner" style="margin: 0 auto 20px auto; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #FA582D; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="color: #666; font-size: 1.1em;">Loading software updates...</p>
+                </div>
+
+                <div id="softwareTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+            </div>
+        </div>
+
+        <!-- Settings Content -->
+        <!-- Devices Content -->
+        <div id="devices-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Devices</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Manage Firewall Devices</p>
+                </div>
+
+                <div class="error-message" id="devicesErrorMessage"></div>
+
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #FA582D;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="color: #333; margin: 0;">Firewall Devices</h2>
+                        <button id="addDeviceBtn" style="padding: 12px 24px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                            + Add Device
+                        </button>
+                    </div>
+
+                    <div id="devicesTableContainer">
+                        <table id="devicesTable" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f5f5f5; border-bottom: 2px solid #FA582D;">
+                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Name</th>
+                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
+                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Group</th>
+                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Status</th>
+                                    <th style="padding: 12px; text-align: center; color: #333; font-weight: 600;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="devicesTableBody">
+                                <tr>
+                                    <td colspan="5" style="padding: 40px; text-align: center; color: #999;">
+                                        Loading devices...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Add/Edit Modal -->
+        <div id="deviceModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="deviceModalTitle" style="color: #333; margin: 0;">Add Device</h2>
+                    <button id="closeModalBtn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+                </div>
+
+                <form id="deviceForm">
+                    <input type="hidden" id="deviceId" value="">
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px;">Device Name *</label>
+                        <input type="text" id="deviceName" required style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px;">IP Address *</label>
+                        <input type="text" id="deviceIp" required placeholder="192.168.1.1" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px;">API Key *</label>
+                        <input type="password" id="deviceApiKey" required style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: monospace;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px;">Group</label>
+                        <select id="deviceGroup" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;">
+                            <option value="Default">Default</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px;">Description</label>
+                        <textarea id="deviceDescription" rows="3" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <button type="button" id="testConnectionBtn" style="flex: 1; padding: 12px; background: #666; color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer;">
+                            Test Connection
+                        </button>
+                    </div>
+
+                    <div id="connectionTestResult" style="display: none; padding: 12px; border-radius: 8px; margin-bottom: 20px;"></div>
+
+                    <div style="display: flex; gap: 15px;">
+                        <button type="submit" style="flex: 1; padding: 15px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
+                            Save Device
+                        </button>
+                        <button type="button" id="cancelModalBtn" style="flex: 1; padding: 15px; background: #666; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="settings-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Settings</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Configure Dashboard Parameters</p>
+                </div>
+
+                <div class="error-message" id="settingsErrorMessage"></div>
+
+                <!-- Settings Tabs -->
+                <div style="background: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); overflow: hidden;">
+                    <!-- Tab Headers -->
+                    <div style="display: flex; background: #f5f5f5; border-bottom: 2px solid #FA582D;">
+                        <div class="settings-tab active" data-tab="general" style="flex: 1; padding: 15px 20px; text-align: center; cursor: pointer; font-weight: 600; color: #333; border-bottom: 3px solid #FA582D; background: white; transition: all 0.3s;">
+                            General
+                        </div>
+                        <div class="settings-tab" data-tab="databases" style="flex: 1; padding: 15px 20px; text-align: center; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s;">
+                            Databases
+                        </div>
+                        <div class="settings-tab" data-tab="integrations" style="flex: 1; padding: 15px 20px; text-align: center; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s;">
+                            Integrations
+                        </div>
+                        <div class="settings-tab" data-tab="debug" style="flex: 1; padding: 15px 20px; text-align: center; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s;">
+                            Debug
+                        </div>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div style="padding: 30px; max-width: 800px;">
+                        <!-- General Tab -->
+                        <div id="general-tab" class="settings-tab-content">
+                            <h2 style="color: #333; margin-bottom: 20px; font-size: 1.3em;">General Settings</h2>
+
+                            <div style="margin-bottom: 30px;">
+                                <label style="display: block; color: #333; font-weight: 600; margin-bottom: 10px; font-size: 1.1em;">
+                                    Refresh Interval (seconds)
+                                </label>
+                                <input type="number" id="refreshInterval" min="1" max="60" value="5"
+                                       style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: border-color 0.3s;">
+                                <p style="color: #666; font-size: 0.9em; margin-top: 5px;">How often to update the dashboard data (1-60 seconds)</p>
+                            </div>
+
+                            <div style="margin-bottom: 30px;">
+                                <label style="display: block; color: #333; font-weight: 600; margin-bottom: 10px; font-size: 1.1em;">
+                                    Number of Recent Matches
+                                </label>
+                                <input type="number" id="matchCount" min="1" max="20" value="5"
+                                       style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: border-color 0.3s;">
+                                <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Number of recent threat/URL/log entries to display (1-20)</p>
+                            </div>
+
+                            <div style="margin-bottom: 30px;">
+                                <label style="display: block; color: #333; font-weight: 600; margin-bottom: 10px; font-size: 1.1em;">
+                                    Number of Top Applications
+                                </label>
+                                <input type="number" id="topAppsCount" min="1" max="10" value="5"
+                                       style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: border-color 0.3s;">
+                                <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Number of top applications to display (1-10)</p>
+                            </div>
+                        </div>
+
+                        <!-- Debug Tab -->
+                        <div id="debug-tab" class="settings-tab-content" style="display: none;">
+                            <h2 style="color: #333; margin-bottom: 20px; font-size: 1.3em;">Debug Settings</h2>
+
+                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                                <strong style="color: #856404;">⚠️ Performance Notice</strong>
+                                <p style="color: #856404; margin: 5px 0 0 0; font-size: 0.9em;">Debug logging may impact performance. Enable only when troubleshooting issues.</p>
+                            </div>
+
+                            <div style="margin-bottom: 30px;">
+                                <label style="display: block; color: #333; font-weight: 600; margin-bottom: 10px; font-size: 1.1em;">
+                                    <input type="checkbox" id="debugLogging" style="margin-right: 10px; width: 18px; height: 18px; vertical-align: middle; cursor: pointer;">
+                                    Enable Debug Logging
+                                </label>
+                                <p style="color: #666; font-size: 0.9em; margin-top: 5px;">Log detailed API responses and debugging information to debug.log file</p>
+                            </div>
+
+                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                                <h3 style="color: #333; margin: 0 0 15px 0; font-size: 1.1em;">Log File Information</h3>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">Log File Location</div>
+                                        <div style="color: #333; font-weight: 600; font-family: monospace; font-size: 0.9em;">debug.log</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">Max File Size</div>
+                                        <div style="color: #333; font-weight: 600;">10 MB</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">Backup Files</div>
+                                        <div style="color: #333; font-weight: 600;">5 rotations</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">Total Storage</div>
+                                        <div style="color: #333; font-weight: 600;">~60 MB max</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: #e7f3ff; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px;">
+                                <strong style="color: #0c5460;">💡 Viewing Logs</strong>
+                                <p style="color: #0c5460; margin: 5px 0 0 0; font-size: 0.9em;">Use <code style="background: #fff; padding: 2px 6px; border-radius: 3px;">tail -f debug.log</code> to view logs in real-time</p>
+                            </div>
+                        </div>
+
+                        <!-- Databases Tab -->
+                        <div id="databases-tab" class="settings-tab-content" style="display: none;">
+                            <h2 style="color: #333; margin-bottom: 20px; font-size: 1.3em;">Database Settings</h2>
+
+                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 30px; text-align: center;">
+                                <div style="font-size: 3em; margin-bottom: 15px; opacity: 0.3;">🗄️</div>
+                                <h3 style="color: #666; margin: 0 0 10px 0; font-weight: 600;">Database Configuration</h3>
+                                <p style="color: #999; margin: 0;">Database integration settings will be available in a future release.</p>
+                                <p style="color: #999; margin: 10px 0 0 0; font-size: 0.9em;">Currently, all data is stored in JSON files (settings.json, devices.json)</p>
+                            </div>
+                        </div>
+
+                        <!-- Integrations Tab -->
+                        <div id="integrations-tab" class="settings-tab-content" style="display: none;">
+                            <h2 style="color: #333; margin-bottom: 20px; font-size: 1.3em;">Integration Settings</h2>
+
+                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 30px; text-align: center;">
+                                <div style="font-size: 3em; margin-bottom: 15px; opacity: 0.3;">🔌</div>
+                                <h3 style="color: #666; margin: 0 0 10px 0; font-weight: 600;">Third-Party Integrations</h3>
+                                <p style="color: #999; margin: 0;">Integration settings will be available in a future release.</p>
+                                <p style="color: #999; margin: 10px 0 0 0; font-size: 0.9em;">Planned integrations: SIEM, ticketing systems, alerting platforms</p>
+                            </div>
+                        </div>
+
+                        <!-- Save Buttons (shared across all tabs) -->
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                            <div style="display: flex; gap: 15px;">
+                                <button id="saveSettings"
+                                        style="flex: 1; padding: 15px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                                    Save Settings
+                                </button>
+                                <button id="resetSettings"
+                                        style="flex: 1; padding: 15px; background: #666; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                                    Reset to Defaults
+                                </button>
+                            </div>
+
+                            <div id="settingsSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; color: #155724;">
+                                Settings saved successfully!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

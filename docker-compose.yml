@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  panfm:
+    build: .
+    container_name: panfm
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount the entire project for live development
+      - .:/app
+      # Mount data directory for persistent storage (includes encryption.key)
+      - ./data:/app/data
+      # Persist settings and devices (encrypted)
+      - ./settings.json:/app/settings.json
+      - ./devices.json:/app/devices.json
+      - ./encryption.key:/app/encryption.key
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    restart: unless-stopped
+    # Override CMD for development with auto-reload
+    command: python app.py
