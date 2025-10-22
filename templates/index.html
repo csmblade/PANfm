@@ -1082,10 +1082,77 @@
                         <div id="databases-tab" class="settings-tab-content" style="display: none;">
                             <h2 style="color: #333; margin-bottom: 20px; font-size: 1.3em;">Database Settings</h2>
 
+                            <!-- MAC Vendor Database -->
+                            <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 25px; margin-bottom: 20px;">
+                                <h3 style="color: #333; margin: 0 0 15px 0; font-size: 1.1em; display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 1.3em;">🏷️</span>
+                                    MAC Vendor Database
+                                </h3>
+
+                                <p style="color: #666; margin: 0 0 15px 0; font-size: 0.95em;">
+                                    Upload a MAC vendor database to display manufacturer names alongside MAC addresses in the Connected Devices page.
+                                </p>
+
+                                <div id="vendorDbInfo" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                        <div>
+                                            <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">Status</div>
+                                            <div id="vendorDbStatus" style="color: #333; font-weight: 600;">Loading...</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">Entries</div>
+                                            <div id="vendorDbEntries" style="color: #333; font-weight: 600;">-</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">File Size</div>
+                                            <div id="vendorDbSize" style="color: #333; font-weight: 600;">-</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #666; font-size: 0.85em; margin-bottom: 5px;">Last Updated</div>
+                                            <div id="vendorDbModified" style="color: #333; font-weight: 600;">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="background: #e7f3ff; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                    <strong style="color: #0c5460;">📥 Database Source</strong>
+                                    <p style="color: #0c5460; margin: 10px 0 5px 0; font-size: 0.9em;">Download the latest MAC vendor database from:</p>
+                                    <a href="https://maclookup.app/downloads/json-database" target="_blank" style="color: #2196f3; font-family: monospace; font-size: 0.85em; word-break: break-all;">https://maclookup.app/downloads/json-database</a>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; color: #333; font-weight: 600; margin-bottom: 8px;">Upload Database File (JSON)</label>
+                                    <input type="file"
+                                           id="vendorDbFileInput"
+                                           accept=".json"
+                                           style="display: block; width: 100%; padding: 10px; border: 2px dashed #ddd; border-radius: 6px; background: #f8f9fa; cursor: pointer;"
+                                    />
+                                    <div style="color: #666; font-size: 0.85em; margin-top: 5px;">Select a JSON file containing MAC vendor data</div>
+                                </div>
+
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="uploadVendorDbBtn"
+                                            style="flex: 1; padding: 12px 20px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: transform 0.2s;"
+                                            onmouseover="this.style.transform='scale(1.02)'"
+                                            onmouseout="this.style.transform='scale(1)'">
+                                        Upload Database
+                                    </button>
+                                    <button id="refreshVendorDbInfoBtn"
+                                            style="padding: 12px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: transform 0.2s;"
+                                            onmouseover="this.style.transform='scale(1.02)'"
+                                            onmouseout="this.style.transform='scale(1)'">
+                                        Refresh Info
+                                    </button>
+                                </div>
+
+                                <div id="vendorDbUploadMessage" style="display: none; margin-top: 15px; padding: 12px; border-radius: 6px;"></div>
+                            </div>
+
+                            <!-- Other Database Settings -->
                             <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 30px; text-align: center;">
                                 <div style="font-size: 3em; margin-bottom: 15px; opacity: 0.3;">🗄️</div>
-                                <h3 style="color: #666; margin: 0 0 10px 0; font-weight: 600;">Database Configuration</h3>
-                                <p style="color: #999; margin: 0;">Database integration settings will be available in a future release.</p>
+                                <h3 style="color: #666; margin: 0 0 10px 0; font-weight: 600;">Additional Database Configuration</h3>
+                                <p style="color: #999; margin: 0;">Additional database integration settings will be available in a future release.</p>
                                 <p style="color: #999; margin: 10px 0 0 0; font-size: 0.9em;">Currently, all data is stored in JSON files (settings.json, devices.json)</p>
                             </div>
                         </div>

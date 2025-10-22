@@ -1451,6 +1451,41 @@ def get_license_info():
             }
         }
 
+def lookup_mac_vendor(mac_address):
+    """
+    Lookup vendor name for a MAC address.
+    Returns vendor name or None if not found.
+    """
+    if not mac_address or mac_address == 'N/A':
+        return None
+
+    try:
+        from config import load_vendor_database
+        vendor_db = load_vendor_database()
+
+        if not vendor_db:
+            return None
+
+        # Normalize MAC address (remove colons/dashes, uppercase)
+        mac_clean = mac_address.upper().replace(':', '').replace('-', '')
+
+        # Try matching with progressively shorter prefixes
+        # MA-L: 6 chars (00:00:0C -> 00000C)
+        # MA-M: 7 chars
+        # MA-S: 9 chars
+        for prefix_len in [6, 7, 9]:
+            if len(mac_clean) >= prefix_len:
+                prefix = mac_clean[:prefix_len]
+                if prefix in vendor_db:
+                    return vendor_db[prefix]
+
+        return None
+
+    except Exception as e:
+        debug(f"Error looking up MAC vendor: {str(e)}")
+        return None
+
+
 def get_connected_devices():
     """Fetch ARP entries from all interfaces on the firewall"""
     debug("=== Starting get_connected_devices ===")
@@ -1488,15 +1523,18 @@ def get_connected_devices():
                 port = entry.find('.//port')
 
                 # Extract values with fallbacks
+                mac_address = mac.text if mac is not None and mac.text else 'N/A'
+
                 device_entry = {
                     'hostname': 'N/A',  # ARP table typically doesn't have hostnames
                     'ip': ip.text if ip is not None and ip.text else 'N/A',
-                    'mac': mac.text if mac is not None and mac.text else 'N/A',
+                    'mac': mac_address,
                     'vlan': 'N/A',  # Will be extracted from interface if available
                     'interface': interface.text if interface is not None and interface.text else 'N/A',
                     'ttl': ttl.text if ttl is not None and ttl.text else 'N/A',
                     'status': status.text if status is not None and status.text else 'N/A',
-                    'port': port.text if port is not None and port.text else 'N/A'
+                    'port': port.text if port is not None and port.text else 'N/A',
+                    'vendor': None  # Will be looked up from vendor database
                 }
 
                 # Try to extract VLAN from interface name (e.g., "ethernet1/1.100" -> VLAN 100)
@@ -1507,6 +1545,11 @@ def get_connected_devices():
                             device_entry['vlan'] = vlan_id
                     except:
                         pass
+
+                # Lookup vendor name for MAC address
+                vendor_name = lookup_mac_vendor(mac_address)
+                if vendor_name:
+                    device_entry['vendor'] = vendor_name
 
                 devices.append(device_entry)
 

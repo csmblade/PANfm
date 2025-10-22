@@ -4,7 +4,8 @@ Flask route handlers for the Palo Alto Firewall Dashboard
 from flask import render_template, jsonify, request, send_from_directory
 from datetime import datetime
 import os
-from config import load_settings, save_settings
+import json
+from config import load_settings, save_settings, save_vendor_database, get_vendor_db_info
 from device_manager import device_manager
 from firewall_api import (
     get_throughput_data,
@@ -337,6 +338,101 @@ def register_routes(app):
                 'message': result['message']
             })
         except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @app.route('/api/vendor-db/info', methods=['GET'])
+    def vendor_db_info():
+        """API endpoint to get vendor database information"""
+        debug("=== Vendor DB info endpoint called ===")
+        try:
+            db_info = get_vendor_db_info()
+            return jsonify({
+                'status': 'success',
+                'info': db_info
+            })
+        except Exception as e:
+            error(f"Error getting vendor DB info: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @app.route('/api/vendor-db/upload', methods=['POST'])
+    def vendor_db_upload():
+        """API endpoint to upload vendor database"""
+        debug("=== Vendor DB upload endpoint called ===")
+        try:
+            if 'file' not in request.files:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No file provided'
+                }), 400
+
+            file = request.files['file']
+
+            if file.filename == '':
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No file selected'
+                }), 400
+
+            if not file.filename.endswith('.json'):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'File must be a JSON file'
+                }), 400
+
+            # Read and parse JSON
+            content = file.read().decode('utf-8')
+            vendor_data = json.loads(content)
+
+            # Validate structure
+            if not isinstance(vendor_data, list):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid format: Expected JSON array'
+                }), 400
+
+            if len(vendor_data) == 0:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Database is empty'
+                }), 400
+
+            # Check first entry has required fields
+            first_entry = vendor_data[0]
+            if 'macPrefix' not in first_entry or 'vendorName' not in first_entry:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid format: Entries must have "macPrefix" and "vendorName" fields'
+                }), 400
+
+            # Save to file
+            if save_vendor_database(vendor_data):
+                db_info = get_vendor_db_info()
+                info(f"Vendor database uploaded successfully: {db_info['entries']} entries, {db_info['size_mb']} MB")
+                return jsonify({
+                    'status': 'success',
+                    'message': f'Vendor database uploaded successfully ({db_info["entries"]} entries)',
+                    'info': db_info
+                })
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Failed to save vendor database'
+                }), 500
+
+        except json.JSONDecodeError as e:
+            error(f"Invalid JSON in vendor DB upload: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid JSON format'
+            }), 400
+        except Exception as e:
+            error(f"Error uploading vendor DB: {str(e)}")
             return jsonify({
                 'status': 'error',
                 'message': str(e)

@@ -1558,11 +1558,18 @@ function renderConnectedDevicesTable() {
 
     displayDevices.forEach((device, index) => {
         const rowStyle = index % 2 === 0 ? 'background: #ffffff;' : 'background: #f8f9fa;';
+
+        // Format MAC address cell with vendor name underneath if available
+        let macCell = `<div style="font-family: monospace; color: #333;">${device.mac}</div>`;
+        if (device.vendor) {
+            macCell += `<div style="font-size: 0.85em; color: #666; margin-top: 2px;">${device.vendor}</div>`;
+        }
+
         html += `
             <tr style="${rowStyle} border-bottom: 1px solid #dee2e6;">
                 <td style="padding: 12px 15px; color: #333;">${device.hostname}</td>
                 <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.ip}</td>
-                <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.mac}</td>
+                <td style="padding: 12px 15px;">${macCell}</td>
                 <td style="padding: 12px 15px; color: #333;">${device.vlan}</td>
                 <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.interface}</td>
                 <td style="padding: 12px 15px; color: #333;">${device.ttl}s</td>
@@ -1678,6 +1685,9 @@ async function loadSettings() {
 
             // Monitored interface will be loaded from the selected device in updateDeviceSelector
         }
+
+        // Initialize vendor DB controls
+        initVendorDbControls();
     } catch (error) {
         console.error('Error loading settings:', error);
     }
@@ -1945,6 +1955,120 @@ function initSettingsTabs() {
             }
         });
     });
+}
+
+// Vendor Database Functions
+async function loadVendorDbInfo() {
+    console.log('Loading vendor database info...');
+    try {
+        const response = await fetch('/api/vendor-db/info');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const info = data.info;
+
+            document.getElementById('vendorDbStatus').textContent = info.exists ? '✓ Loaded' : '✗ Not loaded';
+            document.getElementById('vendorDbStatus').style.color = info.exists ? '#28a745' : '#dc3545';
+            document.getElementById('vendorDbEntries').textContent = info.entries.toLocaleString();
+            document.getElementById('vendorDbSize').textContent = `${info.size_mb} MB`;
+            document.getElementById('vendorDbModified').textContent = info.modified;
+        }
+    } catch (error) {
+        console.error('Error loading vendor DB info:', error);
+        document.getElementById('vendorDbStatus').textContent = 'Error';
+        document.getElementById('vendorDbStatus').style.color = '#dc3545';
+    }
+}
+
+async function uploadVendorDb() {
+    const fileInput = document.getElementById('vendorDbFileInput');
+    const messageDiv = document.getElementById('vendorDbUploadMessage');
+    const uploadBtn = document.getElementById('uploadVendorDbBtn');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        messageDiv.textContent = 'Please select a file first';
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#fff3cd';
+        messageDiv.style.color = '#856404';
+        messageDiv.style.border = '1px solid #ffeaa7';
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (!file.name.endsWith('.json')) {
+        messageDiv.textContent = 'File must be a JSON file';
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.border = '1px solid #f5c6cb';
+        return;
+    }
+
+    // Disable button during upload
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/vendor-db/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            messageDiv.textContent = data.message;
+            messageDiv.style.display = 'block';
+            messageDiv.style.background = '#d4edda';
+            messageDiv.style.color = '#155724';
+            messageDiv.style.border = '1px solid #c3e6cb';
+
+            // Refresh info display
+            await loadVendorDbInfo();
+
+            // Clear file input
+            fileInput.value = '';
+        } else {
+            messageDiv.textContent = 'Error: ' + data.message;
+            messageDiv.style.display = 'block';
+            messageDiv.style.background = '#f8d7da';
+            messageDiv.style.color = '#721c24';
+            messageDiv.style.border = '1px solid #f5c6cb';
+        }
+    } catch (error) {
+        console.error('Error uploading vendor DB:', error);
+        messageDiv.textContent = 'Upload failed: ' + error.message;
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.border = '1px solid #f5c6cb';
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload Database';
+    }
+}
+
+function initVendorDbControls() {
+    // Upload button
+    const uploadBtn = document.getElementById('uploadVendorDbBtn');
+    if (uploadBtn && !uploadBtn.hasAttribute('data-listener')) {
+        uploadBtn.addEventListener('click', uploadVendorDb);
+        uploadBtn.setAttribute('data-listener', 'true');
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshVendorDbInfoBtn');
+    if (refreshBtn && !refreshBtn.hasAttribute('data-listener')) {
+        refreshBtn.addEventListener('click', loadVendorDbInfo);
+        refreshBtn.setAttribute('data-listener', 'true');
+    }
+
+    // Load initial info
+    loadVendorDbInfo();
 }
 
 // Start when DOM is ready
