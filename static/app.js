@@ -16,7 +16,9 @@ let chartData = {
 };
 
 let miniChartData = {
-    sessions: []
+    sessions: [],
+    tcp: [],
+    udp: []
 };
 
 // Historical data for trend calculation (last 5 minutes worth of data)
@@ -37,6 +39,8 @@ let historicalData = {
 
 // Mini chart instances
 let sessionChart = null;
+let tcpChart = null;
+let udpChart = null;
 
 // Initialize Chart.js
 const ctx = document.getElementById('throughputChart').getContext('2d');
@@ -250,6 +254,18 @@ function updateStats(data) {
             miniChartData.sessions.shift();
         }
         updateMiniChart(sessionChart, miniChartData.sessions, '#ff6600');
+
+        miniChartData.tcp.push(data.sessions.tcp);
+        if (miniChartData.tcp.length > MAX_MINI_POINTS) {
+            miniChartData.tcp.shift();
+        }
+        updateMiniChart(tcpChart, miniChartData.tcp, '#3b82f6');
+
+        miniChartData.udp.push(data.sessions.udp);
+        if (miniChartData.udp.length > MAX_MINI_POINTS) {
+            miniChartData.udp.shift();
+        }
+        updateMiniChart(udpChart, miniChartData.udp, '#8b5cf6');
     }
 
     // Update CPU metrics and mini charts
@@ -840,6 +856,8 @@ async function init() {
 
     // Initialize mini charts
     sessionChart = createMiniChart('sessionChart', '#ff6600');
+    tcpChart = createMiniChart('tcpChart', '#3b82f6');
+    udpChart = createMiniChart('udpChart', '#8b5cf6');
 
     // Set up interface update button
     const updateInterfaceBtn = document.getElementById('updateInterfaceBtn');
@@ -2341,6 +2359,14 @@ async function onDeviceChange() {
     if (sessionChart) {
         sessionChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         sessionChart.update();
+    }
+    if (tcpChart) {
+        tcpChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        tcpChart.update();
+    }
+    if (udpChart) {
+        udpChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        udpChart.update();
     }
 
     // Clear historical data arrays
