@@ -350,6 +350,31 @@ def get_session_count():
         return {'active': 0, 'tcp': 0, 'udp': 0, 'icmp': 0}
 
 
+def get_device_uptime(device_id):
+    """Fetch uptime for a specific device"""
+    try:
+        firewall_ip, api_key, base_url = get_firewall_config(device_id)
+
+        cmd = "<show><system><info></info></system></show>"
+        params = {
+            'type': 'op',
+            'cmd': cmd,
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=5)
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+            uptime_elem = root.find('.//uptime')
+            if uptime_elem is not None and uptime_elem.text:
+                return uptime_elem.text
+
+        return None
+    except Exception as e:
+        debug(f"Error fetching uptime for device {device_id}: {str(e)}")
+        return None
+
+
 def get_throughput_data():
     """Fetch throughput data from Palo Alto firewall"""
     try:
@@ -555,6 +580,7 @@ __all__ = [
     'get_system_resources',
     'get_interface_stats',
     'get_session_count',
+    'get_device_uptime',
     'get_throughput_data',
     # Re-exported from firewall_api_logs
     'get_system_logs',

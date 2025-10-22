@@ -15,7 +15,8 @@ from firewall_api import (
     get_software_updates,
     get_license_info,
     get_connected_devices,
-    get_firewall_config
+    get_firewall_config,
+    get_device_uptime
 )
 from logger import debug, info, error
 
@@ -197,6 +198,19 @@ def register_routes(app):
         try:
             devices = device_manager.load_devices()
             groups = device_manager.get_groups()
+
+            # Fetch uptime for each enabled device
+            for device in devices:
+                if device.get('enabled', True):
+                    try:
+                        uptime = get_device_uptime(device['id'])
+                        device['uptime'] = uptime if uptime else 'N/A'
+                    except Exception as e:
+                        debug(f"Error fetching uptime for device {device['id']}: {str(e)}")
+                        device['uptime'] = 'N/A'
+                else:
+                    device['uptime'] = 'Disabled'
+
             return jsonify({
                 'status': 'success',
                 'devices': devices,
