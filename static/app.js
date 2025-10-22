@@ -668,8 +668,8 @@ function updateThreatLogs(elementId, logs, borderColor) {
     const thead = document.createElement('thead');
     thead.innerHTML = `
         <tr>
-            <th>Threat/URL</th>
-            <th>Time</th>
+            <th style="width: 60%;">Threat/URL</th>
+            <th style="width: 40%;">Time</th>
         </tr>
     `;
     table.appendChild(thead);
