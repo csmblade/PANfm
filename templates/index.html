@@ -477,6 +477,10 @@
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Dashboard</span>
             </div>
+            <div class="menu-item" data-page="connected-devices">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Connected Devices</span>
+            </div>
             <div class="menu-item" data-page="policies">
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Policies</span>
@@ -694,6 +698,80 @@
             </div>
             </div>
         </div>
+        </div>
+
+        <!-- Connected Devices Content -->
+        <div id="connected-devices-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Connected Devices</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Devices Connected to the Firewall Network</p>
+                </div>
+
+                <div class="error-message" id="connectedDevicesErrorMessage"></div>
+
+                <!-- Search and Filter Bar -->
+                <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 5px; font-size: 0.9em;">General Search</label>
+                            <input type="text"
+                                id="connectedDevicesSearchInput"
+                                placeholder="Search by hostname, IP, MAC, vendor..."
+                                style="width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; transition: border-color 0.3s;"
+                                onfocus="this.style.borderColor='#FA582D'"
+                                onblur="this.style.borderColor='#ddd'"
+                            />
+                        </div>
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 5px; font-size: 0.9em;">VLAN Filter</label>
+                            <select id="connectedDevicesVlanFilter" style="width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 6px; background: white; color: #333; font-size: 0.95em; cursor: pointer; transition: border-color 0.3s;" onfocus="this.style.borderColor='#ff6600'" onblur="this.style.borderColor='#ddd'">
+                                <option value="">All VLANs</option>
+                                <!-- Will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 5px; font-size: 0.9em;">Status Filter</label>
+                            <select id="connectedDevicesStatusFilter" style="width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 6px; background: white; color: #333; font-size: 0.95em; cursor: pointer; transition: border-color 0.3s;" onfocus="this.style.borderColor='#ff6600'" onblur="this.style.borderColor='#ddd'">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="c">Complete</option>
+                                <option value="active_session">Active Session</option>
+                                <option value="learned">Learned</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="color: #333; font-weight: 600; font-size: 0.9em;">Show:</label>
+                                <select id="connectedDevicesLimit" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                                    <option value="10">10 devices</option>
+                                    <option value="25">25 devices</option>
+                                    <option value="50" selected>50 devices</option>
+                                    <option value="100">100 devices</option>
+                                    <option value="250">250 devices</option>
+                                    <option value="500">500 devices</option>
+                                    <option value="-1">All devices</option>
+                                </select>
+                            </div>
+                            <button id="refreshConnectedDevicesBtn" style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #C64620 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Refresh
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="exportDevicesCSV" style="padding: 8px 16px; background: linear-gradient(135deg, #C64620 0%, #AD3D1A 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Export CSV
+                            </button>
+                            <button id="exportDevicesXML" style="padding: 8px 16px; background: linear-gradient(135deg, #AD3D1A 0%, #933414 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                Export XML
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="connectedDevicesTable"></div>
+            </div>
         </div>
 
         <!-- Policies Content -->

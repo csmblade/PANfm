@@ -890,6 +890,7 @@ function initPageNavigation() {
     const menuItems = document.querySelectorAll('.menu-item');
     const pages = {
         'homepage': document.getElementById('homepage-content'),
+        'connected-devices': document.getElementById('connected-devices-content'),
         'policies': document.getElementById('policies-content'),
         'system-logs': document.getElementById('system-logs-content'),
         'traffic': document.getElementById('traffic-content'),
