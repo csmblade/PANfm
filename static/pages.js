@@ -570,6 +570,8 @@ function downloadFile(content, filename, mimeType) {
 // ============================================================================
 
 let allApplications = [];
+let applicationsSortBy = 'bytes'; // Default sort by volume
+let applicationsSortDesc = true;
 
 async function loadApplications() {
     console.log('=== loadApplications called ===');
@@ -592,6 +594,17 @@ async function loadApplications() {
     }
 }
 
+function sortApplications(field) {
+    // Toggle sort direction if clicking the same field
+    if (applicationsSortBy === field) {
+        applicationsSortDesc = !applicationsSortDesc;
+    } else {
+        applicationsSortBy = field;
+        applicationsSortDesc = true; // Default to descending for new field
+    }
+    renderApplicationsTable();
+}
+
 function renderApplicationsTable() {
     const container = document.getElementById('applicationsTable');
     const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
@@ -601,6 +614,22 @@ function renderApplicationsTable() {
     let filtered = allApplications.filter(app =>
         app.name.toLowerCase().includes(searchTerm)
     );
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+        let aVal = a[applicationsSortBy];
+        let bVal = b[applicationsSortBy];
+
+        // For string fields, use locale compare
+        if (typeof aVal === 'string') {
+            return applicationsSortDesc ?
+                bVal.localeCompare(aVal) :
+                aVal.localeCompare(bVal);
+        }
+
+        // For numeric fields
+        return applicationsSortDesc ? bVal - aVal : aVal - bVal;
+    });
 
     // Apply limit
     const displayed = limit === -1 ? filtered : filtered.slice(0, limit);
@@ -614,16 +643,33 @@ function renderApplicationsTable() {
         return;
     }
 
+    const getSortIndicator = (field) => {
+        if (applicationsSortBy === field) {
+            return applicationsSortDesc ? ' ▼' : ' ▲';
+        }
+        return '';
+    };
+
     let html = `
         <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D;">
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="border-bottom: 2px solid #FA582D;">
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Application</th>
-                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Sessions</th>
-                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Data Volume</th>
-                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Source IPs</th>
-                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Destinations</th>
+                        <th onclick="sortApplications('name')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                            Application${getSortIndicator('name')}
+                        </th>
+                        <th onclick="sortApplications('sessions')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                            Sessions${getSortIndicator('sessions')}
+                        </th>
+                        <th onclick="sortApplications('bytes')" style="padding: 12px; text-align: right; color: #FA582D; font-weight: 600; cursor: pointer; user-select: none;">
+                            Total Volume${getSortIndicator('bytes')}
+                        </th>
+                        <th onclick="sortApplications('source_count')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                            Source IPs${getSortIndicator('source_count')}
+                        </th>
+                        <th onclick="sortApplications('dest_count')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                            Destinations${getSortIndicator('dest_count')}
+                        </th>
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Protocols</th>
                         <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Top Ports</th>
                     </tr>
@@ -640,7 +686,7 @@ function renderApplicationsTable() {
             <tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
                 <td style="padding: 12px; color: #333; font-weight: 600;">${app.name}</td>
                 <td style="padding: 12px; color: #666; text-align: right;">${app.sessions.toLocaleString()}</td>
-                <td style="padding: 12px; color: #666; text-align: right;">${bytes}</td>
+                <td style="padding: 12px; color: #FA582D; text-align: right; font-weight: 600;">${bytes}</td>
                 <td style="padding: 12px; color: #666; text-align: right;">${app.source_count}</td>
                 <td style="padding: 12px; color: #666; text-align: right;">${app.dest_count}</td>
                 <td style="padding: 12px; color: #666; font-size: 0.9em;">${protocols}</td>

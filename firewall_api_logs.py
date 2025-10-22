@@ -527,7 +527,10 @@ def get_application_statistics(firewall_config, max_logs=1000):
             app = log.get('app', 'unknown')
             src = log.get('src', '')
             dst = log.get('dst', '')
-            bytes_val = int(log.get('bytes', 0))
+            # Calculate total bytes (sent + received)
+            bytes_sent = int(log.get('bytes_sent', 0))
+            bytes_received = int(log.get('bytes_received', 0))
+            bytes_val = bytes_sent + bytes_received
             proto = log.get('proto', '')
             dport = log.get('dport', '')
 
@@ -564,8 +567,8 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 'ports': list(stats['ports'])[:20]  # Limit to 20
             })
 
-        # Sort by sessions descending
-        result.sort(key=lambda x: x['sessions'], reverse=True)
+        # Sort by bytes (volume) descending by default
+        result.sort(key=lambda x: x['bytes'], reverse=True)
 
         debug(f"Aggregated {len(result)} unique applications")
         return result
