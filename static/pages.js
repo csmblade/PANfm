@@ -572,6 +572,7 @@ function downloadFile(content, filename, mimeType) {
 let allApplications = [];
 let applicationsSortBy = 'bytes'; // Default sort by volume
 let applicationsSortDesc = true;
+let categoryChart = null;
 
 async function loadApplications() {
     console.log('=== loadApplications called ===');
@@ -583,6 +584,20 @@ async function loadApplications() {
 
         if (data.status === 'success') {
             allApplications = data.applications || [];
+
+            // Update summary statistics tiles
+            const summary = data.summary || {};
+            document.getElementById('appStatTotalApps').textContent = summary.total_applications || 0;
+            document.getElementById('appStatTotalSessions').textContent = (summary.total_sessions || 0).toLocaleString();
+            document.getElementById('appStatTotalVolume').textContent = formatBytesHuman(summary.total_bytes || 0);
+            document.getElementById('appStatVlans').textContent = summary.vlans_detected || 0;
+
+            // Populate filter dropdowns
+            populateApplicationFilters();
+
+            // Render Traffic by Category chart
+            renderCategoryChart();
+
             renderApplicationsTable();
             document.getElementById('applicationsCount').textContent = `Total: ${allApplications.length} applications`;
         } else {
@@ -592,6 +607,121 @@ async function loadApplications() {
         console.error('Error loading applications:', error);
         showApplicationsError('Connection error: ' + error.message);
     }
+}
+
+function populateApplicationFilters() {
+    // Get unique VLANs and Categories
+    const vlans = new Set();
+    const categories = new Set();
+
+    allApplications.forEach(app => {
+        if (app.vlans && app.vlans.length > 0) {
+            app.vlans.forEach(vlan => vlans.add(vlan));
+        }
+        if (app.category) {
+            categories.add(app.category);
+        }
+    });
+
+    // Populate VLAN filter
+    const vlanFilter = document.getElementById('applicationsVlanFilter');
+    const currentVlan = vlanFilter.value;
+    vlanFilter.innerHTML = '<option value="">All VLANs</option>';
+    Array.from(vlans).sort().forEach(vlan => {
+        const option = document.createElement('option');
+        option.value = vlan;
+        option.textContent = vlan;
+        vlanFilter.appendChild(option);
+    });
+    vlanFilter.value = currentVlan;
+
+    // Populate Category filter
+    const categoryFilter = document.getElementById('applicationsCategoryFilter');
+    const currentCategory = categoryFilter.value;
+    categoryFilter.innerHTML = '<option value="">All Categories</option>';
+    Array.from(categories).sort().forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categoryFilter.appendChild(option);
+    });
+    categoryFilter.value = currentCategory;
+}
+
+function renderCategoryChart() {
+    // Aggregate traffic by category
+    const categoryData = {};
+    allApplications.forEach(app => {
+        const category = app.category || 'unknown';
+        if (!categoryData[category]) {
+            categoryData[category] = 0;
+        }
+        categoryData[category] += app.bytes;
+    });
+
+    // Convert to sorted array (top 10 categories by volume)
+    const sortedCategories = Object.entries(categoryData)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    const labels = sortedCategories.map(([category]) => category);
+    const dataValues = sortedCategories.map(([, bytes]) => bytes / (1024 * 1024)); // Convert to MB
+
+    // Destroy previous chart if it exists
+    if (categoryChart) {
+        categoryChart.destroy();
+    }
+
+    // Create chart
+    const ctx = document.getElementById('trafficByCategoryChart');
+    categoryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Traffic Volume (MB)',
+                data: dataValues,
+                backgroundColor: 'rgba(250, 88, 45, 0.8)',
+                borderColor: '#FA582D',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Horizontal bar chart
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return formatBytesHuman(context.raw * 1024 * 1024);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(0) + ' MB';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
 }
 
 function sortApplications(field) {
@@ -609,11 +739,28 @@ function renderApplicationsTable() {
     const container = document.getElementById('applicationsTable');
     const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
     const limit = parseInt(document.getElementById('applicationsLimit').value);
+    const vlanFilter = document.getElementById('applicationsVlanFilter').value;
+    const categoryFilter = document.getElementById('applicationsCategoryFilter').value;
 
-    // Filter applications by search term
-    let filtered = allApplications.filter(app =>
-        app.name.toLowerCase().includes(searchTerm)
-    );
+    // Filter applications
+    let filtered = allApplications.filter(app => {
+        // Search filter
+        if (searchTerm && !app.name.toLowerCase().includes(searchTerm)) {
+            return false;
+        }
+
+        // VLAN filter
+        if (vlanFilter && (!app.vlans || !app.vlans.includes(vlanFilter))) {
+            return false;
+        }
+
+        // Category filter
+        if (categoryFilter && app.category !== categoryFilter) {
+            return false;
+        }
+
+        return true;
+    });
 
     // Apply sorting
     filtered.sort((a, b) => {
@@ -651,53 +798,79 @@ function renderApplicationsTable() {
     };
 
     let html = `
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D;">
-            <table style="width: 100%; border-collapse: collapse;">
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 1400px;">
                 <thead>
                     <tr style="border-bottom: 2px solid #FA582D;">
-                        <th onclick="sortApplications('name')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                        <th onclick="sortApplications('name')" style="padding: 10px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
                             Application${getSortIndicator('name')}
                         </th>
-                        <th onclick="sortApplications('category')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                        <th onclick="sortApplications('category')" style="padding: 10px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
                             Category${getSortIndicator('category')}
                         </th>
-                        <th onclick="sortApplications('sessions')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                        <th onclick="sortApplications('sessions')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
                             Sessions${getSortIndicator('sessions')}
                         </th>
-                        <th onclick="sortApplications('bytes')" style="padding: 12px; text-align: right; color: #FA582D; font-weight: 600; cursor: pointer; user-select: none;">
+                        <th onclick="sortApplications('bytes_sent')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                            Bytes Sent${getSortIndicator('bytes_sent')}
+                        </th>
+                        <th onclick="sortApplications('bytes_received')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                            Bytes Received${getSortIndicator('bytes_received')}
+                        </th>
+                        <th onclick="sortApplications('bytes')" style="padding: 10px; text-align: right; color: #FA582D; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
                             Total Volume${getSortIndicator('bytes')}
                         </th>
-                        <th onclick="sortApplications('source_count')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
-                            Source IPs${getSortIndicator('source_count')}
+                        <th onclick="sortApplications('source_count')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                            Sources${getSortIndicator('source_count')}
                         </th>
-                        <th onclick="sortApplications('dest_count')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                        <th onclick="sortApplications('dest_count')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
                             Destinations${getSortIndicator('dest_count')}
                         </th>
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Protocols</th>
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Top Ports</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600; font-size: 0.85em;">Protocols</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600; font-size: 0.85em;">Top Ports</th>
+                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600; font-size: 0.85em;">VLANs</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
 
     displayed.forEach((app, index) => {
-        const bytes = formatBytesHuman(app.bytes);
+        const totalVolume = formatBytesHuman(app.bytes);
+        const bytesSent = formatBytesHuman(app.bytes_sent || 0);
+        const bytesReceived = formatBytesHuman(app.bytes_received || 0);
         const protocols = app.protocols.slice(0, 3).join(', ') || 'N/A';
         const ports = app.ports.slice(0, 5).join(', ') || 'N/A';
+        const vlans = (app.vlans || []).join(', ') || 'N/A';
         const category = app.category || 'unknown';
+
+        // Category badge colors
+        const categoryColors = {
+            'networking': '#3498db',
+            'general-internet': '#2ecc71',
+            'business-systems': '#9b59b6',
+            'cloud-services': '#e74c3c',
+            'other': '#FA582D',
+            'unknown': '#95a5a6'
+        };
+        const categoryColor = categoryColors[category.toLowerCase()] || categoryColors['other'];
 
         html += `
             <tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                <td style="padding: 12px; color: #333; font-weight: 600;">${app.name}</td>
-                <td onclick="showAppDestinations(${index})" style="padding: 12px; color: #FA582D; font-weight: 600; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#C64620'" onmouseout="this.style.color='#FA582D'">
-                    ${category}
+                <td style="padding: 10px; color: #333; font-weight: 600; font-size: 0.9em;">${app.name}</td>
+                <td onclick="showAppDestinations(${index})" style="padding: 10px; cursor: pointer;">
+                    <span style="background: ${categoryColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; display: inline-block; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                        ${category}
+                    </span>
                 </td>
-                <td style="padding: 12px; color: #666; text-align: right;">${app.sessions.toLocaleString()}</td>
-                <td style="padding: 12px; color: #FA582D; text-align: right; font-weight: 600;">${bytes}</td>
-                <td style="padding: 12px; color: #666; text-align: right;">${app.source_count}</td>
-                <td style="padding: 12px; color: #666; text-align: right;">${app.dest_count}</td>
-                <td style="padding: 12px; color: #666; font-size: 0.9em;">${protocols}</td>
-                <td style="padding: 12px; color: #666; font-size: 0.9em; font-family: monospace;">${ports}</td>
+                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${app.sessions.toLocaleString()}</td>
+                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${bytesSent}</td>
+                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${bytesReceived}</td>
+                <td style="padding: 10px; color: #FA582D; text-align: right; font-weight: 600; font-size: 0.9em;">${totalVolume}</td>
+                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${app.source_count}</td>
+                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${app.dest_count}</td>
+                <td style="padding: 10px; color: #666; font-size: 0.85em;">${protocols}</td>
+                <td style="padding: 10px; color: #666; font-size: 0.85em; font-family: monospace;">${ports}</td>
+                <td style="padding: 10px; color: #666; font-size: 0.85em;">${vlans}</td>
             </tr>
         `;
     });
@@ -728,10 +901,104 @@ function showApplicationsError(message) {
     }, 5000);
 }
 
+function exportApplicationsCSV() {
+    // Get filtered applications (same logic as table rendering)
+    const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
+    const vlanFilter = document.getElementById('applicationsVlanFilter').value;
+    const categoryFilter = document.getElementById('applicationsCategoryFilter').value;
+
+    let filtered = allApplications.filter(app => {
+        if (searchTerm && !app.name.toLowerCase().includes(searchTerm)) return false;
+        if (vlanFilter && (!app.vlans || !app.vlans.includes(vlanFilter))) return false;
+        if (categoryFilter && app.category !== categoryFilter) return false;
+        return true;
+    });
+
+    // CSV Headers
+    const headers = ['Application', 'Category', 'Sessions', 'Bytes Sent', 'Bytes Received', 'Total Volume', 'Sources', 'Destinations', 'Protocols', 'Top Ports', 'VLANs'];
+    let csv = headers.join(',') + '\n';
+
+    // CSV Rows
+    filtered.forEach(app => {
+        const row = [
+            `"${app.name}"`,
+            `"${app.category || 'unknown'}"`,
+            app.sessions,
+            app.bytes_sent || 0,
+            app.bytes_received || 0,
+            app.bytes,
+            app.source_count,
+            app.dest_count,
+            `"${(app.protocols || []).join(', ')}"`,
+            `"${(app.ports || []).slice(0, 5).join(', ')}"`,
+            `"${(app.vlans || []).join(', ')}"`
+        ];
+        csv += row.join(',') + '\n';
+    });
+
+    // Download file
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `applications-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function exportApplicationsJSON() {
+    // Get filtered applications (same logic as table rendering)
+    const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
+    const vlanFilter = document.getElementById('applicationsVlanFilter').value;
+    const categoryFilter = document.getElementById('applicationsCategoryFilter').value;
+
+    let filtered = allApplications.filter(app => {
+        if (searchTerm && !app.name.toLowerCase().includes(searchTerm)) return false;
+        if (vlanFilter && (!app.vlans || !app.vlans.includes(vlanFilter))) return false;
+        if (categoryFilter && app.category !== categoryFilter) return false;
+        return true;
+    });
+
+    // Create JSON export data
+    const exportData = {
+        export_date: new Date().toISOString(),
+        total_applications: filtered.length,
+        applications: filtered.map(app => ({
+            name: app.name,
+            category: app.category || 'unknown',
+            sessions: app.sessions,
+            bytes_sent: app.bytes_sent || 0,
+            bytes_received: app.bytes_received || 0,
+            total_bytes: app.bytes,
+            source_count: app.source_count,
+            dest_count: app.dest_count,
+            protocols: app.protocols || [],
+            top_ports: (app.ports || []).slice(0, 10),
+            vlans: app.vlans || []
+        }))
+    };
+
+    // Download file
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `applications-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
 // Event listeners for Applications page
 function setupApplicationsEventListeners() {
     const searchInput = document.getElementById('applicationsSearchInput');
     const limitSelect = document.getElementById('applicationsLimit');
+    const vlanFilter = document.getElementById('applicationsVlanFilter');
+    const categoryFilter = document.getElementById('applicationsCategoryFilter');
     const refreshBtn = document.getElementById('refreshApplicationsBtn');
 
     if (searchInput) {
@@ -746,10 +1013,34 @@ function setupApplicationsEventListeners() {
         });
     }
 
+    if (vlanFilter) {
+        vlanFilter.addEventListener('change', () => {
+            renderApplicationsTable();
+        });
+    }
+
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            renderApplicationsTable();
+        });
+    }
+
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             loadApplications();
         });
+    }
+
+    // Export buttons
+    const exportCSVBtn = document.getElementById('exportAppsCSVBtn');
+    const exportJSONBtn = document.getElementById('exportAppsJSONBtn');
+
+    if (exportCSVBtn) {
+        exportCSVBtn.addEventListener('click', exportApplicationsCSV);
+    }
+
+    if (exportJSONBtn) {
+        exportJSONBtn.addEventListener('click', exportApplicationsJSON);
     }
 
     // Modal close button

@@ -136,11 +136,14 @@ def register_routes(app):
         try:
             firewall_config = get_firewall_config()
             max_logs = request.args.get('max_logs', 1000, type=int)
-            applications = get_application_statistics(firewall_config, max_logs)
+            data = get_application_statistics(firewall_config, max_logs)
+            applications = data.get('applications', [])
+            summary = data.get('summary', {})
             debug(f"Retrieved {len(applications)} applications from firewall")
             return jsonify({
                 'status': 'success',
                 'applications': applications,
+                'summary': summary,
                 'total': len(applications),
                 'timestamp': datetime.now().isoformat()
             })
@@ -150,6 +153,12 @@ def register_routes(app):
                 'status': 'error',
                 'message': str(e),
                 'applications': [],
+                'summary': {
+                    'total_applications': 0,
+                    'total_sessions': 0,
+                    'total_bytes': 0,
+                    'vlans_detected': 0
+                },
                 'total': 0
             })
 

@@ -516,6 +516,7 @@ def get_application_statistics(firewall_config, max_logs=1000):
     """
     Fetch application statistics from traffic logs
     Returns aggregated data by application name with sessions, bytes, source IPs, destinations, etc.
+    Also returns summary statistics for the dashboard
     """
     debug("=== get_application_statistics called ===")
     try:
@@ -524,6 +525,9 @@ def get_application_statistics(firewall_config, max_logs=1000):
 
         # Aggregate by application
         app_stats = {}
+        total_sessions = 0
+        total_bytes = 0
+        vlans = set()
 
         for log in traffic_logs:
             app = log.get('app', 'unknown')
@@ -536,6 +540,18 @@ def get_application_statistics(firewall_config, max_logs=1000):
             bytes_val = bytes_sent + bytes_received
             proto = log.get('proto', '')
             dport = log.get('dport', '')
+            from_zone = log.get('from_zone', '')
+            to_zone = log.get('to_zone', '')
+
+            # Track VLANs from zones if they contain VLAN information
+            if from_zone:
+                vlans.add(from_zone)
+            if to_zone:
+                vlans.add(to_zone)
+
+            # Update summary totals
+            total_sessions += 1
+            total_bytes += bytes_val
 
             if app not in app_stats:
                 app_stats[app] = {
@@ -543,15 +559,20 @@ def get_application_statistics(firewall_config, max_logs=1000):
                     'category': category,
                     'sessions': 0,
                     'bytes': 0,
+                    'bytes_sent': 0,
+                    'bytes_received': 0,
                     'source_ips': set(),
                     'dest_ips': set(),
                     'dest_details': {},  # Track bytes per destination
                     'protocols': set(),
-                    'ports': set()
+                    'ports': set(),
+                    'vlans': set()
                 }
 
             app_stats[app]['sessions'] += 1
             app_stats[app]['bytes'] += bytes_val
+            app_stats[app]['bytes_sent'] += bytes_sent
+            app_stats[app]['bytes_received'] += bytes_received
             if src: app_stats[app]['source_ips'].add(src)
             if dst:
                 app_stats[app]['dest_ips'].add(dst)
@@ -566,6 +587,8 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 app_stats[app]['dest_details'][dest_key]['bytes'] += bytes_val
             if proto: app_stats[app]['protocols'].add(proto)
             if dport: app_stats[app]['ports'].add(dport)
+            if from_zone: app_stats[app]['vlans'].add(from_zone)
+            if to_zone: app_stats[app]['vlans'].add(to_zone)
 
         # Convert sets to lists and format result
         result = []
@@ -586,21 +609,42 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 'category': stats['category'],
                 'sessions': stats['sessions'],
                 'bytes': stats['bytes'],
+                'bytes_sent': stats['bytes_sent'],
+                'bytes_received': stats['bytes_received'],
                 'source_count': len(stats['source_ips']),
                 'dest_count': len(stats['dest_ips']),
                 'source_ips': list(stats['source_ips'])[:50],  # Limit to 50
                 'dest_ips': list(stats['dest_ips'])[:50],
                 'destinations': dest_list[:50],  # Top 50 destinations with details
                 'protocols': list(stats['protocols']),
-                'ports': list(stats['ports'])[:20]  # Limit to 20
+                'ports': list(stats['ports'])[:20],  # Limit to 20
+                'vlans': list(stats['vlans'])
             })
 
         # Sort by bytes (volume) descending by default
         result.sort(key=lambda x: x['bytes'], reverse=True)
 
         debug(f"Aggregated {len(result)} unique applications")
-        return result
+
+        # Return both applications list and summary statistics
+        return {
+            'applications': result,
+            'summary': {
+                'total_applications': len(result),
+                'total_sessions': total_sessions,
+                'total_bytes': total_bytes,
+                'vlans_detected': len(vlans)
+            }
+        }
 
     except Exception as e:
         exception(f"Error getting application statistics: {str(e)}")
-        return []
+        return {
+            'applications': [],
+            'summary': {
+                'total_applications': 0,
+                'total_sessions': 0,
+                'total_bytes': 0,
+                'vlans_detected': 0
+            }
+        }
