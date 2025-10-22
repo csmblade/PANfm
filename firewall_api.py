@@ -20,7 +20,8 @@ from firewall_api_logs import (
     get_system_logs,
     get_threat_stats,
     get_traffic_logs,
-    get_top_applications
+    get_top_applications,
+    get_application_statistics
 )
 from firewall_api_policies import get_policy_hit_counts
 from firewall_api_devices import (

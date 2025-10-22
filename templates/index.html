@@ -492,6 +492,10 @@
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Connected Devices</span>
             </div>
+            <div class="menu-item" data-page="applications">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Applications</span>
+            </div>
             <div class="menu-item" data-page="device-info">
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Device Info</span>
@@ -769,6 +773,52 @@
                 </div>
 
                 <div id="connectedDevicesTable"></div>
+            </div>
+        </div>
+
+        <!-- Applications Content -->
+        <div id="applications-content" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="header" style="text-align: left; margin-bottom: 30px;">
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Applications</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Application Traffic Analysis and Statistics</p>
+                </div>
+
+                <div class="error-message" id="applicationsErrorMessage"></div>
+
+                <!-- Search and Filter Bar -->
+                <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 5px; font-size: 0.9em;">Search Applications</label>
+                            <input type="text"
+                                id="applicationsSearchInput"
+                                placeholder="Search by application name..."
+                                style="width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; transition: border-color 0.3s;"
+                                onfocus="this.style.borderColor='#FA582D'"
+                                onblur="this.style.borderColor='#ddd'"
+                            />
+                        </div>
+                        <div>
+                            <label style="display: block; color: #333; font-weight: 600; margin-bottom: 5px; font-size: 0.9em;">Show:</label>
+                            <select id="applicationsLimit" style="width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 6px; background: white; color: #333; font-size: 0.95em; cursor: pointer;">
+                                <option value="25">25 applications</option>
+                                <option value="50" selected>50 applications</option>
+                                <option value="100">100 applications</option>
+                                <option value="250">250 applications</option>
+                                <option value="-1">All applications</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <button id="refreshApplicationsBtn" style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #C64620 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            Refresh
+                        </button>
+                        <span style="color: #666; font-size: 0.9em;" id="applicationsCount">Loading...</span>
+                    </div>
+                </div>
+
+                <div id="applicationsTable"></div>
             </div>
         </div>
 

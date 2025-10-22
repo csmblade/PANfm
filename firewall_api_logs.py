@@ -508,3 +508,68 @@ def get_top_applications(firewall_config, top_count=5):
     except Exception as e:
         debug(f"Top applications error: {str(e)}")
         return {'apps': [], 'total_count': 0}
+
+
+def get_application_statistics(firewall_config, max_logs=1000):
+    """
+    Fetch application statistics from traffic logs
+    Returns aggregated data by application name with sessions, bytes, source IPs, destinations, etc.
+    """
+    debug("=== get_application_statistics called ===")
+    try:
+        traffic_logs = get_traffic_logs(firewall_config, max_logs)
+        debug(f"Retrieved {len(traffic_logs)} traffic logs for application analysis")
+
+        # Aggregate by application
+        app_stats = {}
+
+        for log in traffic_logs:
+            app = log.get('app', 'unknown')
+            src = log.get('src', '')
+            dst = log.get('dst', '')
+            bytes_val = int(log.get('bytes', 0))
+            proto = log.get('proto', '')
+            dport = log.get('dport', '')
+
+            if app not in app_stats:
+                app_stats[app] = {
+                    'name': app,
+                    'sessions': 0,
+                    'bytes': 0,
+                    'source_ips': set(),
+                    'dest_ips': set(),
+                    'protocols': set(),
+                    'ports': set()
+                }
+
+            app_stats[app]['sessions'] += 1
+            app_stats[app]['bytes'] += bytes_val
+            if src: app_stats[app]['source_ips'].add(src)
+            if dst: app_stats[app]['dest_ips'].add(dst)
+            if proto: app_stats[app]['protocols'].add(proto)
+            if dport: app_stats[app]['ports'].add(dport)
+
+        # Convert sets to lists and format result
+        result = []
+        for app_name, stats in app_stats.items():
+            result.append({
+                'name': app_name,
+                'sessions': stats['sessions'],
+                'bytes': stats['bytes'],
+                'source_count': len(stats['source_ips']),
+                'dest_count': len(stats['dest_ips']),
+                'source_ips': list(stats['source_ips'])[:50],  # Limit to 50
+                'dest_ips': list(stats['dest_ips'])[:50],
+                'protocols': list(stats['protocols']),
+                'ports': list(stats['ports'])[:20]  # Limit to 20
+            })
+
+        # Sort by sessions descending
+        result.sort(key=lambda x: x['sessions'], reverse=True)
+
+        debug(f"Aggregated {len(result)} unique applications")
+        return result
+
+    except Exception as e:
+        exception(f"Error getting application statistics: {str(e)}")
+        return []

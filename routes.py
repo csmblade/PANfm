@@ -16,7 +16,8 @@ from firewall_api import (
     get_license_info,
     get_connected_devices,
     get_firewall_config,
-    get_device_uptime
+    get_device_uptime,
+    get_application_statistics
 )
 from logger import debug, info, error
 
@@ -125,6 +126,30 @@ def register_routes(app):
                 'status': 'error',
                 'message': str(e),
                 'devices': [],
+                'total': 0
+            })
+
+    @app.route('/api/applications')
+    def applications_api():
+        """API endpoint for application statistics"""
+        debug("=== Applications API endpoint called ===")
+        try:
+            firewall_config = get_firewall_config()
+            max_logs = request.args.get('max_logs', 1000, type=int)
+            applications = get_application_statistics(firewall_config, max_logs)
+            debug(f"Retrieved {len(applications)} applications from firewall")
+            return jsonify({
+                'status': 'success',
+                'applications': applications,
+                'total': len(applications),
+                'timestamp': datetime.now().isoformat()
+            })
+        except Exception as e:
+            error(f"Error in applications API: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e),
+                'applications': [],
                 'total': 0
             })
 

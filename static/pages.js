@@ -565,3 +565,138 @@ function downloadFile(content, filename, mimeType) {
     URL.revokeObjectURL(url);
 }
 
+// ============================================================================
+// Applications Page Functions
+// ============================================================================
+
+let allApplications = [];
+
+async function loadApplications() {
+    console.log('=== loadApplications called ===');
+    try {
+        const response = await fetch('/api/applications?max_logs=1000');
+        const data = await response.json();
+
+        console.log('Applications API response:', data);
+
+        if (data.status === 'success') {
+            allApplications = data.applications || [];
+            renderApplicationsTable();
+            document.getElementById('applicationsCount').textContent = `Total: ${allApplications.length} applications`;
+        } else {
+            showApplicationsError(data.message || 'Failed to load applications');
+        }
+    } catch (error) {
+        console.error('Error loading applications:', error);
+        showApplicationsError('Connection error: ' + error.message);
+    }
+}
+
+function renderApplicationsTable() {
+    const container = document.getElementById('applicationsTable');
+    const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
+    const limit = parseInt(document.getElementById('applicationsLimit').value);
+
+    // Filter applications by search term
+    let filtered = allApplications.filter(app =>
+        app.name.toLowerCase().includes(searchTerm)
+    );
+
+    // Apply limit
+    const displayed = limit === -1 ? filtered : filtered.slice(0, limit);
+
+    if (displayed.length === 0) {
+        container.innerHTML = `
+            <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <p style="color: #999; font-size: 1.1em;">No applications found</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #FA582D;">
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Application</th>
+                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Sessions</th>
+                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Data Volume</th>
+                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Source IPs</th>
+                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Destinations</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Protocols</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Top Ports</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    displayed.forEach(app => {
+        const bytes = formatBytesHuman(app.bytes);
+        const protocols = app.protocols.slice(0, 3).join(', ') || 'N/A';
+        const ports = app.ports.slice(0, 5).join(', ') || 'N/A';
+
+        html += `
+            <tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
+                <td style="padding: 12px; color: #333; font-weight: 600;">${app.name}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${app.sessions.toLocaleString()}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${bytes}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${app.source_count}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${app.dest_count}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.9em;">${protocols}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.9em; font-family: monospace;">${ports}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+function formatBytesHuman(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function showApplicationsError(message) {
+    const errorDiv = document.getElementById('applicationsErrorMessage');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
+}
+
+// Event listeners for Applications page
+function setupApplicationsEventListeners() {
+    const searchInput = document.getElementById('applicationsSearchInput');
+    const limitSelect = document.getElementById('applicationsLimit');
+    const refreshBtn = document.getElementById('refreshApplicationsBtn');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            renderApplicationsTable();
+        });
+    }
+
+    if (limitSelect) {
+        limitSelect.addEventListener('change', () => {
+            renderApplicationsTable();
+        });
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            loadApplications();
+        });
+    }
+}
+

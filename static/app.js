@@ -666,6 +666,7 @@ function initPageNavigation() {
     const pages = {
         'homepage': document.getElementById('homepage-content'),
         'connected-devices': document.getElementById('connected-devices-content'),
+        'applications': document.getElementById('applications-content'),
         'device-info': document.getElementById('device-info-content'),
         'logs': document.getElementById('logs-content'),
         'devices': document.getElementById('devices-content'),
@@ -689,6 +690,9 @@ function initPageNavigation() {
                         loadPolicies();
                     } else if (pageKey === 'connected-devices') {
                         loadConnectedDevices();
+                    } else if (pageKey === 'applications') {
+                        loadApplications();
+                        setupApplicationsEventListeners();
                     } else if (pageKey === 'logs') {
                         // Load system logs by default (first tab)
                         loadSystemLogs();
