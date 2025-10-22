@@ -892,8 +892,7 @@ function initPageNavigation() {
         'homepage': document.getElementById('homepage-content'),
         'connected-devices': document.getElementById('connected-devices-content'),
         'policies': document.getElementById('policies-content'),
-        'system-logs': document.getElementById('system-logs-content'),
-        'traffic': document.getElementById('traffic-content'),
+        'logs': document.getElementById('logs-content'),
         'software-updates': document.getElementById('software-updates-content'),
         'devices': document.getElementById('devices-content'),
         'settings': document.getElementById('settings-content')
@@ -915,10 +914,9 @@ function initPageNavigation() {
                         loadPolicies();
                     } else if (pageKey === 'connected-devices') {
                         loadConnectedDevices();
-                    } else if (pageKey === 'system-logs') {
+                    } else if (pageKey === 'logs') {
+                        // Load system logs by default (first tab)
                         loadSystemLogs();
-                    } else if (pageKey === 'traffic') {
-                        updateTrafficPage();
                     } else if (pageKey === 'software-updates') {
                         loadSoftwareUpdates();
                     } else if (pageKey === 'devices') {
@@ -957,6 +955,40 @@ function initPageNavigation() {
     const testConnectionBtn = document.getElementById('testConnectionBtn');
     if (testConnectionBtn) {
         testConnectionBtn.addEventListener('click', testConnection);
+    }
+
+    // Logs page tab switching
+    const logsTabs = document.querySelectorAll('.logs-tab');
+    if (logsTabs.length > 0) {
+        logsTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+
+                // Update active tab styling
+                logsTabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.style.color = 'rgba(255, 255, 255, 0.6)';
+                    t.style.borderBottom = '3px solid transparent';
+                });
+                tab.classList.add('active');
+                tab.style.color = '#FA582D';
+                tab.style.borderBottom = '3px solid #FA582D';
+
+                // Show target tab content, hide others
+                const systemLogsTab = document.getElementById('system-logs-tab');
+                const trafficLogsTab = document.getElementById('traffic-logs-tab');
+
+                if (targetTab === 'system-logs') {
+                    systemLogsTab.style.display = 'block';
+                    trafficLogsTab.style.display = 'none';
+                    loadSystemLogs();
+                } else if (targetTab === 'traffic-logs') {
+                    systemLogsTab.style.display = 'none';
+                    trafficLogsTab.style.display = 'block';
+                    updateTrafficPage();
+                }
+            });
+        });
     }
 }
 

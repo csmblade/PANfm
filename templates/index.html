@@ -485,13 +485,9 @@
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Policies</span>
             </div>
-            <div class="menu-item" data-page="system-logs">
+            <div class="menu-item" data-page="logs">
                 <span class="menu-icon" style="color: #FA582D;">●</span>
-                <span>System Logs</span>
-            </div>
-            <div class="menu-item" data-page="traffic">
-                <span class="menu-icon" style="color: #FA582D;">●</span>
-                <span>Traffic</span>
+                <span>Logs</span>
             </div>
             <div class="menu-item" data-page="software-updates">
                 <span class="menu-icon" style="color: #FA582D;">●</span>
@@ -781,67 +777,72 @@
             </div>
         </div>
 
-        <!-- System Logs Content -->
-        <div id="system-logs-content" class="page-content" style="display: none;">
+        <!-- Logs Content (Combined System and Traffic Logs) -->
+        <div id="logs-content" class="page-content" style="display: none;">
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
-                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">System Logs</h1>
-                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Recent System Events and Activities</p>
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Logs</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">System Events and Network Traffic Logs</p>
                 </div>
 
-                <div class="error-message" id="systemLogsErrorMessage"></div>
-
-                <!-- Search Box -->
-                <div style="margin-bottom: 20px;">
-                    <input type="text"
-                        id="systemLogsSearchInput"
-                        placeholder="Search by time, severity, module, event ID, or description..."
-                        style="width: 100%; padding: 12px 15px; border: 2px solid #FA582D; border-radius: 8px; font-size: 0.95em; box-sizing: border-box;"
-                    />
+                <!-- Tab Navigation -->
+                <div style="display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid rgba(250, 88, 45, 0.3);">
+                    <button class="logs-tab active" data-tab="system-logs" style="padding: 12px 24px; background: transparent; border: none; color: #FA582D; font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid #FA582D; transition: all 0.3s;">
+                        System Logs
+                    </button>
+                    <button class="logs-tab" data-tab="traffic-logs" style="padding: 12px 24px; background: transparent; border: none; color: rgba(255, 255, 255, 0.6); font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
+                        Traffic Logs
+                    </button>
                 </div>
 
-                <!-- Sort and Filter Controls -->
-                <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="color: #ffffff; font-weight: 600;">Sort by:</label>
-                        <select id="systemLogsSortBy" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
-                            <option value="time">Time (Newest First)</option>
-                            <option value="time-asc">Time (Oldest First)</option>
-                            <option value="severity">Severity (High to Low)</option>
-                            <option value="severity-asc">Severity (Low to High)</option>
-                            <option value="module">Module (A-Z)</option>
-                            <option value="eventid">Event ID</option>
-                        </select>
+                <!-- System Logs Tab Content -->
+                <div id="system-logs-tab" class="logs-tab-content">
+                    <div class="error-message" id="systemLogsErrorMessage"></div>
+
+                    <!-- Search Box -->
+                    <div style="margin-bottom: 20px;">
+                        <input type="text"
+                            id="systemLogsSearchInput"
+                            placeholder="Search by time, severity, module, event ID, or description..."
+                            style="width: 100%; padding: 12px 15px; border: 2px solid #FA582D; border-radius: 8px; font-size: 0.95em; box-sizing: border-box;"
+                        />
                     </div>
 
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="color: #ffffff; font-weight: 600;">Filter by Severity:</label>
-                        <select id="systemLogsFilterSeverity" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
-                            <option value="all">All Severities</option>
-                            <option value="critical">Critical Only</option>
-                            <option value="high">High Only</option>
-                            <option value="medium">Medium Only</option>
-                            <option value="low">Low Only</option>
-                            <option value="informational">Informational Only</option>
-                        </select>
+                    <!-- Sort and Filter Controls -->
+                    <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label style="color: #ffffff; font-weight: 600;">Sort by:</label>
+                            <select id="systemLogsSortBy" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                                <option value="time">Time (Newest First)</option>
+                                <option value="time-asc">Time (Oldest First)</option>
+                                <option value="severity">Severity (High to Low)</option>
+                                <option value="severity-asc">Severity (Low to High)</option>
+                                <option value="module">Module (A-Z)</option>
+                                <option value="eventid">Event ID</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label style="color: #ffffff; font-weight: 600;">Filter by Severity:</label>
+                            <select id="systemLogsFilterSeverity" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; background: white; color: #333; font-size: 0.9em; cursor: pointer;">
+                                <option value="all">All Severities</option>
+                                <option value="critical">Critical Only</option>
+                                <option value="high">High Only</option>
+                                <option value="medium">Medium Only</option>
+                                <option value="low">Low Only</option>
+                                <option value="informational">Informational Only</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <div id="systemLogsTable"></div>
                 </div>
 
-                <div id="systemLogsTable"></div>
-            </div>
-        </div>
-
-        <!-- Traffic Content -->
-        <div id="traffic-content" class="page-content" style="display: none;">
-            <div class="container">
-                <div class="header" style="text-align: left; margin-bottom: 30px;">
-                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Traffic Logs</h1>
-                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Network Traffic Sessions and Connections</p>
+                <!-- Traffic Logs Tab Content -->
+                <div id="traffic-logs-tab" class="logs-tab-content" style="display: none;">
+                    <div class="error-message" id="trafficLogsErrorMessage"></div>
+                    <div id="trafficLogsTable"></div>
                 </div>
-
-                <div class="error-message" id="trafficLogsErrorMessage"></div>
-
-                <div id="trafficLogsTable"></div>
             </div>
         </div>
 
