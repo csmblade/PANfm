@@ -1,0 +1,567 @@
+/**
+ * pages.js - Page-Specific Functions Module
+ *
+ * Handles page-specific functionality including:
+ * - Policies page (load, display, format)
+ * - Software updates page
+ * - Connected devices page
+ * - Export functionality (CSV, XML)
+ */
+
+// Load policies data
+async function loadPolicies() {
+    try {
+        const response = await fetch('/api/policies');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            displayPolicies(data.policies);
+        } else {
+            showPoliciesError(data.message || 'Failed to load policies');
+        }
+    } catch (error) {
+        console.error('Error loading policies:', error);
+        showPoliciesError('Connection error: ' + error.message);
+    }
+}
+
+// Display policies in a table
+function displayPolicies(policies) {
+    const container = document.getElementById('policiesTable');
+
+    if (policies.length === 0) {
+        container.innerHTML = '<div style="color: white; padding: 20px; text-align: center;">No policies found</div>';
+        return;
+    }
+
+    let html = `
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ff6600;">
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Policy Name</th>
+                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Hit Count</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">First Hit</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Latest Hit</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    policies.forEach((policy, index) => {
+        const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+        const hitCountColor = policy.hit_count > 1000 ? '#ff6600' : '#333';
+
+        // Show trend indicator if available
+        let trendIcon = '';
+        if (policy.trend) {
+            if (policy.trend === 'up') {
+                trendIcon = '<span style="color: #ff6600; margin-left: 5px;">▲</span>';
+            } else if (policy.trend === 'down') {
+                trendIcon = '<span style="color: #28a745; margin-left: 5px;">▼</span>';
+            } else {
+                trendIcon = '<span style="color: #999; margin-left: 5px;">━</span>';
+            }
+        }
+
+        html += `
+            <tr style="background: ${bgColor}; border-bottom: 1px solid #eee;">
+                <td style="padding: 12px; color: #333; font-weight: 500;">${policy.name}</td>
+                <td style="padding: 12px; text-align: right; color: ${hitCountColor}; font-weight: 600; font-size: 1.1em;">${policy.hit_count.toLocaleString()}${trendIcon}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.9em;">${formatTimestamp(policy.first_hit)}</td>
+                <td style="padding: 12px; color: #666; font-size: 0.9em;">${formatTimestamp(policy.latest_hit)}</td>
+                <td style="padding: 12px; color: #666;">${policy.type}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+function formatTimestamp(timestamp) {
+    if (!timestamp || timestamp === 'Never' || timestamp === 'N/A') return 'N/A';
+    try {
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) {
+            return 'N/A';
+        }
+        return date.toLocaleString();
+    } catch (e) {
+        return 'N/A';
+    }
+}
+
+function formatDaysAgo(timestamp) {
+    if (!timestamp || timestamp === 'N/A') {
+        return 'Never';
+    }
+
+    try {
+        // Parse the timestamp - Palo Alto format is typically YYYY/MM/DD HH:MM:SS
+        const dateStr = timestamp.replace(/\//g, '-');
+        const date = new Date(dateStr);
+
+        if (isNaN(date.getTime())) {
+            return 'Never';
+        }
+
+        const now = new Date();
+        const diffMs = now - date;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+        if (diffDays > 0) {
+            return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+        } else if (diffHours > 0) {
+            return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+        } else if (diffMinutes > 0) {
+            return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+        } else {
+            return 'Just now';
+        }
+    } catch (e) {
+        return 'Never';
+    }
+}
+
+function showPoliciesError(message) {
+    const errorDiv = document.getElementById('policiesErrorMessage');
+    errorDiv.textContent = `Error: ${message}`;
+    errorDiv.style.display = 'block';
+
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
+}
+
+// Sort system logs based on criteria
+function sortSystemLogs(logs, sortBy) {
+    const severityOrder = {
+        'critical': 4,
+        'high': 3,
+        'medium': 2,
+        'low': 1,
+        'informational': 0
+    };
+
+    return logs.sort((a, b) => {
+        switch(sortBy) {
+            case 'time':
+                // Newest first
+                return new Date(b.time) - new Date(a.time);
+
+            case 'time-asc':
+                // Oldest first
+                return new Date(a.time) - new Date(b.time);
+
+            case 'severity':
+                // High to Low
+                const severityA = severityOrder[a.severity.toLowerCase()] || 0;
+                const severityB = severityOrder[b.severity.toLowerCase()] || 0;
+                return severityB - severityA;
+
+            case 'severity-asc':
+                // Low to High
+                const severityA2 = severityOrder[a.severity.toLowerCase()] || 0;
+                const severityB2 = severityOrder[b.severity.toLowerCase()] || 0;
+                return severityA2 - severityB2;
+
+            case 'module':
+                // Module A-Z
+                return (a.module || '').localeCompare(b.module || '');
+
+            case 'eventid':
+                // Event ID numeric
+                return (a.eventid || '').localeCompare(b.eventid || '');
+
+            default:
+                return 0;
+        }
+    });
+}
+
+// Load system logs data
+// Load software updates data
+async function loadSoftwareUpdates() {
+    const loadingDiv = document.getElementById('softwareLoading');
+    const tableDiv = document.getElementById('softwareTable');
+    const errorDiv = document.getElementById('softwareErrorMessage');
+
+    // Show loading animation
+    loadingDiv.style.display = 'block';
+    tableDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/software-updates');
+        const data = await response.json();
+
+        // Hide loading animation
+        loadingDiv.style.display = 'none';
+        tableDiv.style.display = 'block';
+
+        if (data.status === 'success' && data.software.length > 0) {
+            errorDiv.style.display = 'none';
+
+            // Create table HTML
+            let tableHtml = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white;">
+                            <th style="padding: 15px; text-align: left; font-size: 1.1em;">Component</th>
+                            <th style="padding: 15px; text-align: left; font-size: 1.1em;">Version</th>
+                            <th style="padding: 15px; text-align: center; font-size: 1.1em;">Downloaded</th>
+                            <th style="padding: 15px; text-align: center; font-size: 1.1em;">Current</th>
+                            <th style="padding: 15px; text-align: center; font-size: 1.1em;">Latest</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            // Add rows for each software component
+            data.software.forEach((item, index) => {
+                const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+                tableHtml += `
+                    <tr style="background: ${bgColor}; border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 15px; font-weight: 600; color: #333;">${item.name}</td>
+                        <td style="padding: 15px; color: #666; font-family: monospace;">${item.version}</td>
+                        <td style="padding: 15px; text-align: center; color: ${item.downloaded === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.downloaded}</td>
+                        <td style="padding: 15px; text-align: center; color: ${item.current === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.current}</td>
+                        <td style="padding: 15px; text-align: center; color: ${item.latest === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.latest}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em;">
+                    Last updated: ${new Date(data.timestamp).toLocaleString()}
+                </div>
+            `;
+
+            tableDiv.innerHTML = tableHtml;
+        } else {
+            errorDiv.textContent = data.message || 'No software version information available';
+            errorDiv.style.display = 'block';
+            tableDiv.innerHTML = '';
+        }
+    } catch (error) {
+        console.error('Error loading software updates:', error);
+        loadingDiv.style.display = 'none';
+        tableDiv.style.display = 'none';
+        errorDiv.textContent = 'Failed to load software updates: ' + error.message;
+        errorDiv.style.display = 'block';
+    }
+}
+
+// Connected Devices functionality
+let allConnectedDevices = [];
+let connectedDevicesMetadata = {};
+
+async function loadConnectedDevices() {
+    console.log('Loading connected devices...');
+    try {
+        const response = await fetch('/api/connected-devices');
+        const data = await response.json();
+
+        const tableDiv = document.getElementById('connectedDevicesTable');
+        const errorDiv = document.getElementById('connectedDevicesErrorMessage');
+
+        if (data.status === 'success' && data.devices.length > 0) {
+            errorDiv.style.display = 'none';
+
+            // Store devices for filtering/searching
+            allConnectedDevices = data.devices;
+            connectedDevicesMetadata = {
+                total: data.total,
+                timestamp: data.timestamp
+            };
+
+            console.log(`Loaded ${data.devices.length} connected devices`);
+
+            // Set up event listeners
+            setupConnectedDevicesEventListeners();
+
+            // Render the table
+            renderConnectedDevicesTable();
+        } else {
+            errorDiv.textContent = data.message || 'No connected devices found';
+            errorDiv.style.display = 'block';
+            tableDiv.innerHTML = '';
+        }
+    } catch (error) {
+        console.error('Error loading connected devices:', error);
+        document.getElementById('connectedDevicesErrorMessage').textContent = 'Failed to load connected devices: ' + error.message;
+        document.getElementById('connectedDevicesErrorMessage').style.display = 'block';
+    }
+}
+
+function setupConnectedDevicesEventListeners() {
+    // Search input
+    const searchInput = document.getElementById('connectedDevicesSearchInput');
+    if (searchInput && !searchInput.hasAttribute('data-listener')) {
+        searchInput.addEventListener('input', () => renderConnectedDevicesTable());
+        searchInput.setAttribute('data-listener', 'true');
+    }
+
+    // VLAN filter
+    const vlanFilter = document.getElementById('connectedDevicesVlanFilter');
+    if (vlanFilter && !vlanFilter.hasAttribute('data-listener')) {
+        vlanFilter.addEventListener('change', () => renderConnectedDevicesTable());
+        vlanFilter.setAttribute('data-listener', 'true');
+    }
+
+    // Status filter
+    const statusFilter = document.getElementById('connectedDevicesStatusFilter');
+    if (statusFilter && !statusFilter.hasAttribute('data-listener')) {
+        statusFilter.addEventListener('change', () => renderConnectedDevicesTable());
+        statusFilter.setAttribute('data-listener', 'true');
+    }
+
+    // Limit selector
+    const limitSelect = document.getElementById('connectedDevicesLimit');
+    if (limitSelect && !limitSelect.hasAttribute('data-listener')) {
+        limitSelect.addEventListener('change', () => renderConnectedDevicesTable());
+        limitSelect.setAttribute('data-listener', 'true');
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshConnectedDevicesBtn');
+    if (refreshBtn && !refreshBtn.hasAttribute('data-listener')) {
+        refreshBtn.addEventListener('click', () => loadConnectedDevices());
+        refreshBtn.setAttribute('data-listener', 'true');
+    }
+
+    // Export buttons
+    const exportCSVBtn = document.getElementById('exportDevicesCSV');
+    if (exportCSVBtn && !exportCSVBtn.hasAttribute('data-listener')) {
+        exportCSVBtn.addEventListener('click', () => exportDevices('csv'));
+        exportCSVBtn.setAttribute('data-listener', 'true');
+    }
+
+    const exportXMLBtn = document.getElementById('exportDevicesXML');
+    if (exportXMLBtn && !exportXMLBtn.hasAttribute('data-listener')) {
+        exportXMLBtn.addEventListener('click', () => exportDevices('xml'));
+        exportXMLBtn.setAttribute('data-listener', 'true');
+    }
+
+    // Populate VLAN filter with unique VLANs
+    populateVLANFilter();
+}
+
+function populateVLANFilter() {
+    const vlanFilter = document.getElementById('connectedDevicesVlanFilter');
+    if (!vlanFilter) return;
+
+    // Get unique VLANs
+    const vlans = new Set();
+    allConnectedDevices.forEach(device => {
+        if (device.vlan && device.vlan !== 'N/A') {
+            vlans.add(device.vlan);
+        }
+    });
+
+    // Clear existing options (except "All VLANs")
+    while (vlanFilter.options.length > 1) {
+        vlanFilter.remove(1);
+    }
+
+    // Add VLAN options sorted
+    Array.from(vlans).sort((a, b) => {
+        const numA = parseInt(a);
+        const numB = parseInt(b);
+        if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+        }
+        return a.localeCompare(b);
+    }).forEach(vlan => {
+        const option = document.createElement('option');
+        option.value = vlan;
+        option.textContent = `VLAN ${vlan}`;
+        vlanFilter.appendChild(option);
+    });
+}
+
+function renderConnectedDevicesTable() {
+    const tableDiv = document.getElementById('connectedDevicesTable');
+    const searchTerm = (document.getElementById('connectedDevicesSearchInput')?.value || '').toLowerCase().trim();
+    const vlanFilter = document.getElementById('connectedDevicesVlanFilter')?.value || '';
+    const statusFilter = document.getElementById('connectedDevicesStatusFilter')?.value || '';
+    const limit = parseInt(document.getElementById('connectedDevicesLimit')?.value || '50');
+
+    // Filter devices
+    let filteredDevices = allConnectedDevices.filter(device => {
+        // Search filter
+        if (searchTerm) {
+            const searchableText = `${device.hostname} ${device.ip} ${device.mac} ${device.interface}`.toLowerCase();
+            if (!searchableText.includes(searchTerm)) {
+                return false;
+            }
+        }
+
+        // VLAN filter
+        if (vlanFilter && device.vlan !== vlanFilter) {
+            return false;
+        }
+
+        // Status filter
+        if (statusFilter && device.status !== statusFilter) {
+            return false;
+        }
+
+        return true;
+    });
+
+    // Apply limit (unless "All" is selected)
+    const displayDevices = limit === -1 ? filteredDevices : filteredDevices.slice(0, limit);
+
+    // Create table HTML
+    let html = `
+        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="padding: 15px 20px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="font-size: 1.1em;">Connected Devices</strong>
+                    <span style="margin-left: 15px; opacity: 0.9;">Showing ${displayDevices.length} of ${filteredDevices.length} devices</span>
+                </div>
+                <div style="font-size: 0.9em; opacity: 0.9;">
+                    Total: ${allConnectedDevices.length}
+                </div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Hostname</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">IP Address</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">MAC Address</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">VLAN</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Interface</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Age (TTL)</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+    displayDevices.forEach((device, index) => {
+        const rowStyle = index % 2 === 0 ? 'background: #ffffff;' : 'background: #f8f9fa;';
+
+        // Format MAC address cell with vendor name underneath if available
+        let macCell = `<div style="font-family: monospace; color: #333;">${device.mac}</div>`;
+        if (device.vendor) {
+            macCell += `<div style="font-size: 0.85em; color: #666; margin-top: 2px;">${device.vendor}</div>`;
+        }
+
+        html += `
+            <tr style="${rowStyle} border-bottom: 1px solid #dee2e6;">
+                <td style="padding: 12px 15px; color: #333;">${device.hostname}</td>
+                <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.ip}</td>
+                <td style="padding: 12px 15px;">${macCell}</td>
+                <td style="padding: 12px 15px; color: #333;">${device.vlan}</td>
+                <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.interface}</td>
+                <td style="padding: 12px 15px; color: #333;">${device.ttl}s</td>
+            </tr>`;
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+
+    tableDiv.innerHTML = html;
+}
+
+function exportDevices(format) {
+    const vlanFilter = document.getElementById('connectedDevicesVlanFilter')?.value || '';
+    const statusFilter = document.getElementById('connectedDevicesStatusFilter')?.value || '';
+    const searchTerm = (document.getElementById('connectedDevicesSearchInput')?.value || '').toLowerCase().trim();
+
+    // Filter devices (same as table)
+    let filteredDevices = allConnectedDevices.filter(device => {
+        if (searchTerm) {
+            const searchableText = `${device.hostname} ${device.ip} ${device.mac} ${device.interface}`.toLowerCase();
+            if (!searchableText.includes(searchTerm)) return false;
+        }
+        if (vlanFilter && device.vlan !== vlanFilter) return false;
+        if (statusFilter && device.status !== statusFilter) return false;
+        return true;
+    });
+
+    if (format === 'csv') {
+        exportDevicesCSV(filteredDevices);
+    } else if (format === 'xml') {
+        exportDevicesXML(filteredDevices);
+    }
+}
+
+function exportDevicesCSV(devices) {
+    const headers = ['Hostname', 'IP Address', 'MAC Address', 'VLAN', 'Interface', 'TTL', 'Status'];
+    let csv = headers.join(',') + '\n';
+
+    devices.forEach(device => {
+        const row = [
+            device.hostname,
+            device.ip,
+            device.mac,
+            device.vlan,
+            device.interface,
+            device.ttl,
+            device.status
+        ];
+        csv += row.map(field => `"${field}"`).join(',') + '\n';
+    });
+
+    downloadFile(csv, 'connected-devices.csv', 'text/csv');
+}
+
+function exportDevicesXML(devices) {
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<connected-devices>\n';
+
+    devices.forEach(device => {
+        xml += '  <device>\n';
+        xml += `    <hostname>${escapeXML(device.hostname)}</hostname>\n`;
+        xml += `    <ip>${escapeXML(device.ip)}</ip>\n`;
+        xml += `    <mac>${escapeXML(device.mac)}</mac>\n`;
+        xml += `    <vlan>${escapeXML(device.vlan)}</vlan>\n`;
+        xml += `    <interface>${escapeXML(device.interface)}</interface>\n`;
+        xml += `    <ttl>${escapeXML(device.ttl)}</ttl>\n`;
+        xml += `    <status>${escapeXML(device.status)}</status>\n`;
+        xml += '  </device>\n';
+    });
+
+    xml += '</connected-devices>';
+
+    downloadFile(xml, 'connected-devices.xml', 'application/xml');
+}
+
+function escapeXML(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+

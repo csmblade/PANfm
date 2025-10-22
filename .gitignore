@@ -41,6 +41,7 @@ venv.bak/
 .DS_Store
 Thumbs.db
 *.log
+*.rtf
 
 # Application-specific - sensitive data
 devices.json
