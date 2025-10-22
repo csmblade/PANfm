@@ -12,7 +12,8 @@ from firewall_api import (
     get_traffic_logs,
     get_policy_hit_counts,
     get_software_updates,
-    get_license_info
+    get_license_info,
+    get_connected_devices
 )
 from logger import debug, info, error
 
@@ -95,6 +96,28 @@ def register_routes(app):
         """API endpoint for license information"""
         data = get_license_info()
         return jsonify(data)
+
+    @app.route('/api/connected-devices')
+    def connected_devices_api():
+        """API endpoint for connected devices (ARP entries)"""
+        debug("=== Connected Devices API endpoint called ===")
+        try:
+            devices = get_connected_devices()
+            debug(f"Retrieved {len(devices)} devices from firewall")
+            return jsonify({
+                'status': 'success',
+                'devices': devices,
+                'total': len(devices),
+                'timestamp': datetime.now().isoformat()
+            })
+        except Exception as e:
+            error(f"Error in connected devices API: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e),
+                'devices': [],
+                'total': 0
+            })
 
     @app.route('/api/settings', methods=['GET', 'POST'])
     def settings():

@@ -1450,3 +1450,74 @@ def get_license_info():
                 'licenses': []
             }
         }
+
+def get_connected_devices():
+    """Fetch ARP entries from all interfaces on the firewall"""
+    debug("=== Starting get_connected_devices ===")
+    try:
+        _, api_key, base_url = get_firewall_config()
+        debug(f"Using firewall API: {base_url}")
+
+        # Query for ARP table entries
+        params = {
+            'type': 'op',
+            'cmd': '<show><arp><entry name="all"/></arp></show>',
+            'key': api_key
+        }
+
+        debug(f"Making API request for ARP entries")
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+
+        debug(f"ARP API Response Status: {response.status_code}")
+
+        devices = []
+
+        if response.status_code == 200:
+            debug(f"Response length: {len(response.text)} characters")
+            debug(f"Response preview (first 500 chars): {response.text[:500]}")
+
+            root = ET.fromstring(response.text)
+
+            # Parse ARP entries
+            for entry in root.findall('.//entry'):
+                status = entry.find('.//status')
+                ip = entry.find('.//ip')
+                mac = entry.find('.//mac')
+                ttl = entry.find('.//ttl')
+                interface = entry.find('.//interface')
+                port = entry.find('.//port')
+
+                # Extract values with fallbacks
+                device_entry = {
+                    'hostname': 'N/A',  # ARP table typically doesn't have hostnames
+                    'ip': ip.text if ip is not None and ip.text else 'N/A',
+                    'mac': mac.text if mac is not None and mac.text else 'N/A',
+                    'vlan': 'N/A',  # Will be extracted from interface if available
+                    'interface': interface.text if interface is not None and interface.text else 'N/A',
+                    'ttl': ttl.text if ttl is not None and ttl.text else 'N/A',
+                    'status': status.text if status is not None and status.text else 'N/A',
+                    'port': port.text if port is not None and port.text else 'N/A'
+                }
+
+                # Try to extract VLAN from interface name (e.g., "ethernet1/1.100" -> VLAN 100)
+                if device_entry['interface'] != 'N/A' and '.' in device_entry['interface']:
+                    try:
+                        vlan_id = device_entry['interface'].split('.')[-1]
+                        if vlan_id.isdigit():
+                            device_entry['vlan'] = vlan_id
+                    except:
+                        pass
+
+                devices.append(device_entry)
+
+            debug(f"Total devices found: {len(devices)}")
+            debug(f"Sample device entries (first 3): {devices[:3]}")
+        else:
+            error(f"Failed to fetch ARP entries. Status code: {response.status_code}")
+            debug(f"Error response: {response.text[:500]}")
+
+        return devices
+
+    except Exception as e:
+        exception(f"Error fetching connected devices: {str(e)}")
+        return []
