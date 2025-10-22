@@ -14,7 +14,8 @@ from firewall_api import (
     get_policy_hit_counts,
     get_software_updates,
     get_license_info,
-    get_connected_devices
+    get_connected_devices,
+    get_firewall_config
 )
 from logger import debug, info, error
 
@@ -47,7 +48,8 @@ def register_routes(app):
     def system_logs_api():
         """API endpoint for system logs"""
         try:
-            logs = get_system_logs(max_logs=50)
+            firewall_config = get_firewall_config()
+            logs = get_system_logs(firewall_config, max_logs=50)
             return jsonify({
                 'status': 'success',
                 'logs': logs,
@@ -65,8 +67,9 @@ def register_routes(app):
     def traffic_logs_api():
         """API endpoint for traffic logs"""
         try:
+            firewall_config = get_firewall_config()
             max_logs = request.args.get('max_logs', 50, type=int)
-            logs = get_traffic_logs(max_logs)
+            logs = get_traffic_logs(firewall_config, max_logs)
             return jsonify({
                 'status': 'success',
                 'logs': logs,
@@ -83,19 +86,22 @@ def register_routes(app):
     @app.route('/api/policies')
     def policies():
         """API endpoint for policy hit counts"""
-        data = get_policy_hit_counts()
+        firewall_config = get_firewall_config()
+        data = get_policy_hit_counts(firewall_config)
         return jsonify(data)
 
     @app.route('/api/software-updates')
     def software_updates():
         """API endpoint for software update information"""
-        data = get_software_updates()
+        firewall_config = get_firewall_config()
+        data = get_software_updates(firewall_config)
         return jsonify(data)
 
     @app.route('/api/license')
     def license_info():
         """API endpoint for license information"""
-        data = get_license_info()
+        firewall_config = get_firewall_config()
+        data = get_license_info(firewall_config)
         return jsonify(data)
 
     @app.route('/api/connected-devices')
@@ -103,7 +109,8 @@ def register_routes(app):
         """API endpoint for connected devices (ARP entries)"""
         debug("=== Connected Devices API endpoint called ===")
         try:
-            devices = get_connected_devices()
+            firewall_config = get_firewall_config()
+            devices = get_connected_devices(firewall_config)
             debug(f"Retrieved {len(devices)} devices from firewall")
             return jsonify({
                 'status': 'success',
