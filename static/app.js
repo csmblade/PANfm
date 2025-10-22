@@ -909,9 +909,8 @@ function initPageNavigation() {
     const pages = {
         'homepage': document.getElementById('homepage-content'),
         'connected-devices': document.getElementById('connected-devices-content'),
-        'policies': document.getElementById('policies-content'),
+        'device-info': document.getElementById('device-info-content'),
         'logs': document.getElementById('logs-content'),
-        'software-updates': document.getElementById('software-updates-content'),
         'devices': document.getElementById('devices-content'),
         'settings': document.getElementById('settings-content')
     };
@@ -928,15 +927,14 @@ function initPageNavigation() {
             Object.keys(pages).forEach(pageKey => {
                 if (pageKey === targetPage) {
                     pages[pageKey].style.display = 'block';
-                    if (pageKey === 'policies') {
+                    if (pageKey === 'device-info') {
+                        // Load policies by default (first tab)
                         loadPolicies();
                     } else if (pageKey === 'connected-devices') {
                         loadConnectedDevices();
                     } else if (pageKey === 'logs') {
                         // Load system logs by default (first tab)
                         loadSystemLogs();
-                    } else if (pageKey === 'software-updates') {
-                        loadSoftwareUpdates();
                     } else if (pageKey === 'devices') {
                         loadDevices();
                     } else if (pageKey === 'settings') {
@@ -1004,6 +1002,40 @@ function initPageNavigation() {
                     systemLogsTab.style.display = 'none';
                     trafficLogsTab.style.display = 'block';
                     updateTrafficPage();
+                }
+            });
+        });
+    }
+
+    // Device Info page tab switching
+    const deviceInfoTabs = document.querySelectorAll('.device-info-tab');
+    if (deviceInfoTabs.length > 0) {
+        deviceInfoTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+
+                // Update active tab styling
+                deviceInfoTabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.style.color = 'rgba(255, 255, 255, 0.6)';
+                    t.style.borderBottom = '3px solid transparent';
+                });
+                tab.classList.add('active');
+                tab.style.color = '#FA582D';
+                tab.style.borderBottom = '3px solid #FA582D';
+
+                // Show target tab content, hide others
+                const policiesTab = document.getElementById('policies-tab');
+                const softwareUpdatesTab = document.getElementById('software-updates-tab');
+
+                if (targetTab === 'policies') {
+                    policiesTab.style.display = 'block';
+                    softwareUpdatesTab.style.display = 'none';
+                    loadPolicies();
+                } else if (targetTab === 'software-updates') {
+                    policiesTab.style.display = 'none';
+                    softwareUpdatesTab.style.display = 'block';
+                    loadSoftwareUpdates();
                 }
             });
         });

@@ -492,25 +492,21 @@
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Connected Devices</span>
             </div>
-            <div class="menu-item" data-page="policies">
+            <div class="menu-item" data-page="device-info">
                 <span class="menu-icon" style="color: #FA582D;">●</span>
-                <span>Policies</span>
+                <span>Device Info</span>
             </div>
             <div class="menu-item" data-page="logs">
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Logs</span>
             </div>
-            <div class="menu-item" data-page="software-updates">
-                <span class="menu-icon" style="color: #FA582D;">●</span>
-                <span>Software Updates</span>
-            </div>
-            <div class="menu-item" data-page="devices">
-                <span class="menu-icon" style="color: #FA582D;">●</span>
-                <span>Devices</span>
-            </div>
             <div class="menu-item" data-page="settings">
                 <span class="menu-icon" style="color: #FA582D;">●</span>
                 <span>Settings</span>
+            </div>
+            <div class="menu-item" data-page="devices">
+                <span class="menu-icon" style="color: #FA582D;">●</span>
+                <span>Managed Devices</span>
             </div>
         </div>
 
@@ -776,17 +772,41 @@
             </div>
         </div>
 
-        <!-- Policies Content -->
-        <div id="policies-content" class="page-content" style="display: none;">
+        <!-- Device Info Content (Combined Policies and Software Updates) -->
+        <div id="device-info-content" class="page-content" style="display: none;">
             <div class="container">
                 <div class="header" style="text-align: left; margin-bottom: 30px;">
-                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Security Policies</h1>
-                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Policy Hit Counts and Statistics</p>
+                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Device Info</h1>
+                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">Firewall Policies and Software Information</p>
                 </div>
 
-                <div class="error-message" id="policiesErrorMessage"></div>
+                <!-- Tab Navigation -->
+                <div style="display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid rgba(250, 88, 45, 0.3);">
+                    <button class="device-info-tab active" data-tab="policies" style="padding: 12px 24px; background: transparent; border: none; color: #FA582D; font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid #FA582D; transition: all 0.3s;">
+                        Policies
+                    </button>
+                    <button class="device-info-tab" data-tab="software-updates" style="padding: 12px 24px; background: transparent; border: none; color: rgba(255, 255, 255, 0.6); font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
+                        Software Updates
+                    </button>
+                </div>
 
-                <div id="policiesTable"></div>
+                <!-- Policies Tab Content -->
+                <div id="policies-tab" class="device-info-tab-content">
+                    <div class="error-message" id="policiesErrorMessage"></div>
+                    <div id="policiesTable"></div>
+                </div>
+
+                <!-- Software Updates Tab Content -->
+                <div id="software-updates-tab" class="device-info-tab-content" style="display: none;">
+                    <div class="error-message" id="softwareErrorMessage"></div>
+
+                    <div id="softwareLoading" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div class="spinner" style="margin: 0 auto 20px auto; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #FA582D; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="color: #666; font-size: 1.1em;">Loading software updates...</p>
+                    </div>
+
+                    <div id="softwareTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                </div>
             </div>
         </div>
 
@@ -856,25 +876,6 @@
                     <div class="error-message" id="trafficLogsErrorMessage"></div>
                     <div id="trafficLogsTable"></div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Software Updates Content -->
-        <div id="software-updates-content" class="page-content" style="display: none;">
-            <div class="container">
-                <div class="header" style="text-align: left; margin-bottom: 30px;">
-                    <h1 style="color: #ffffff; font-size: 1.8em; font-weight: 700; margin: 0 0 5px 0;">Software Updates</h1>
-                    <p style="color: #FA582D; font-size: 0.9em; margin: 0;">System and Content Version Information</p>
-                </div>
-
-                <div class="error-message" id="softwareErrorMessage"></div>
-
-                <div id="softwareLoading" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div class="spinner" style="margin: 0 auto 20px auto; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #FA582D; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <p style="color: #666; font-size: 1.1em;">Loading software updates...</p>
-                </div>
-
-                <div id="softwareTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
             </div>
         </div>
 
