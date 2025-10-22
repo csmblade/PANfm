@@ -409,6 +409,7 @@ def get_traffic_logs(firewall_config, max_logs=50):
                 sport = entry.find('sport')
                 dport = entry.find('dport')
                 app = entry.find('app')
+                category = entry.find('category')
                 proto = entry.find('proto')
                 action = entry.find('action')
                 bytes_sent = entry.find('bytes_sent')
@@ -425,6 +426,7 @@ def get_traffic_logs(firewall_config, max_logs=50):
                     'sport': sport.text if sport is not None else '',
                     'dport': dport.text if dport is not None else '',
                     'app': app.text if app is not None else '',
+                    'category': category.text if category is not None else 'unknown',
                     'proto': proto.text if proto is not None else '',
                     'action': action.text if action is not None else '',
                     'bytes_sent': bytes_sent.text if bytes_sent is not None else '0',
@@ -525,6 +527,7 @@ def get_application_statistics(firewall_config, max_logs=1000):
 
         for log in traffic_logs:
             app = log.get('app', 'unknown')
+            category = log.get('category', 'unknown')
             src = log.get('src', '')
             dst = log.get('dst', '')
             # Calculate total bytes (sent + received)
@@ -537,10 +540,12 @@ def get_application_statistics(firewall_config, max_logs=1000):
             if app not in app_stats:
                 app_stats[app] = {
                     'name': app,
+                    'category': category,
                     'sessions': 0,
                     'bytes': 0,
                     'source_ips': set(),
                     'dest_ips': set(),
+                    'dest_details': {},  # Track bytes per destination
                     'protocols': set(),
                     'ports': set()
                 }
@@ -548,21 +553,44 @@ def get_application_statistics(firewall_config, max_logs=1000):
             app_stats[app]['sessions'] += 1
             app_stats[app]['bytes'] += bytes_val
             if src: app_stats[app]['source_ips'].add(src)
-            if dst: app_stats[app]['dest_ips'].add(dst)
+            if dst:
+                app_stats[app]['dest_ips'].add(dst)
+                # Track bytes per destination with port
+                dest_key = f"{dst}:{dport}" if dport else dst
+                if dest_key not in app_stats[app]['dest_details']:
+                    app_stats[app]['dest_details'][dest_key] = {
+                        'ip': dst,
+                        'port': dport,
+                        'bytes': 0
+                    }
+                app_stats[app]['dest_details'][dest_key]['bytes'] += bytes_val
             if proto: app_stats[app]['protocols'].add(proto)
             if dport: app_stats[app]['ports'].add(dport)
 
         # Convert sets to lists and format result
         result = []
         for app_name, stats in app_stats.items():
+            # Convert dest_details dict to sorted list
+            dest_list = []
+            for dest_key, dest_info in stats['dest_details'].items():
+                dest_list.append({
+                    'ip': dest_info['ip'],
+                    'port': dest_info['port'],
+                    'bytes': dest_info['bytes']
+                })
+            # Sort destinations by bytes descending
+            dest_list.sort(key=lambda x: x['bytes'], reverse=True)
+
             result.append({
                 'name': app_name,
+                'category': stats['category'],
                 'sessions': stats['sessions'],
                 'bytes': stats['bytes'],
                 'source_count': len(stats['source_ips']),
                 'dest_count': len(stats['dest_ips']),
                 'source_ips': list(stats['source_ips'])[:50],  # Limit to 50
                 'dest_ips': list(stats['dest_ips'])[:50],
+                'destinations': dest_list[:50],  # Top 50 destinations with details
                 'protocols': list(stats['protocols']),
                 'ports': list(stats['ports'])[:20]  # Limit to 20
             })

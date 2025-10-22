@@ -658,6 +658,9 @@ function renderApplicationsTable() {
                         <th onclick="sortApplications('name')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
                             Application${getSortIndicator('name')}
                         </th>
+                        <th onclick="sortApplications('category')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
+                            Category${getSortIndicator('category')}
+                        </th>
                         <th onclick="sortApplications('sessions')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none;">
                             Sessions${getSortIndicator('sessions')}
                         </th>
@@ -677,14 +680,18 @@ function renderApplicationsTable() {
                 <tbody>
     `;
 
-    displayed.forEach(app => {
+    displayed.forEach((app, index) => {
         const bytes = formatBytesHuman(app.bytes);
         const protocols = app.protocols.slice(0, 3).join(', ') || 'N/A';
         const ports = app.ports.slice(0, 5).join(', ') || 'N/A';
+        const category = app.category || 'unknown';
 
         html += `
             <tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
                 <td style="padding: 12px; color: #333; font-weight: 600;">${app.name}</td>
+                <td onclick="showAppDestinations(${index})" style="padding: 12px; color: #FA582D; font-weight: 600; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#C64620'" onmouseout="this.style.color='#FA582D'">
+                    ${category}
+                </td>
                 <td style="padding: 12px; color: #666; text-align: right;">${app.sessions.toLocaleString()}</td>
                 <td style="padding: 12px; color: #FA582D; text-align: right; font-weight: 600;">${bytes}</td>
                 <td style="padding: 12px; color: #666; text-align: right;">${app.source_count}</td>
@@ -744,5 +751,91 @@ function setupApplicationsEventListeners() {
             loadApplications();
         });
     }
+
+    // Modal close button
+    const closeModalBtn = document.getElementById('closeAppDestModalBtn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', hideAppDestinations);
+    }
+
+    // Close modal when clicking outside
+    const modal = document.getElementById('appDestinationsModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideAppDestinations();
+            }
+        });
+    }
+}
+
+function showAppDestinations(appIndex) {
+    const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
+    const limit = parseInt(document.getElementById('applicationsLimit').value);
+
+    // Get the filtered and sorted list
+    let filtered = allApplications.filter(app =>
+        app.name.toLowerCase().includes(searchTerm)
+    );
+
+    filtered.sort((a, b) => {
+        let aVal = a[applicationsSortBy];
+        let bVal = b[applicationsSortBy];
+        if (typeof aVal === 'string') {
+            return applicationsSortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+        }
+        return applicationsSortDesc ? bVal - aVal : aVal - bVal;
+    });
+
+    const displayed = limit === -1 ? filtered : filtered.slice(0, limit);
+    const app = displayed[appIndex];
+
+    if (!app) {
+        console.error('Application not found at index:', appIndex);
+        return;
+    }
+
+    // Populate modal with app data
+    document.getElementById('appDestApp').textContent = app.name;
+    document.getElementById('appDestCount').textContent = app.dest_count;
+    document.getElementById('appDestVolume').textContent = formatBytesHuman(app.bytes);
+    document.getElementById('appDestModalSubtitle').textContent = `Category: ${app.category}`;
+
+    // Populate destinations list
+    const destinationsList = document.getElementById('appDestinationsList');
+    if (app.destinations && app.destinations.length > 0) {
+        let destHtml = '';
+        app.destinations.forEach(dest => {
+            const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
+            const portDisplay = dest.port ? `:${dest.port}` : '';
+            destHtml += `
+                <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
+                    <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
+                    <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
+                </div>
+            `;
+        });
+        destinationsList.innerHTML = destHtml;
+
+        // Update note
+        const totalDests = app.dest_count;
+        const showingDests = app.destinations.length;
+        document.getElementById('appDestNote').textContent =
+            showingDests < totalDests ?
+            `Showing top ${showingDests} of ${totalDests} total destinations` :
+            `Showing all ${totalDests} destinations`;
+    } else {
+        destinationsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No destination data available</div>';
+        document.getElementById('appDestNote').textContent = 'No destinations found';
+    }
+
+    // Show modal
+    const modal = document.getElementById('appDestinationsModal');
+    modal.style.display = 'flex';
+}
+
+function hideAppDestinations() {
+    const modal = document.getElementById('appDestinationsModal');
+    modal.style.display = 'none';
 }
 

@@ -822,6 +822,53 @@
             </div>
         </div>
 
+        <!-- Application Destinations Modal -->
+        <div id="appDestinationsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <!-- Modal Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #FA582D; padding-bottom: 15px;">
+                    <div>
+                        <h2 id="appDestModalTitle" style="color: #333; margin: 0 0 5px 0; font-family: var(--font-primary);">Application Destinations</h2>
+                        <p id="appDestModalSubtitle" style="color: #666; margin: 0; font-size: 0.9em; font-family: var(--font-secondary);">Traffic destinations</p>
+                    </div>
+                    <button id="closeAppDestModalBtn" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; font-family: var(--font-primary);">&times;</button>
+                </div>
+
+                <!-- Summary Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: linear-gradient(135deg, #FA582D 0%, #E04F26 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Application</div>
+                        <div id="appDestApp" style="font-size: 1.5em; font-weight: 700; word-break: break-word; font-family: var(--font-primary);">-</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #C64620 0%, #AD3D1A 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Total Destinations</div>
+                        <div id="appDestCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">-</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #AD3D1A 0%, #933414 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Total Volume</div>
+                        <div id="appDestVolume" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">-</div>
+                    </div>
+                </div>
+
+                <!-- Destinations Table -->
+                <div style="background: #f9f9f9; border-radius: 8px; padding: 20px;">
+                    <h3 style="margin: 0 0 15px 0; color: #333; font-size: 1.1em; font-family: var(--font-primary);">Destination IP Addresses / Hosts</h3>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <div id="appDestinationsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <p id="appDestNote" style="margin: 0; color: #856404; font-size: 0.9em; font-family: var(--font-secondary);">
+                        Showing top destinations by volume
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Device Info Content (Combined Policies and Software Updates) -->
         <div id="device-info-content" class="page-content" style="display: none;">
             <div class="container">
