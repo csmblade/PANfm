@@ -88,12 +88,13 @@ def encrypt_string(plaintext):
 def decrypt_string(encrypted_text):
     """
     Decrypt an encrypted string value.
+    If decryption fails or the value isn't encrypted, returns the original value.
 
     Args:
         encrypted_text (str): Base64-encoded encrypted string
 
     Returns:
-        str: Decrypted plaintext string, or empty string on error
+        str: Decrypted plaintext string, or original value if not encrypted
     """
     if not encrypted_text:
         return ""
@@ -105,7 +106,8 @@ def decrypt_string(encrypted_text):
         decrypted_string = decrypted_bytes.decode('utf-8')
         return decrypted_string
     except Exception:
-        return ""
+        # If decryption fails, return the original value (might be plaintext)
+        return encrypted_text
 
 
 def encrypt_dict(data_dict):
