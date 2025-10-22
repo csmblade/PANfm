@@ -18,7 +18,7 @@ VENDOR_DB_FILE = os.path.join(os.path.dirname(__file__), 'mac_vendor_db.json')
 
 # Default settings
 DEFAULT_SETTINGS = {
-    'refresh_interval': 5,
+    'refresh_interval': 15,
     'match_count': 5,
     'top_apps_count': 5,
     'debug_logging': False,
