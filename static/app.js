@@ -626,7 +626,7 @@ async function init() {
     await initSettings();
 
     // Initialize mini charts
-    sessionChart = createMiniChart('sessionChart', '#ff6600');
+    sessionChart = createMiniChart('sessionChart', '#ffffff');
     tcpChart = createMiniChart('tcpChart', '#3b82f6');
     udpChart = createMiniChart('udpChart', '#8b5cf6');
     ppsChart = createMiniChart('ppsChart', '#ffffff');
