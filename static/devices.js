@@ -93,8 +93,7 @@ function updateDeviceSelector() {
 
             currentDevices.forEach(device => {
                 const selected = device.id === selectedDeviceId ? 'selected' : '';
-                const status = device.enabled ? '🟢' : '🔴';
-                options += `<option value="${device.id}" ${selected}>${status} ${device.name} (${device.ip})</option>`;
+                options += `<option value="${device.id}" ${selected}>${device.name} (${device.ip})</option>`;
             });
             selector.innerHTML = options;
 
