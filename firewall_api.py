@@ -586,14 +586,19 @@ def get_throughput_data():
                 for sw in software_info.get('software', []):
                     if sw['name'] == 'PAN-OS':
                         panos_version = sw['version']
-                        # Check if update is available (current=yes means this is the current version)
-                        # If current=no and latest field has a version, that's the available update
-                        if sw.get('current', 'yes') == 'no':
+                        debug(f"PAN-OS current version: {panos_version}")
+                        debug(f"PAN-OS update fields - current: {sw.get('current')}, latest: {sw.get('latest')}, downloaded: {sw.get('downloaded')}")
+
+                        # Check if update is available
+                        # If 'latest' field contains a version number (not 'yes' or 'N/A'), that's the available update
+                        latest_field = sw.get('latest', 'N/A')
+                        if latest_field not in ['yes', 'N/A', None, '']:
+                            # latest field contains a version number - update is available
                             update_available = True
-                            latest_version = sw.get('latest', None)
-                        elif sw.get('latest', 'yes') != 'yes':
-                            update_available = True
-                            latest_version = sw.get('latest', None)
+                            latest_version = latest_field
+                            debug(f"Update available: {latest_version}")
+                        else:
+                            debug(f"No update available (latest field: {latest_field})")
                         break
 
             return {

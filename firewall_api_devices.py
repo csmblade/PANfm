@@ -44,26 +44,55 @@ def get_software_updates(firewall_config):
 
                     if check_response.status_code == 200:
                         check_root = ET.fromstring(check_response.text)
-                        debug(f"Update check response (first 1000 chars):\n{check_response.text[:1000]}")
+                        debug(f"Update check response (first 1500 chars):\n{check_response.text[:1500]}")
 
-                        # Find the first entry with downloaded/current/latest fields
+                        # Find all entries with version information
                         entries = check_root.findall('.//entry')
+                        current_version = None
+                        latest_available = None
+
                         for entry in entries:
+                            version_elem = entry.find('.//version')
                             downloaded_elem = entry.find('.//downloaded')
                             current_elem = entry.find('.//current')
                             latest_elem = entry.find('.//latest')
 
-                            # If we found at least one of these fields, return the status
-                            if downloaded_elem is not None or current_elem is not None or latest_elem is not None:
-                                return {
-                                    'downloaded': downloaded_elem.text if downloaded_elem is not None and downloaded_elem.text else 'N/A',
-                                    'current': current_elem.text if current_elem is not None and current_elem.text else 'N/A',
-                                    'latest': latest_elem.text if latest_elem is not None and latest_elem.text else 'N/A'
-                                }
+                            version_num = version_elem.text if version_elem is not None and version_elem.text else None
+                            is_current = current_elem.text if current_elem is not None and current_elem.text else 'no'
+                            is_latest = latest_elem.text if latest_elem is not None and latest_elem.text else 'no'
+
+                            debug(f"  Entry: version={version_num}, current={is_current}, latest={is_latest}")
+
+                            # Track the current version
+                            if is_current == 'yes' and version_num:
+                                current_version = version_num
+
+                            # Track latest available version (that's not current)
+                            if is_latest == 'yes' and is_current == 'no' and version_num:
+                                latest_available = version_num
+
+                        debug(f"  Found current: {current_version}, latest available: {latest_available}")
+
+                        # Return status
+                        if latest_available:
+                            # There's a newer version available
+                            return {
+                                'downloaded': 'N/A',
+                                'current': 'no',
+                                'latest': latest_available
+                            }
+                        else:
+                            # No update available
+                            return {
+                                'downloaded': 'N/A',
+                                'current': 'yes',
+                                'latest': 'yes'
+                            }
+
                 except Exception as e:
                     debug(f"Error checking update status: {e}")
 
-                return {'downloaded': 'N/A', 'current': 'N/A', 'latest': 'N/A'}
+                return {'downloaded': 'N/A', 'current': 'yes', 'latest': 'yes'}
 
             # Helper function to add software entry
             def add_software_entry(name, version_elem, update_cmd=None):
@@ -104,7 +133,7 @@ def get_software_updates(firewall_config):
 
             # PAN-OS version - check for updates
             sw_version = root.find('.//sw-version')
-            panos_cmd = '<request><content><upgrade><check></check></upgrade></content></request>'
+            panos_cmd = '<request><system><software><check></check></software></system></request>'
             add_software_entry('PAN-OS', sw_version, panos_cmd)
 
             debug(f"Software versions found: {software_info}")
