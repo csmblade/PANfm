@@ -653,43 +653,31 @@
         <!-- Threat and Application Statistics Tiles -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
             <!-- Critical Threats Tile -->
-            <div style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(250, 88, 45, 0.3); color: white;">
+            <div onclick="showCriticalThreatsModal()" style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(250, 88, 45, 0.3); color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(250, 88, 45, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(250, 88, 45, 0.3)'">
                 <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">CRITICAL THREATS</div>
                 <div id="criticalValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
-                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">High severity alerts</div>
-                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
-                    <div id="criticalLogs"></div>
-                </div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Click to view details</div>
             </div>
 
             <!-- Medium Threats Tile -->
-            <div style="background: linear-gradient(135deg, #E04F26 0%, #FF6B3D 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(224, 79, 38, 0.3); color: white;">
+            <div onclick="showMediumThreatsModal()" style="background: linear-gradient(135deg, #E04F26 0%, #FF6B3D 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(224, 79, 38, 0.3); color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(224, 79, 38, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(224, 79, 38, 0.3)'">
                 <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">MEDIUM THREATS</div>
                 <div id="mediumValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
-                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Moderate severity</div>
-                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
-                    <div id="mediumLogs"></div>
-                </div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Click to view details</div>
             </div>
 
             <!-- Blocked URLs Tile -->
-            <div style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(198, 70, 32, 0.3); color: white;">
+            <div onclick="showBlockedUrlsModal()" style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(198, 70, 32, 0.3); color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(198, 70, 32, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(198, 70, 32, 0.3)'">
                 <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">BLOCKED URLS</div>
                 <div id="blockedUrlValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
-                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">URL filtering blocks</div>
-                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
-                    <div id="blockedUrlLogs"></div>
-                </div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Click to view details</div>
             </div>
 
             <!-- Top Applications Tile -->
-            <div style="background: linear-gradient(135deg, #AD3D1A 0%, #D14925 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(173, 61, 26, 0.3); color: white;">
+            <div onclick="showTopAppsModal()" style="background: linear-gradient(135deg, #AD3D1A 0%, #D14925 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(173, 61, 26, 0.3); color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(173, 61, 26, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(173, 61, 26, 0.3)'">
                 <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">TOP APPLICATIONS</div>
                 <div id="topAppsValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
-                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Most active apps</div>
-                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
-                    <div id="topAppsContainer"></div>
-                </div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Click to view details</div>
             </div>
         </div>
 
@@ -711,6 +699,122 @@
             </div>
             </div>
         </div>
+        </div>
+
+        <!-- Critical Threats Modal -->
+        <div id="criticalThreatsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1200px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <!-- Modal Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #FA582D; padding-bottom: 15px;">
+                    <div>
+                        <h2 style="color: #333; margin: 0 0 5px 0; font-family: var(--font-primary);">Critical Threats</h2>
+                        <p style="color: #666; margin: 0; font-size: 0.9em; font-family: var(--font-secondary);">High severity threat detections</p>
+                    </div>
+                    <button onclick="closeCriticalThreatsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; font-family: var(--font-primary);">&times;</button>
+                </div>
+
+                <!-- Summary Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Total Critical Threats</div>
+                        <div id="criticalModalCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">0</div>
+                    </div>
+                </div>
+
+                <!-- Threats Table -->
+                <div style="background: #f9f9f9; border-radius: 8px; padding: 20px;">
+                    <div style="max-height: 500px; overflow-y: auto;" id="criticalThreatsTableContainer">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medium Threats Modal -->
+        <div id="mediumThreatsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1200px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <!-- Modal Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #E04F26; padding-bottom: 15px;">
+                    <div>
+                        <h2 style="color: #333; margin: 0 0 5px 0; font-family: var(--font-primary);">Medium Threats</h2>
+                        <p style="color: #666; margin: 0; font-size: 0.9em; font-family: var(--font-secondary);">Medium severity threat detections</p>
+                    </div>
+                    <button onclick="closeMediumThreatsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; font-family: var(--font-primary);">&times;</button>
+                </div>
+
+                <!-- Summary Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: linear-gradient(135deg, #E04F26 0%, #FF6B3D 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Total Medium Threats</div>
+                        <div id="mediumModalCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">0</div>
+                    </div>
+                </div>
+
+                <!-- Threats Table -->
+                <div style="background: #f9f9f9; border-radius: 8px; padding: 20px;">
+                    <div style="max-height: 500px; overflow-y: auto;" id="mediumThreatsTableContainer">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blocked URLs Modal -->
+        <div id="blockedUrlsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1200px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <!-- Modal Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #C64620; padding-bottom: 15px;">
+                    <div>
+                        <h2 style="color: #333; margin: 0 0 5px 0; font-family: var(--font-primary);">Blocked URLs</h2>
+                        <p style="color: #666; margin: 0; font-size: 0.9em; font-family: var(--font-secondary);">URL filtering blocks</p>
+                    </div>
+                    <button onclick="closeBlockedUrlsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; font-family: var(--font-primary);">&times;</button>
+                </div>
+
+                <!-- Summary Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Total Blocked URLs</div>
+                        <div id="blockedUrlsModalCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">0</div>
+                    </div>
+                </div>
+
+                <!-- URLs Table -->
+                <div style="background: #f9f9f9; border-radius: 8px; padding: 20px;">
+                    <div style="max-height: 500px; overflow-y: auto;" id="blockedUrlsTableContainer">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Applications Modal -->
+        <div id="topAppsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1200px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <!-- Modal Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #AD3D1A; padding-bottom: 15px;">
+                    <div>
+                        <h2 style="color: #333; margin: 0 0 5px 0; font-family: var(--font-primary);">Top Applications</h2>
+                        <p style="color: #666; margin: 0; font-size: 0.9em; font-family: var(--font-secondary);">Most active applications by bandwidth usage</p>
+                    </div>
+                    <button onclick="closeTopAppsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; line-height: 1; font-family: var(--font-primary);">&times;</button>
+                </div>
+
+                <!-- Summary Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: linear-gradient(135deg, #AD3D1A 0%, #D14925 100%); border-radius: 8px; padding: 15px; color: white;">
+                        <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Total Applications</div>
+                        <div id="topAppsModalCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">0</div>
+                    </div>
+                </div>
+
+                <!-- Applications Table -->
+                <div style="background: #f9f9f9; border-radius: 8px; padding: 20px;">
+                    <div style="max-height: 500px; overflow-y: auto;" id="topAppsTableContainer">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Connected Devices Content -->
