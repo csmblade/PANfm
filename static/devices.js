@@ -218,9 +218,21 @@ async function onDeviceChange() {
                 }
             }
 
-            // Wait a moment to ensure settings are fully saved before refreshing data
-            console.log('Waiting for settings to save...');
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // Wait to ensure settings are fully saved and available for reading
+            console.log('Waiting for settings to save and flush to disk...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Verify settings were saved by reading them back
+            console.log('Verifying settings were saved...');
+            const verifyResponse = await fetch('/api/settings');
+            const verifyData = await verifyResponse.json();
+            if (verifyData.status === 'success') {
+                console.log('Verified selected_device_id in settings:', verifyData.settings.selected_device_id);
+                if (verifyData.settings.selected_device_id !== selectedDeviceId) {
+                    console.error('WARNING: Settings verification failed! Selected device ID mismatch.');
+                    console.error('Expected:', selectedDeviceId, 'Got:', verifyData.settings.selected_device_id);
+                }
+            }
 
             // Call centralized function to clear and refresh ALL data
             // This function is defined in app.js and handles all data clearing/refreshing

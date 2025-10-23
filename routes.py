@@ -38,6 +38,9 @@ def register_routes(app):
     @app.route('/api/throughput')
     def throughput():
         """API endpoint for real-time throughput data"""
+        debug("=== Throughput API endpoint called ===")
+        settings = load_settings()
+        debug(f"Selected device ID from settings: {settings.get('selected_device_id', 'NONE')}")
         data = get_throughput_data()
         return jsonify(data)
 
@@ -49,7 +52,10 @@ def register_routes(app):
     @app.route('/api/system-logs')
     def system_logs_api():
         """API endpoint for system logs"""
+        debug("=== System Logs API endpoint called ===")
         try:
+            settings = load_settings()
+            debug(f"Selected device ID from settings: {settings.get('selected_device_id', 'NONE')}")
             firewall_config = get_firewall_config()
             logs = get_system_logs(firewall_config, max_logs=50)
             return jsonify({
@@ -68,7 +74,10 @@ def register_routes(app):
     @app.route('/api/traffic-logs')
     def traffic_logs_api():
         """API endpoint for traffic logs"""
+        debug("=== Traffic Logs API endpoint called ===")
         try:
+            settings = load_settings()
+            debug(f"Selected device ID from settings: {settings.get('selected_device_id', 'NONE')}")
             firewall_config = get_firewall_config()
             max_logs = request.args.get('max_logs', 50, type=int)
             logs = get_traffic_logs(firewall_config, max_logs)
@@ -88,6 +97,9 @@ def register_routes(app):
     @app.route('/api/policies')
     def policies():
         """API endpoint for policy hit counts"""
+        debug("=== Policies API endpoint called ===")
+        settings = load_settings()
+        debug(f"Selected device ID from settings: {settings.get('selected_device_id', 'NONE')}")
         firewall_config = get_firewall_config()
         data = get_policy_hit_counts(firewall_config)
         return jsonify(data)
@@ -95,6 +107,9 @@ def register_routes(app):
     @app.route('/api/software-updates')
     def software_updates():
         """API endpoint for software update information"""
+        debug("=== Software Updates API endpoint called ===")
+        settings = load_settings()
+        debug(f"Selected device ID from settings: {settings.get('selected_device_id', 'NONE')}")
         firewall_config = get_firewall_config()
         data = get_software_updates(firewall_config)
         return jsonify(data)
