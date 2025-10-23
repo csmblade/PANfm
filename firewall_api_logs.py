@@ -402,25 +402,8 @@ def get_traffic_logs(firewall_config, max_logs=50):
                     root = ET.fromstring(result_response.text)
 
             # Find all log entries
-            entry_count = 0
             for entry in root.findall('.//entry'):
                 time_generated = entry.get('time_generated', '')
-
-                # Debug first entry to see all available fields
-                if entry_count == 0:
-                    debug(f"First log entry time_generated attribute: '{time_generated}'")
-                    debug(f"First entry attributes: {entry.attrib}")
-                    child_tags = [child.tag for child in entry]
-                    debug(f"First entry child elements: {child_tags[:20]}")  # Show first 20
-
-                    # Check for time-related child elements
-                    time_fields = ['time_generated', 'time_received', 'cef-formatted-receive_time', 'receive_time', 'timestamp']
-                    for field in time_fields:
-                        elem = entry.find(field)
-                        if elem is not None:
-                            debug(f"Found time field '{field}': {elem.text}")
-
-                entry_count += 1
                 src = entry.find('src')
                 dst = entry.find('dst')
                 sport = entry.find('sport')
@@ -592,8 +575,6 @@ def get_application_statistics(firewall_config, max_logs=5000):
                     earliest_time = log_time
                 if latest_time is None or log_time > latest_time:
                     latest_time = log_time
-            else:
-                debug("Warning: Log entry has no time field")
 
             # Calculate total bytes (sent + received)
             bytes_sent = int(log.get('bytes_sent', 0))
@@ -707,7 +688,6 @@ def get_application_statistics(firewall_config, max_logs=5000):
         result.sort(key=lambda x: x['bytes'], reverse=True)
 
         debug(f"Aggregated {len(result)} unique applications")
-        debug(f"Time range - Earliest: {earliest_time}, Latest: {latest_time}")
 
         # Return both applications list and summary statistics
         return {
