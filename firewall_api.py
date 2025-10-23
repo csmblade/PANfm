@@ -295,18 +295,22 @@ def get_wan_interface_ip(wan_interface):
             root = ET.fromstring(response.text)
 
             # Try to find IP address in the response
-            # PAN-OS returns IP in <ip> tag
+            # First try <dyn-addr><member> for dynamic IPs (DHCP, PPPoE, etc.)
+            dyn_addr_elem = root.find('.//dyn-addr/member')
+            if dyn_addr_elem is not None and dyn_addr_elem.text:
+                # Dynamic address includes CIDR notation (e.g., "87.121.248.146/22")
+                # Strip the CIDR to get just the IP
+                ip_with_cidr = dyn_addr_elem.text
+                ip_address = ip_with_cidr.split('/')[0] if '/' in ip_with_cidr else ip_with_cidr
+                debug(f"Found WAN interface {wan_interface} dynamic IP: {ip_address} (from {ip_with_cidr})")
+                return ip_address
+
+            # Fallback: try <ip> tag for static IPs
             ip_elem = root.find('.//ip')
             if ip_elem is not None and ip_elem.text:
-                ip_address = ip_elem.text
-                debug(f"Found WAN interface {wan_interface} IP: {ip_address}")
+                ip_address = ip_elem.text.split('/')[0] if '/' in ip_elem.text else ip_elem.text
+                debug(f"Found WAN interface {wan_interface} static IP: {ip_address}")
                 return ip_address
-            else:
-                # Debug: print all tags in the XML to see what's available
-                debug(f"No <ip> tag found. Available tags in XML:")
-                for elem in root.iter():
-                    if elem.text and elem.text.strip():
-                        debug(f"  <{elem.tag}>: {elem.text[:100]}")
 
             debug(f"No IP found for interface {wan_interface}")
             return None
