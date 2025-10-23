@@ -550,6 +550,20 @@ def get_throughput_data():
             # Get license information (from firewall_api_devices module)
             license_info = get_license_info(firewall_config)
 
+            # Get software version information (from firewall_api_devices module)
+            software_info = get_software_updates(firewall_config)
+            panos_version = None
+            update_available = False
+
+            if software_info.get('status') == 'success':
+                # Find PAN-OS version from software list
+                for sw in software_info.get('software', []):
+                    if sw['name'] == 'PAN-OS':
+                        panos_version = sw['version']
+                        # Check if update is available (latest=yes means we have the latest)
+                        update_available = sw.get('latest', 'yes') != 'yes'
+                        break
+
             return {
                 'timestamp': datetime.now().isoformat(),
                 'inbound_mbps': round(max(0, inbound_mbps), 2),
@@ -566,6 +580,8 @@ def get_throughput_data():
                 'top_applications': top_apps,
                 'license': license_info.get('license', {'expired': 0, 'licensed': 0}),
                 'api_stats': get_api_stats(),
+                'panos_version': panos_version,
+                'version_update_available': update_available,
                 'status': 'success'
             }
         else:

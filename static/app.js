@@ -305,11 +305,21 @@ function updateStats(data) {
 
     }
 
-    // Update API stats display in sidebar
-    if (data.api_stats) {
-        const apiStatsElement = document.getElementById('sidebarApiStats');
-        if (apiStatsElement) {
-            apiStatsElement.textContent = `${data.api_stats.total_calls.toLocaleString()} (${data.api_stats.calls_per_minute}/min)`;
+    // Update PAN-OS version in sidebar
+    if (data.panos_version !== undefined) {
+        const versionElement = document.getElementById('sidebarPanosVersion');
+        const alertElement = document.getElementById('sidebarVersionAlert');
+
+        if (versionElement) {
+            versionElement.textContent = data.panos_version || 'N/A';
+        }
+
+        if (alertElement) {
+            if (data.version_update_available) {
+                alertElement.style.display = 'block';
+            } else {
+                alertElement.style.display = 'none';
+            }
         }
     }
 
@@ -421,13 +431,6 @@ function updateStats(data) {
     }
 
     // System logs are now on their own page, no need to update here
-
-    // Update last update time in sidebar
-    const timestamp = new Date(data.timestamp);
-    const lastUpdateElement = document.getElementById('sidebarLastUpdate');
-    if (lastUpdateElement) {
-        lastUpdateElement.textContent = timestamp.toLocaleTimeString();
-    }
 
     // Update license information in sidebar
     if (data.license) {
