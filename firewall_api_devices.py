@@ -382,12 +382,93 @@ def lookup_mac_vendor(mac_address):
         return None
 
 
+def get_interface_zones(firewall_config):
+    """Get mapping of interfaces to security zones by querying the firewall"""
+    debug("=== Getting interface-to-zone mappings ===")
+    interface_zones = {}
+
+    try:
+        firewall_ip, api_key, base_url = firewall_config
+
+        # Query for zone configuration using the config API
+        params = {
+            'type': 'config',
+            'action': 'get',
+            'xpath': '/config/devices/entry[@name="localhost.localdomain"]/vsys/entry[@name="vsys1"]/zone',
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+            debug(f"Zone config response (first 2000 chars):\n{response.text[:2000]}")
+
+            # Parse zone entries to get interface-to-zone mappings
+            # Structure: <response><result><zone><entry name="zone-name"><network><layer3><member>interface</member>...
+            for zone_entry in root.findall('.//zone/entry'):
+                zone_name = zone_entry.get('name')
+                if not zone_name:
+                    continue
+
+                debug(f"Processing zone: {zone_name}")
+
+                # Look for member interfaces in the network section
+                network = zone_entry.find('.//network')
+                if network is not None:
+                    # Check for layer3 interfaces
+                    layer3 = network.find('.//layer3')
+                    if layer3 is not None:
+                        for member in layer3.findall('.//member'):
+                            if member.text:
+                                interface_name = member.text
+                                interface_zones[interface_name] = zone_name
+                                debug(f"  Mapped L3 interface {interface_name} -> {zone_name}")
+
+                                # Also map base interface if this is a subinterface
+                                if '.' in interface_name:
+                                    base_interface = interface_name.split('.')[0]
+                                    if base_interface not in interface_zones:
+                                        interface_zones[base_interface] = zone_name
+                                        debug(f"  Mapped base interface {base_interface} -> {zone_name}")
+
+                    # Check for layer2 interfaces
+                    layer2 = network.find('.//layer2')
+                    if layer2 is not None:
+                        for member in layer2.findall('.//member'):
+                            if member.text:
+                                interface_name = member.text
+                                interface_zones[interface_name] = zone_name
+                                debug(f"  Mapped L2 interface {interface_name} -> {zone_name}")
+
+                                # Also map base interface if this is a subinterface
+                                if '.' in interface_name:
+                                    base_interface = interface_name.split('.')[0]
+                                    if base_interface not in interface_zones:
+                                        interface_zones[base_interface] = zone_name
+                                        debug(f"  Mapped base interface {base_interface} -> {zone_name}")
+
+            debug(f"Found {len(interface_zones)} interface-to-zone mappings")
+            if interface_zones:
+                debug(f"Zone mappings: {interface_zones}")
+            else:
+                debug("WARNING: No zone mappings found!")
+
+    except Exception as e:
+        exception(f"Error getting interface zones: {str(e)}")
+
+    return interface_zones
+
+
 def get_connected_devices(firewall_config):
     """Fetch ARP entries from all interfaces on the firewall"""
     debug("=== Starting get_connected_devices ===")
     try:
         firewall_ip, api_key, base_url = firewall_config
         debug(f"Using firewall API: {base_url}")
+
+        # Get interface-to-zone mappings first
+        interface_zones = get_interface_zones(firewall_config)
 
         # Query for ARP table entries
         params = {
@@ -419,24 +500,44 @@ def get_connected_devices(firewall_config):
                 port = entry.find('.//port')
 
                 # Extract values with fallbacks
-                mac_address = mac.text if mac is not None and mac.text else 'N/A'
+                mac_address = mac.text if mac is not None and mac.text else '-'
+                interface_name = interface.text if interface is not None and interface.text else '-'
+
+                # Convert TTL from seconds to minutes
+                ttl_seconds = ttl.text if ttl is not None and ttl.text else None
+                ttl_minutes = '-'
+                if ttl_seconds and ttl_seconds.isdigit():
+                    ttl_minutes = str(round(int(ttl_seconds) / 60, 1))
+
+                # Get security zone for this interface
+                zone = '-'
+                if interface_name != '-':
+                    # Try exact match first
+                    if interface_name in interface_zones:
+                        zone = interface_zones[interface_name]
+                    else:
+                        # Try base interface (e.g., ethernet1/1 from ethernet1/1.100)
+                        base_interface = interface_name.split('.')[0]
+                        if base_interface in interface_zones:
+                            zone = interface_zones[base_interface]
 
                 device_entry = {
-                    'hostname': 'N/A',  # ARP table typically doesn't have hostnames
-                    'ip': ip.text if ip is not None and ip.text else 'N/A',
+                    'hostname': '-',  # ARP table typically doesn't have hostnames
+                    'ip': ip.text if ip is not None and ip.text else '-',
                     'mac': mac_address,
-                    'vlan': 'N/A',  # Will be extracted from interface if available
-                    'interface': interface.text if interface is not None and interface.text else 'N/A',
-                    'ttl': ttl.text if ttl is not None and ttl.text else 'N/A',
-                    'status': status.text if status is not None and status.text else 'N/A',
-                    'port': port.text if port is not None and port.text else 'N/A',
+                    'vlan': '-',  # Will be extracted from interface if available
+                    'interface': interface_name,
+                    'ttl': ttl_minutes,
+                    'status': status.text if status is not None and status.text else '-',
+                    'port': port.text if port is not None and port.text else '-',
+                    'zone': zone,  # Security zone
                     'vendor': None,  # Will be looked up from vendor database
                     'is_virtual': False,  # Will be determined by MAC analysis
                     'virtual_type': None  # Type of virtual MAC if detected
                 }
 
                 # Try to extract VLAN from interface name (e.g., "ethernet1/1.100" -> VLAN 100)
-                if device_entry['interface'] != 'N/A' and '.' in device_entry['interface']:
+                if device_entry['interface'] != '-' and '.' in device_entry['interface']:
                     try:
                         vlan_id = device_entry['interface'].split('.')[-1]
                         if vlan_id.isdigit():

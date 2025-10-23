@@ -65,11 +65,11 @@ function setupConnectedDevicesEventListeners() {
         vlanFilter.setAttribute('data-listener', 'true');
     }
 
-    // Status filter
-    const statusFilter = document.getElementById('connectedDevicesStatusFilter');
-    if (statusFilter && !statusFilter.hasAttribute('data-listener')) {
-        statusFilter.addEventListener('change', () => renderConnectedDevicesTable());
-        statusFilter.setAttribute('data-listener', 'true');
+    // Zone filter
+    const zoneFilter = document.getElementById('connectedDevicesZoneFilter');
+    if (zoneFilter && !zoneFilter.hasAttribute('data-listener')) {
+        zoneFilter.addEventListener('change', () => renderConnectedDevicesTable());
+        zoneFilter.setAttribute('data-listener', 'true');
     }
 
     // Limit selector
@@ -99,8 +99,9 @@ function setupConnectedDevicesEventListeners() {
         exportXMLBtn.setAttribute('data-listener', 'true');
     }
 
-    // Populate VLAN filter with unique VLANs
+    // Populate VLAN and Zone filters with unique values
     populateVLANFilter();
+    populateZoneFilter();
 }
 
 function populateVLANFilter() {
@@ -110,7 +111,7 @@ function populateVLANFilter() {
     // Get unique VLANs
     const vlans = new Set();
     allConnectedDevices.forEach(device => {
-        if (device.vlan && device.vlan !== 'N/A') {
+        if (device.vlan && device.vlan !== '-') {
             vlans.add(device.vlan);
         }
     });
@@ -136,11 +137,37 @@ function populateVLANFilter() {
     });
 }
 
+function populateZoneFilter() {
+    const zoneFilter = document.getElementById('connectedDevicesZoneFilter');
+    if (!zoneFilter) return;
+
+    // Get unique zones
+    const zones = new Set();
+    allConnectedDevices.forEach(device => {
+        if (device.zone && device.zone !== '-') {
+            zones.add(device.zone);
+        }
+    });
+
+    // Clear existing options (except "All Zones")
+    while (zoneFilter.options.length > 1) {
+        zoneFilter.remove(1);
+    }
+
+    // Add zone options sorted alphabetically
+    Array.from(zones).sort().forEach(zone => {
+        const option = document.createElement('option');
+        option.value = zone;
+        option.textContent = zone;
+        zoneFilter.appendChild(option);
+    });
+}
+
 function renderConnectedDevicesTable() {
     const tableDiv = document.getElementById('connectedDevicesTable');
     const searchTerm = (document.getElementById('connectedDevicesSearchInput')?.value || '').toLowerCase().trim();
     const vlanFilter = document.getElementById('connectedDevicesVlanFilter')?.value || '';
-    const statusFilter = document.getElementById('connectedDevicesStatusFilter')?.value || '';
+    const zoneFilter = document.getElementById('connectedDevicesZoneFilter')?.value || '';
     const limit = parseInt(document.getElementById('connectedDevicesLimit')?.value || '50');
 
     // Filter devices
@@ -158,8 +185,8 @@ function renderConnectedDevicesTable() {
             return false;
         }
 
-        // Status filter
-        if (statusFilter && device.status !== statusFilter) {
+        // Zone filter
+        if (zoneFilter && device.zone !== zoneFilter) {
             return false;
         }
 
@@ -189,8 +216,9 @@ function renderConnectedDevicesTable() {
                             <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">IP Address</th>
                             <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">MAC Address</th>
                             <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">VLAN</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Security Zone</th>
                             <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Interface</th>
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Age (TTL)</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Age (minutes)</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -222,7 +250,7 @@ function renderConnectedDevicesTable() {
         // Add virtual type detail if available
         if (device.is_virtual && device.virtual_type) {
             const detailColor = device.is_randomized ? '#9c27b0' : '#ff9800';
-            macCell += `<div style="font-size: 0.75em; color: ${detailColor}; margin-top: 2px; font-style: italic;">${device.virtual_type}</div>`;
+            macCell += `<div style="font-size: 0.75em; color: ${detailColor}; margin-top: 2px;">${device.virtual_type}</div>`;
         }
 
         html += `
@@ -231,8 +259,9 @@ function renderConnectedDevicesTable() {
                 <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.ip}</td>
                 <td style="padding: 12px 15px;">${macCell}</td>
                 <td style="padding: 12px 15px; color: #333;">${device.vlan}</td>
+                <td style="padding: 12px 15px; color: #333;">${device.zone || '-'}</td>
                 <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.interface}</td>
-                <td style="padding: 12px 15px; color: #333;">${device.ttl}s</td>
+                <td style="padding: 12px 15px; color: #333;">${device.ttl}</td>
             </tr>`;
     });
 
@@ -269,7 +298,7 @@ function exportDevices(format) {
 }
 
 function exportDevicesCSV(devices) {
-    const headers = ['Hostname', 'IP Address', 'MAC Address', 'VLAN', 'Interface', 'TTL', 'Status'];
+    const headers = ['Hostname', 'IP Address', 'MAC Address', 'VLAN', 'Security Zone', 'Interface', 'TTL (minutes)', 'Status'];
     let csv = headers.join(',') + '\n';
 
     devices.forEach(device => {
@@ -278,6 +307,7 @@ function exportDevicesCSV(devices) {
             device.ip,
             device.mac,
             device.vlan,
+            device.zone || '-',
             device.interface,
             device.ttl,
             device.status
@@ -298,6 +328,7 @@ function exportDevicesXML(devices) {
         xml += `    <ip>${escapeXML(device.ip)}</ip>\n`;
         xml += `    <mac>${escapeXML(device.mac)}</mac>\n`;
         xml += `    <vlan>${escapeXML(device.vlan)}</vlan>\n`;
+        xml += `    <zone>${escapeXML(device.zone || '-')}</zone>\n`;
         xml += `    <interface>${escapeXML(device.interface)}</interface>\n`;
         xml += `    <ttl>${escapeXML(device.ttl)}</ttl>\n`;
         xml += `    <status>${escapeXML(device.status)}</status>\n`;
