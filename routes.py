@@ -234,9 +234,10 @@ def register_routes(app):
 
     @app.route('/api/devices', methods=['GET'])
     def get_devices():
-        """Get all devices"""
+        """Get all devices with encrypted API keys"""
         try:
-            devices = device_manager.load_devices()
+            # Load devices with encrypted API keys for API response (security)
+            devices = device_manager.load_devices(decrypt_api_keys=False)
             groups = device_manager.get_groups()
 
             # Fetch uptime and version for each enabled device
@@ -302,9 +303,11 @@ def register_routes(app):
 
     @app.route('/api/devices/<device_id>', methods=['GET'])
     def get_device(device_id):
-        """Get a specific device"""
+        """Get a specific device with encrypted API key"""
         try:
-            device = device_manager.get_device(device_id)
+            # Get all devices with encrypted keys, then find the specific one
+            devices = device_manager.load_devices(decrypt_api_keys=False)
+            device = next((d for d in devices if d.get('id') == device_id), None)
             if device:
                 return jsonify({
                     'status': 'success',

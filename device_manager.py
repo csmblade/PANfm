@@ -28,25 +28,39 @@ class DeviceManager:
             with open(self.devices_file, 'w') as f:
                 json.dump(default_data, f, indent=2)
 
-    def load_devices(self):
+    def load_devices(self, decrypt_api_keys=True):
         """
         Load all devices from file.
-        Automatically decrypts encrypted device credentials.
+
+        Args:
+            decrypt_api_keys: If True, decrypts api_key field. If False, returns encrypted api_keys.
+                             Default True for internal use, False for API responses.
         """
         try:
             with open(self.devices_file, 'r') as f:
                 data = json.load(f)
-                encrypted_devices = data.get('devices', [])
-                debug("Loaded %d devices from %s", len(encrypted_devices), self.devices_file)
+                devices = data.get('devices', [])
+                debug("Loaded %d devices from %s", len(devices), self.devices_file)
 
-                # Decrypt all device credentials
-                decrypted_devices = []
-                for device in encrypted_devices:
-                    decrypted_device = decrypt_dict(device)
-                    decrypted_devices.append(decrypted_device)
-
-                debug("Decrypted %d device records", len(decrypted_devices))
-                return decrypted_devices
+                if decrypt_api_keys:
+                    # Decrypt ONLY the api_key field for internal use
+                    decrypted_devices = []
+                    for device in devices:
+                        device_copy = device.copy()
+                        if 'api_key' in device_copy and device_copy['api_key']:
+                            from encryption import decrypt_string
+                            try:
+                                device_copy['api_key'] = decrypt_string(device_copy['api_key'])
+                            except:
+                                # Already decrypted or invalid, leave as-is
+                                pass
+                        decrypted_devices.append(device_copy)
+                    debug("Decrypted api_key for %d device records", len(decrypted_devices))
+                    return decrypted_devices
+                else:
+                    # Return with encrypted api_keys for API responses
+                    debug("Returning %d devices with encrypted api_keys", len(devices))
+                    return devices
         except Exception as e:
             exception("Error loading devices: %s", str(e))
             return []
@@ -54,23 +68,30 @@ class DeviceManager:
     def save_devices(self, devices):
         """
         Save devices to file with encryption.
-        All sensitive device credentials are encrypted before saving.
+        Only the api_key field is encrypted, other fields remain plain text.
         """
         try:
             with open(self.devices_file, 'r') as f:
                 data = json.load(f)
 
-            # Encrypt all device credentials
+            # Encrypt ONLY the api_key field for each device
             encrypted_devices = []
             for device in devices:
-                encrypted_device = encrypt_dict(device)
-                encrypted_devices.append(encrypted_device)
+                device_copy = device.copy()
+                if 'api_key' in device_copy and device_copy['api_key']:
+                    from encryption import encrypt_string
+                    try:
+                        device_copy['api_key'] = encrypt_string(device_copy['api_key'])
+                    except:
+                        # Already encrypted or invalid, leave as-is
+                        pass
+                encrypted_devices.append(device_copy)
 
             data['devices'] = encrypted_devices
             with open(self.devices_file, 'w') as f:
                 json.dump(data, f, indent=2)
 
-            debug("Saved and encrypted %d devices to %s", len(devices), self.devices_file)
+            debug("Saved %d devices with encrypted api_keys to %s", len(devices), self.devices_file)
             return True
         except Exception as e:
             exception("Error saving devices: %s", str(e))
