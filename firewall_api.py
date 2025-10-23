@@ -284,6 +284,14 @@ def get_wan_interface_ip(wan_interface):
         debug(f"WAN interface IP API Status: {response.status_code}")
 
         if response.status_code == 200:
+            # Export XML for debugging
+            try:
+                with open(f'wan_interface_{wan_interface.replace("/", "_")}_output.xml', 'w') as f:
+                    f.write(response.text)
+                debug(f"Exported WAN interface XML to wan_interface_{wan_interface.replace('/', '_')}_output.xml")
+            except Exception as e:
+                debug(f"Error exporting WAN interface XML: {e}")
+
             root = ET.fromstring(response.text)
 
             # Try to find IP address in the response
@@ -293,6 +301,12 @@ def get_wan_interface_ip(wan_interface):
                 ip_address = ip_elem.text
                 debug(f"Found WAN interface {wan_interface} IP: {ip_address}")
                 return ip_address
+            else:
+                # Debug: print all tags in the XML to see what's available
+                debug(f"No <ip> tag found. Available tags in XML:")
+                for elem in root.iter():
+                    if elem.text and elem.text.strip():
+                        debug(f"  <{elem.tag}>: {elem.text[:100]}")
 
             debug(f"No IP found for interface {wan_interface}")
             return None
