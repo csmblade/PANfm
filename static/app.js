@@ -322,6 +322,14 @@ function updateStats(data) {
         }
     }
 
+    // Update WAN speed in sidebar
+    if (data.wan_speed !== undefined) {
+        const wanSpeedElement = document.getElementById('sidebarWanSpeed');
+        if (wanSpeedElement) {
+            wanSpeedElement.textContent = data.wan_speed ? `${data.wan_speed} Mbps` : '-';
+        }
+    }
+
     // Update interface stats
     if (data.interfaces) {
         const interfaceErrorsElement = document.getElementById('interfaceErrorsValue');
@@ -1017,6 +1025,7 @@ function refreshAllDataForDevice() {
     const sidebarPPS = document.getElementById('sidebarPPS');
     const sidebarUptime = document.getElementById('sidebarUptime');
     const sidebarWanIp = document.getElementById('sidebarWanIp');
+    const sidebarWanSpeed = document.getElementById('sidebarWanSpeed');
     const sidebarApiStats = document.getElementById('sidebarApiStats');
     const sidebarLastUpdate = document.getElementById('sidebarLastUpdate');
     const sidebarPanosVersion = document.getElementById('sidebarPanosVersion');
@@ -1026,6 +1035,7 @@ function refreshAllDataForDevice() {
     if (sidebarPPS) sidebarPPS.textContent = '0 PPS';
     if (sidebarUptime) sidebarUptime.textContent = '-';
     if (sidebarWanIp) sidebarWanIp.textContent = '-';
+    if (sidebarWanSpeed) sidebarWanSpeed.textContent = '-';
     if (sidebarApiStats) sidebarApiStats.textContent = '-';
     if (sidebarLastUpdate) sidebarLastUpdate.textContent = '-';
     if (sidebarPanosVersion) sidebarPanosVersion.textContent = '-';

@@ -258,13 +258,14 @@ def get_system_resources():
 
 def get_wan_interface_ip(wan_interface):
     """
-    Get the IP address of a specific WAN interface
+    Get the IP address and speed of a specific WAN interface
 
     Args:
         wan_interface: Interface name (e.g., 'ethernet1/1')
 
     Returns:
-        IP address string or None if not found
+        Dictionary with 'ip' and 'speed' keys, or None if interface not found
+        Example: {'ip': '87.121.248.146', 'speed': '1000'}
     """
     try:
         if not wan_interface:
@@ -294,6 +295,9 @@ def get_wan_interface_ip(wan_interface):
 
             root = ET.fromstring(response.text)
 
+            ip_address = None
+            speed = None
+
             # Try to find IP address in the response
             # First try <dyn-addr><member> for dynamic IPs (DHCP, PPPoE, etc.)
             dyn_addr_elem = root.find('.//dyn-addr/member')
@@ -303,14 +307,22 @@ def get_wan_interface_ip(wan_interface):
                 ip_with_cidr = dyn_addr_elem.text
                 ip_address = ip_with_cidr.split('/')[0] if '/' in ip_with_cidr else ip_with_cidr
                 debug(f"Found WAN interface {wan_interface} dynamic IP: {ip_address} (from {ip_with_cidr})")
-                return ip_address
 
             # Fallback: try <ip> tag for static IPs
-            ip_elem = root.find('.//ip')
-            if ip_elem is not None and ip_elem.text:
-                ip_address = ip_elem.text.split('/')[0] if '/' in ip_elem.text else ip_elem.text
-                debug(f"Found WAN interface {wan_interface} static IP: {ip_address}")
-                return ip_address
+            if not ip_address:
+                ip_elem = root.find('.//ip')
+                if ip_elem is not None and ip_elem.text:
+                    ip_address = ip_elem.text.split('/')[0] if '/' in ip_elem.text else ip_elem.text
+                    debug(f"Found WAN interface {wan_interface} static IP: {ip_address}")
+
+            # Extract interface speed
+            speed_elem = root.find('.//speed')
+            if speed_elem is not None and speed_elem.text:
+                speed = speed_elem.text
+                debug(f"Found WAN interface {wan_interface} speed: {speed}")
+
+            if ip_address:
+                return {'ip': ip_address, 'speed': speed}
 
             debug(f"No IP found for interface {wan_interface}")
             return None
@@ -668,11 +680,15 @@ def get_throughput_data():
                         panos_version = sw['version']
                         break
 
-            # Get WAN interface IP if wan_interface is configured
+            # Get WAN interface IP and speed if wan_interface is configured
             wan_ip = None
+            wan_speed = None
             if wan_interface:
-                wan_ip = get_wan_interface_ip(wan_interface)
-                debug(f"WAN IP for interface {wan_interface}: {wan_ip}")
+                wan_data = get_wan_interface_ip(wan_interface)
+                if wan_data:
+                    wan_ip = wan_data.get('ip')
+                    wan_speed = wan_data.get('speed')
+                    debug(f"WAN IP for interface {wan_interface}: {wan_ip}, Speed: {wan_speed}")
 
             return {
                 'timestamp': datetime.now().isoformat(),
@@ -692,6 +708,7 @@ def get_throughput_data():
                 'api_stats': get_api_stats(),
                 'panos_version': panos_version,
                 'wan_ip': wan_ip,
+                'wan_speed': wan_speed,
                 'status': 'success'
             }
         else:
