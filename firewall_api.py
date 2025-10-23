@@ -45,6 +45,7 @@ def get_firewall_config(device_id=None):
         if device:
             firewall_ip = device['ip']
             api_key = device['api_key']
+            debug(f"get_firewall_config: Using device {device.get('name')} - API key starts with: {api_key[:20] if api_key else 'NONE'}...")
             base_url = f"https://{firewall_ip}/api/"
             return firewall_ip, api_key, base_url
 
@@ -52,6 +53,7 @@ def get_firewall_config(device_id=None):
     settings = load_settings()
     firewall_ip = settings.get('firewall_ip', DEFAULT_FIREWALL_IP)
     api_key = settings.get('api_key', DEFAULT_API_KEY)
+    debug(f"get_firewall_config: Loaded from settings - API key starts with: {api_key[:20] if api_key else 'NONE'}...")
 
     # Check if we have a selected device in settings
     selected_device_id = settings.get('selected_device_id')
@@ -60,8 +62,10 @@ def get_firewall_config(device_id=None):
         if device and device.get('enabled', True):
             firewall_ip = device['ip']
             api_key = device['api_key']
+            debug(f"get_firewall_config: Using selected device {device.get('name')} - API key starts with: {api_key[:20] if api_key else 'NONE'}...")
 
     base_url = f"https://{firewall_ip}/api/"
+    debug(f"get_firewall_config: Final API key starts with: {api_key[:20] if api_key else 'NONE'}...")
     return firewall_ip, api_key, base_url
 
 
@@ -435,6 +439,12 @@ def get_throughput_data():
         }
 
         response = api_request_get(base_url, params=params, verify=False, timeout=10)
+
+        debug(f"Interface counter API response: HTTP {response.status_code}")
+        if response.status_code != 200:
+            debug(f"Interface counter request URL length: {len(response.url)} chars")
+            debug(f"Interface counter request URL: {response.url}")
+            debug(f"Interface counter error response: {response.text[:500]}")
 
         if response.status_code == 200:
             # Export XML for debugging

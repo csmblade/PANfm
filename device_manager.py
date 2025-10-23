@@ -50,10 +50,13 @@ class DeviceManager:
                         if 'api_key' in device_copy and device_copy['api_key']:
                             from encryption import decrypt_string
                             try:
-                                device_copy['api_key'] = decrypt_string(device_copy['api_key'])
-                            except:
-                                # Already decrypted or invalid, leave as-is
-                                pass
+                                decrypted_key = decrypt_string(device_copy['api_key'])
+                                device_copy['api_key'] = decrypted_key
+                                debug(f"Successfully decrypted API key for device {device_copy.get('name', 'unknown')}")
+                            except Exception as decrypt_err:
+                                # Decryption failed - log the error
+                                warning(f"Failed to decrypt API key for device {device_copy.get('name', 'unknown')}: {str(decrypt_err)}")
+                                # Leave encrypted key as-is (will fail API calls)
                         decrypted_devices.append(device_copy)
                     debug("Decrypted api_key for %d device records", len(decrypted_devices))
                     return decrypted_devices
