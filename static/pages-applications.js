@@ -789,7 +789,7 @@ function updateTimeRangeDisplay(earliestTime, latestTime) {
     const timeRangeElement = document.getElementById('applicationsTimeRange');
 
     if (!earliestTime || !latestTime) {
-        timeRangeElement.textContent = '';
+        timeRangeElement.textContent = 'Loading time period...';
         return;
     }
 
@@ -797,33 +797,11 @@ function updateTimeRangeDisplay(earliestTime, latestTime) {
     const earliest = new Date(earliestTime);
     const latest = new Date(latestTime);
 
-    // Calculate duration
+    // Calculate duration in minutes
     const durationMs = latest - earliest;
-    const durationMins = Math.floor(durationMs / 1000 / 60);
-    const durationHours = Math.floor(durationMins / 60);
-    const durationDays = Math.floor(durationHours / 24);
+    const durationMins = Math.round(durationMs / 1000 / 60);
 
-    // Format duration display
-    let durationText = '';
-    if (durationDays > 0) {
-        durationText = `${durationDays} day${durationDays > 1 ? 's' : ''}`;
-    } else if (durationHours > 0) {
-        durationText = `${durationHours} hour${durationHours > 1 ? 's' : ''}`;
-    } else {
-        durationText = `${durationMins} minute${durationMins > 1 ? 's' : ''}`;
-    }
-
-    // Format display
-    const formatOptions = {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-
-    const earliestFormatted = earliest.toLocaleString('en-US', formatOptions);
-    const latestFormatted = latest.toLocaleString('en-US', formatOptions);
-
-    timeRangeElement.textContent = `Data period: ${earliestFormatted} to ${latestFormatted} (${durationText})`;
+    // Display the time period in minutes
+    timeRangeElement.textContent = `Data gathered over ${durationMins} minute${durationMins !== 1 ? 's' : ''}`;
 }
 
