@@ -384,14 +384,10 @@ function updateStats(data) {
         document.getElementById('mediumValue').innerHTML = data.threats.medium_threats.toLocaleString() + calculateTrend(historicalData.mediumThreats);
         document.getElementById('blockedUrlValue').innerHTML = data.threats.blocked_urls.toLocaleString() + calculateTrend(historicalData.blockedUrls);
 
-        // Update threat logs and store for modals
+        // Store threat logs for modals
         currentCriticalLogs = data.threats.critical_logs || [];
         currentMediumLogs = data.threats.medium_logs || [];
         currentBlockedUrlLogs = data.threats.blocked_url_logs || [];
-
-        updateThreatLogs('criticalLogs', data.threats.critical_logs, '#dc2626');
-        updateThreatLogs('mediumLogs', data.threats.medium_logs, '#f59e0b');
-        updateThreatLogs('blockedUrlLogs', data.threats.blocked_url_logs, '#2563eb');
 
         // Update sidebar last seen stats
         const sidebarCritical = document.getElementById('sidebarCriticalLastSeen');
