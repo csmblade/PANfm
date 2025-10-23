@@ -334,7 +334,8 @@ function showDeviceModal(deviceId = null) {
             document.getElementById('deviceId').value = device.id;
             document.getElementById('deviceName').value = device.name;
             document.getElementById('deviceIp').value = device.ip;
-            document.getElementById('deviceApiKey').value = device.api_key;
+            document.getElementById('deviceApiKey').value = '';  // Don't populate encrypted key
+            document.getElementById('deviceApiKey').placeholder = 'Leave blank to keep existing API key';
             document.getElementById('deviceGroup').value = device.group || 'Default';
             document.getElementById('deviceDescription').value = device.description || '';
             document.getElementById('deviceWanInterface').value = device.wan_interface || '';
@@ -342,6 +343,7 @@ function showDeviceModal(deviceId = null) {
     } else {
         title.textContent = 'Add Device';
         document.getElementById('deviceId').value = '';
+        document.getElementById('deviceApiKey').placeholder = '';
     }
 
     modal.style.display = 'flex';
