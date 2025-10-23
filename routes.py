@@ -157,7 +157,8 @@ def register_routes(app):
                     'total_applications': 0,
                     'total_sessions': 0,
                     'total_bytes': 0,
-                    'vlans_detected': 0
+                    'vlans_detected': 0,
+                    'zones_detected': 0
                 },
                 'total': 0
             })

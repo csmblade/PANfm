@@ -36,6 +36,7 @@ async function loadApplications() {
             document.getElementById('appStatTotalSessions').textContent = (summary.total_sessions || 0).toLocaleString();
             document.getElementById('appStatTotalVolume').textContent = formatBytesHuman(summary.total_bytes || 0);
             document.getElementById('appStatVlans').textContent = summary.vlans_detected || 0;
+            document.getElementById('appStatZones').textContent = summary.zones_detected || 0;
 
             // Populate filter dropdowns
             populateApplicationFilters();
@@ -55,13 +56,17 @@ async function loadApplications() {
 }
 
 function populateApplicationFilters() {
-    // Get unique VLANs and Categories
+    // Get unique VLANs, Zones, and Categories
     const vlans = new Set();
+    const zones = new Set();
     const categories = new Set();
 
     allApplications.forEach(app => {
         if (app.vlans && app.vlans.length > 0) {
             app.vlans.forEach(vlan => vlans.add(vlan));
+        }
+        if (app.zones && app.zones.length > 0) {
+            app.zones.forEach(zone => zones.add(zone));
         }
         if (app.category) {
             categories.add(app.category);
@@ -79,6 +84,18 @@ function populateApplicationFilters() {
         vlanFilter.appendChild(option);
     });
     vlanFilter.value = currentVlan;
+
+    // Populate Security Zone filter
+    const zoneFilter = document.getElementById('applicationsZoneFilter');
+    const currentZone = zoneFilter.value;
+    zoneFilter.innerHTML = '<option value="">All Zones</option>';
+    Array.from(zones).sort().forEach(zone => {
+        const option = document.createElement('option');
+        option.value = zone;
+        option.textContent = zone;
+        zoneFilter.appendChild(option);
+    });
+    zoneFilter.value = currentZone;
 
     // Populate Category filter
     const categoryFilter = document.getElementById('applicationsCategoryFilter');
@@ -185,6 +202,7 @@ function renderApplicationsTable() {
     const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
     const limit = parseInt(document.getElementById('applicationsLimit').value);
     const vlanFilter = document.getElementById('applicationsVlanFilter').value;
+    const zoneFilter = document.getElementById('applicationsZoneFilter').value;
     const categoryFilter = document.getElementById('applicationsCategoryFilter').value;
 
     // Filter applications
@@ -196,6 +214,11 @@ function renderApplicationsTable() {
 
         // VLAN filter
         if (vlanFilter && (!app.vlans || !app.vlans.includes(vlanFilter))) {
+            return false;
+        }
+
+        // Security Zone filter
+        if (zoneFilter && (!app.zones || !app.zones.includes(zoneFilter))) {
             return false;
         }
 
@@ -443,6 +466,7 @@ function setupApplicationsEventListeners() {
     const searchInput = document.getElementById('applicationsSearchInput');
     const limitSelect = document.getElementById('applicationsLimit');
     const vlanFilter = document.getElementById('applicationsVlanFilter');
+    const zoneFilter = document.getElementById('applicationsZoneFilter');
     const categoryFilter = document.getElementById('applicationsCategoryFilter');
     const refreshBtn = document.getElementById('refreshApplicationsBtn');
 
@@ -460,6 +484,12 @@ function setupApplicationsEventListeners() {
 
     if (vlanFilter) {
         vlanFilter.addEventListener('change', () => {
+            renderApplicationsTable();
+        });
+    }
+
+    if (zoneFilter) {
+        zoneFilter.addEventListener('change', () => {
             renderApplicationsTable();
         });
     }

@@ -558,6 +558,7 @@ def get_application_statistics(firewall_config, max_logs=1000):
         total_sessions = 0
         total_bytes = 0
         vlans = set()
+        zones = set()
 
         for log in traffic_logs:
             app = log.get('app', 'unknown')
@@ -584,6 +585,12 @@ def get_application_statistics(firewall_config, max_logs=1000):
             if outbound_vlan:
                 vlans.add(outbound_vlan)
 
+            # Track security zones
+            if from_zone:
+                zones.add(from_zone)
+            if to_zone:
+                zones.add(to_zone)
+
             # Update summary totals
             total_sessions += 1
             total_bytes += bytes_val
@@ -601,7 +608,8 @@ def get_application_statistics(firewall_config, max_logs=1000):
                     'dest_details': {},  # Track bytes per destination
                     'protocols': set(),
                     'ports': set(),
-                    'vlans': set()
+                    'vlans': set(),
+                    'zones': set()
                 }
 
             app_stats[app]['sessions'] += 1
@@ -625,9 +633,13 @@ def get_application_statistics(firewall_config, max_logs=1000):
             # Track VLANs from interfaces (not zones)
             if inbound_vlan: app_stats[app]['vlans'].add(inbound_vlan)
             if outbound_vlan: app_stats[app]['vlans'].add(outbound_vlan)
+            # Track security zones
+            if from_zone: app_stats[app]['zones'].add(from_zone)
+            if to_zone: app_stats[app]['zones'].add(to_zone)
 
-        # Log VLAN detection summary
+        # Log VLAN and zone detection summary
         debug(f"Detected {len(vlans)} unique VLANs from interface data: {sorted(vlans)}")
+        debug(f"Detected {len(zones)} unique security zones: {sorted(zones)}")
 
         # Convert sets to lists and format result
         result = []
@@ -657,7 +669,8 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 'destinations': dest_list[:50],  # Top 50 destinations with details
                 'protocols': list(stats['protocols']),
                 'ports': list(stats['ports'])[:20],  # Limit to 20
-                'vlans': list(stats['vlans'])
+                'vlans': list(stats['vlans']),
+                'zones': list(stats['zones'])
             })
 
         # Sort by bytes (volume) descending by default
@@ -672,7 +685,8 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 'total_applications': len(result),
                 'total_sessions': total_sessions,
                 'total_bytes': total_bytes,
-                'vlans_detected': len(vlans)
+                'vlans_detected': len(vlans),
+                'zones_detected': len(zones)
             }
         }
 
@@ -684,6 +698,7 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 'total_applications': 0,
                 'total_sessions': 0,
                 'total_bytes': 0,
-                'vlans_detected': 0
+                'vlans_detected': 0,
+                'zones_detected': 0
             }
         }
