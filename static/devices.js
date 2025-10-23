@@ -543,10 +543,11 @@ async function updateMonitoredInterface() {
         }
 
         // Create clean payload with only necessary fields
+        // NOTE: Do NOT include api_key here - it's already encrypted in the device object
+        // and would cause double encryption if sent back to server
         const updatePayload = {
             name: device.name,
             ip: device.ip,
-            api_key: device.api_key,
             group: device.group || 'Default',
             description: device.description || '',
             enabled: device.enabled !== undefined ? device.enabled : true,
