@@ -309,6 +309,7 @@ function updateStats(data) {
     if (data.panos_version !== undefined) {
         const versionElement = document.getElementById('sidebarPanosVersion');
         const alertElement = document.getElementById('sidebarVersionAlert');
+        const latestVersionElement = document.getElementById('sidebarLatestVersion');
 
         if (versionElement) {
             versionElement.textContent = data.panos_version || 'N/A';
@@ -317,6 +318,10 @@ function updateStats(data) {
         if (alertElement) {
             if (data.version_update_available) {
                 alertElement.style.display = 'block';
+                // Update the version text if available
+                if (latestVersionElement && data.latest_panos_version) {
+                    latestVersionElement.textContent = data.latest_panos_version;
+                }
             } else {
                 alertElement.style.display = 'none';
             }

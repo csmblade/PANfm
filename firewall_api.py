@@ -554,14 +554,21 @@ def get_throughput_data():
             software_info = get_software_updates(firewall_config)
             panos_version = None
             update_available = False
+            latest_version = None
 
             if software_info.get('status') == 'success':
                 # Find PAN-OS version from software list
                 for sw in software_info.get('software', []):
                     if sw['name'] == 'PAN-OS':
                         panos_version = sw['version']
-                        # Check if update is available (latest=yes means we have the latest)
-                        update_available = sw.get('latest', 'yes') != 'yes'
+                        # Check if update is available (current=yes means this is the current version)
+                        # If current=no and latest field has a version, that's the available update
+                        if sw.get('current', 'yes') == 'no':
+                            update_available = True
+                            latest_version = sw.get('latest', None)
+                        elif sw.get('latest', 'yes') != 'yes':
+                            update_available = True
+                            latest_version = sw.get('latest', None)
                         break
 
             return {
@@ -582,6 +589,7 @@ def get_throughput_data():
                 'api_stats': get_api_stats(),
                 'panos_version': panos_version,
                 'version_update_available': update_available,
+                'latest_panos_version': latest_version,
                 'status': 'success'
             }
         else:
