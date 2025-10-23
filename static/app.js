@@ -565,12 +565,24 @@ function updateStatus(isOnline, message = '', deviceName = '') {
     if (isOnline) {
         statusDot.classList.remove('offline');
         statusDot.classList.add('online');
-        // Show device name if provided, otherwise just "Connected"
-        statusText.textContent = deviceName ? `Connected: ${deviceName}` : 'Connected';
+        // If device name is provided, use it. Otherwise preserve existing text if it already has a device name
+        if (deviceName) {
+            statusText.textContent = `Connected: ${deviceName}`;
+        } else if (!statusText.textContent.includes(':')) {
+            // Only change to generic "Connected" if there's no device name already
+            statusText.textContent = 'Connected';
+        }
+        // else: preserve existing "Connected: DeviceName" text
     } else {
         statusDot.classList.remove('online');
         statusDot.classList.add('offline');
-        statusText.textContent = deviceName ? `Disconnected: ${deviceName}` : 'Disconnected';
+        // Same logic for disconnected state
+        if (deviceName) {
+            statusText.textContent = `Disconnected: ${deviceName}`;
+        } else if (!statusText.textContent.includes(':')) {
+            statusText.textContent = 'Disconnected';
+        }
+        // else: preserve existing "Disconnected: DeviceName" text
     }
 }
 
