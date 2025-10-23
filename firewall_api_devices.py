@@ -261,6 +261,63 @@ def get_license_info(firewall_config):
         }
 
 
+def is_virtual_mac(mac_address):
+    """
+    Determine if a MAC address is virtual/locally administered.
+
+    Returns dict with:
+    - is_virtual: bool
+    - reason: string explaining why (if virtual)
+    """
+    if not mac_address or mac_address == 'N/A':
+        return {'is_virtual': False, 'reason': None}
+
+    try:
+        # Normalize MAC address
+        mac_clean = mac_address.upper().replace(':', '').replace('-', '')
+
+        if len(mac_clean) < 2:
+            return {'is_virtual': False, 'reason': None}
+
+        # Check locally administered bit (2nd bit of 1st octet)
+        first_octet = int(mac_clean[:2], 16)
+        is_locally_administered = bool(first_octet & 0x02)
+
+        # Known virtual MAC prefixes
+        virtual_prefixes = {
+            '005056': 'VMware',
+            '000C29': 'VMware',
+            '000569': 'VMware',
+            '00155D': 'Microsoft Hyper-V',
+            '0242': 'Docker',
+            '080027': 'VirtualBox',
+            '00163E': 'Xen',
+            'DEADBE': 'Test/Virtual',
+            '525400': 'QEMU/KVM'
+        }
+
+        # Check for known virtual prefixes
+        for prefix, vm_type in virtual_prefixes.items():
+            if mac_clean.startswith(prefix):
+                return {
+                    'is_virtual': True,
+                    'reason': f'{vm_type} virtual MAC'
+                }
+
+        # Check locally administered bit
+        if is_locally_administered:
+            return {
+                'is_virtual': True,
+                'reason': 'Locally administered (virtual/custom)'
+            }
+
+        return {'is_virtual': False, 'reason': None}
+
+    except Exception as e:
+        debug(f"Error checking if MAC is virtual: {str(e)}")
+        return {'is_virtual': False, 'reason': None}
+
+
 def lookup_mac_vendor(mac_address):
     """
     Lookup vendor name for a MAC address.
@@ -344,7 +401,9 @@ def get_connected_devices(firewall_config):
                     'ttl': ttl.text if ttl is not None and ttl.text else 'N/A',
                     'status': status.text if status is not None and status.text else 'N/A',
                     'port': port.text if port is not None and port.text else 'N/A',
-                    'vendor': None  # Will be looked up from vendor database
+                    'vendor': None,  # Will be looked up from vendor database
+                    'is_virtual': False,  # Will be determined by MAC analysis
+                    'virtual_type': None  # Type of virtual MAC if detected
                 }
 
                 # Try to extract VLAN from interface name (e.g., "ethernet1/1.100" -> VLAN 100)
@@ -355,6 +414,11 @@ def get_connected_devices(firewall_config):
                             device_entry['vlan'] = vlan_id
                     except:
                         pass
+
+                # Check if MAC is virtual/locally administered
+                virtual_info = is_virtual_mac(mac_address)
+                device_entry['is_virtual'] = virtual_info['is_virtual']
+                device_entry['virtual_type'] = virtual_info['reason']
 
                 # Lookup vendor name for MAC address
                 vendor_name = lookup_mac_vendor(mac_address)

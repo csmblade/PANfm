@@ -28,6 +28,7 @@ from firewall_api_devices import (
     get_software_updates,
     get_license_info,
     lookup_mac_vendor,
+    is_virtual_mac,
     get_connected_devices
 )
 

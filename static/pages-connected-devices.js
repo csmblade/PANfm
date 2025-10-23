@@ -198,10 +198,24 @@ function renderConnectedDevicesTable() {
     displayDevices.forEach((device, index) => {
         const rowStyle = index % 2 === 0 ? 'background: #ffffff;' : 'background: #f8f9fa;';
 
-        // Format MAC address cell with vendor name underneath if available
-        let macCell = `<div style="font-family: monospace; color: #333;">${device.mac}</div>`;
+        // Format MAC address cell with vendor name and virtual indicator
+        let macCell = `<div style="font-family: monospace; color: #333;">${device.mac}`;
+
+        // Add virtual MAC indicator if detected
+        if (device.is_virtual) {
+            macCell += ` <span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600; margin-left: 4px;" title="${device.virtual_type || 'Virtual/Locally Administered MAC'}">VIRTUAL</span>`;
+        }
+
+        macCell += `</div>`;
+
+        // Add vendor name underneath if available
         if (device.vendor) {
             macCell += `<div style="font-size: 0.85em; color: #666; margin-top: 2px;">${device.vendor}</div>`;
+        }
+
+        // Add virtual type detail if available
+        if (device.is_virtual && device.virtual_type) {
+            macCell += `<div style="font-size: 0.75em; color: #ff9800; margin-top: 2px; font-style: italic;">${device.virtual_type}</div>`;
         }
 
         html += `
