@@ -214,6 +214,12 @@ function updateChart(data) {
 
     // Update chart
     chart.update('none'); // No animation for smoother updates
+
+    // Hide loading overlay once data is loaded
+    const chartLoadingOverlay = document.getElementById('chartLoadingOverlay');
+    if (chartLoadingOverlay) {
+        chartLoadingOverlay.style.display = 'none';
+    }
 }
 
 // Update stat cards
@@ -862,7 +868,14 @@ function refreshAllDataForDevice() {
     chart.data.datasets[1].data = [];
     chart.data.datasets[2].data = [];
     chart.update('none');
-    console.log('Main chart cleared');
+
+    // Show loading overlay on chart
+    const chartLoadingOverlay = document.getElementById('chartLoadingOverlay');
+    if (chartLoadingOverlay) {
+        chartLoadingOverlay.style.display = 'flex';
+    }
+
+    console.log('Main chart cleared and loading overlay shown');
 
     // ========================================================================
     // 2. CLEAR HISTORICAL DATA ARRAYS
