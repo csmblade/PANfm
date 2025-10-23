@@ -395,9 +395,9 @@ function updateStats(data) {
             historicalData.urlFiltering.shift();
         }
 
-        document.getElementById('criticalValue').innerHTML = data.threats.critical_threats.toLocaleString() + calculateTrend(historicalData.criticalThreats);
-        document.getElementById('mediumValue').innerHTML = data.threats.medium_threats.toLocaleString() + calculateTrend(historicalData.mediumThreats);
-        document.getElementById('blockedUrlValue').innerHTML = data.threats.blocked_urls.toLocaleString() + calculateTrend(historicalData.blockedUrls);
+        document.getElementById('criticalValue').innerHTML = data.threats.critical_threats.toLocaleString();
+        document.getElementById('mediumValue').innerHTML = data.threats.medium_threats.toLocaleString();
+        document.getElementById('blockedUrlValue').innerHTML = data.threats.blocked_urls.toLocaleString();
 
         // Store threat logs for modals
         currentCriticalLogs = data.threats.critical_logs || [];
