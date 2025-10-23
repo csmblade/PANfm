@@ -375,14 +375,57 @@ async function saveDevice(event) {
         if (data.status === 'success') {
             hideDeviceModal();
             console.log('Device saved successfully, reloading devices...');
+
+            // Get the new device ID if this was an add operation
+            const newDeviceId = data.device?.id || null;
+            console.log('New device ID:', newDeviceId);
+            console.log('Was this an edit? deviceId =', deviceId);
+
             await loadDevices();
             console.log('Devices reloaded, currentDevices count:', currentDevices.length);
+
+            // If a new device was added (not edited), select it
+            if (newDeviceId && !deviceId) {
+                console.log('Setting newly added device as selected:', newDeviceId);
+                await selectNewDevice(newDeviceId);
+            }
+
             alert(data.message);
         } else {
             alert('Error: ' + data.message);
         }
     } catch (error) {
         alert('Error saving device: ' + error.message);
+    }
+}
+
+async function selectNewDevice(newDeviceId) {
+    try {
+        // Update selected device in settings
+        const currentSettings = await fetch('/api/settings').then(r => r.json());
+        if (currentSettings.status === 'success') {
+            const settings = currentSettings.settings;
+            settings.selected_device_id = newDeviceId;
+
+            // Get the new device's interface
+            const device = currentDevices.find(d => d.id === newDeviceId);
+            if (device) {
+                settings.monitored_interface = device.monitored_interface || 'ethernet1/12';
+            }
+
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(settings)
+            });
+
+            console.log('New device set as selected in settings');
+
+            // Update the selector if it exists
+            await updateDeviceSelector();
+        }
+    } catch (error) {
+        console.error('Error selecting new device:', error);
     }
 }
 
