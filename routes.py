@@ -297,6 +297,7 @@ def register_routes(app):
             api_key = data.get('api_key', '').strip()
             group = data.get('group', 'Default')
             description = data.get('description', '')
+            wan_interface = data.get('wan_interface', '').strip()
 
             # Validate required fields
             if not name or not ip or not api_key:
@@ -305,7 +306,7 @@ def register_routes(app):
                     'message': 'Name, IP, and API Key are required'
                 }), 400
 
-            new_device = device_manager.add_device(name, ip, api_key, group, description)
+            new_device = device_manager.add_device(name, ip, api_key, group, description, wan_interface=wan_interface)
             return jsonify({
                 'status': 'success',
                 'device': new_device,

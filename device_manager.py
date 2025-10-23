@@ -107,7 +107,7 @@ class DeviceManager:
                 return device
         return None
 
-    def add_device(self, name, ip, api_key, group="Default", description="", monitored_interface="ethernet1/12"):
+    def add_device(self, name, ip, api_key, group="Default", description="", monitored_interface="ethernet1/12", wan_interface=""):
         """Add a new device"""
         devices = self.load_devices()
 
@@ -121,7 +121,8 @@ class DeviceManager:
             "description": description,
             "added_date": datetime.now().isoformat(),
             "last_seen": None,
-            "monitored_interface": monitored_interface
+            "monitored_interface": monitored_interface,
+            "wan_interface": wan_interface
         }
 
         devices.append(new_device)

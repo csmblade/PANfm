@@ -256,6 +256,55 @@ def get_system_resources():
         return {'data_plane_cpu': 0, 'mgmt_plane_cpu': 0, 'uptime': None, 'memory_used_pct': 0, 'memory_used_mb': 0, 'memory_total_mb': 0}
 
 
+def get_wan_interface_ip(wan_interface):
+    """
+    Get the IP address of a specific WAN interface
+
+    Args:
+        wan_interface: Interface name (e.g., 'ethernet1/1')
+
+    Returns:
+        IP address string or None if not found
+    """
+    try:
+        if not wan_interface:
+            return None
+
+        _, api_key, base_url = get_firewall_config()
+
+        # Get interface information
+        cmd = f"<show><interface>{wan_interface}</interface></show>"
+        params = {
+            'type': 'op',
+            'cmd': cmd,
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+        debug(f"WAN interface IP API Status: {response.status_code}")
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+
+            # Try to find IP address in the response
+            # PAN-OS returns IP in <ip> tag
+            ip_elem = root.find('.//ip')
+            if ip_elem is not None and ip_elem.text:
+                ip_address = ip_elem.text
+                debug(f"Found WAN interface {wan_interface} IP: {ip_address}")
+                return ip_address
+
+            debug(f"No IP found for interface {wan_interface}")
+            return None
+        else:
+            debug(f"Failed to get WAN interface IP, status: {response.status_code}")
+            return None
+
+    except Exception as e:
+        debug(f"WAN interface IP error: {str(e)}")
+        return None
+
+
 def get_interface_stats():
     """Fetch interface statistics from Palo Alto firewall"""
     try:
@@ -415,17 +464,22 @@ def get_throughput_data():
         selected_device_id = settings.get('selected_device_id', '')
         firewall_ip, api_key, base_url = get_firewall_config()
 
-        # Get monitored interface from the device, not from settings
+        # Get monitored interface and WAN interface from the device, not from settings
         monitored_interface = 'ethernet1/12'  # default
+        wan_interface = ''  # default
         if selected_device_id:
             device = device_manager.get_device(selected_device_id)
-            if device and device.get('monitored_interface'):
-                monitored_interface = device['monitored_interface']
+            if device:
+                if device.get('monitored_interface'):
+                    monitored_interface = device['monitored_interface']
+                if device.get('wan_interface'):
+                    wan_interface = device['wan_interface']
 
         debug(f"=== get_throughput_data called ===")
         debug(f"Selected device from settings: {selected_device_id}")
         debug(f"Fetching throughput data from device: {firewall_ip}")
         debug(f"Monitored interface: {monitored_interface}")
+        debug(f"WAN interface: {wan_interface}")
 
         # Use device ID as key for per-device stats, fallback to IP if no device ID
         device_key = selected_device_id if selected_device_id else firewall_ip
@@ -596,6 +650,12 @@ def get_throughput_data():
                         panos_version = sw['version']
                         break
 
+            # Get WAN interface IP if wan_interface is configured
+            wan_ip = None
+            if wan_interface:
+                wan_ip = get_wan_interface_ip(wan_interface)
+                debug(f"WAN IP for interface {wan_interface}: {wan_ip}")
+
             return {
                 'timestamp': datetime.now().isoformat(),
                 'inbound_mbps': round(max(0, inbound_mbps), 2),
@@ -613,6 +673,7 @@ def get_throughput_data():
                 'license': license_info.get('license', {'expired': 0, 'licensed': 0}),
                 'api_stats': get_api_stats(),
                 'panos_version': panos_version,
+                'wan_ip': wan_ip,
                 'status': 'success'
             }
         else:

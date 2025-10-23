@@ -337,6 +337,7 @@ function showDeviceModal(deviceId = null) {
             document.getElementById('deviceApiKey').value = device.api_key;
             document.getElementById('deviceGroup').value = device.group || 'Default';
             document.getElementById('deviceDescription').value = device.description || '';
+            document.getElementById('deviceWanInterface').value = device.wan_interface || '';
         }
     } else {
         title.textContent = 'Add Device';
@@ -359,7 +360,8 @@ async function saveDevice(event) {
         ip: document.getElementById('deviceIp').value,
         api_key: document.getElementById('deviceApiKey').value,
         group: document.getElementById('deviceGroup').value,
-        description: document.getElementById('deviceDescription').value
+        description: document.getElementById('deviceDescription').value,
+        wan_interface: document.getElementById('deviceWanInterface').value
     };
 
     try {

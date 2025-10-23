@@ -314,6 +314,14 @@ function updateStats(data) {
         }
     }
 
+    // Update WAN IP in sidebar
+    if (data.wan_ip !== undefined) {
+        const wanIpElement = document.getElementById('sidebarWanIp');
+        if (wanIpElement) {
+            wanIpElement.textContent = data.wan_ip || '-';
+        }
+    }
+
     // Update interface stats
     if (data.interfaces) {
         const interfaceErrorsElement = document.getElementById('interfaceErrorsValue');
@@ -1008,6 +1016,7 @@ function refreshAllDataForDevice() {
     // ========================================================================
     const sidebarPPS = document.getElementById('sidebarPPS');
     const sidebarUptime = document.getElementById('sidebarUptime');
+    const sidebarWanIp = document.getElementById('sidebarWanIp');
     const sidebarApiStats = document.getElementById('sidebarApiStats');
     const sidebarLastUpdate = document.getElementById('sidebarLastUpdate');
     const sidebarPanosVersion = document.getElementById('sidebarPanosVersion');
@@ -1016,6 +1025,7 @@ function refreshAllDataForDevice() {
 
     if (sidebarPPS) sidebarPPS.textContent = '0 PPS';
     if (sidebarUptime) sidebarUptime.textContent = '-';
+    if (sidebarWanIp) sidebarWanIp.textContent = '-';
     if (sidebarApiStats) sidebarApiStats.textContent = '-';
     if (sidebarLastUpdate) sidebarLastUpdate.textContent = '-';
     if (sidebarPanosVersion) sidebarPanosVersion.textContent = '-';
