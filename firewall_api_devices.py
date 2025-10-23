@@ -336,7 +336,7 @@ def is_virtual_mac(mac_address, vendor_name=None):
                 # Randomized MACs often have specific patterns in 2nd-3rd octets
                 return {
                     'is_virtual': True,
-                    'reason': 'Randomized MAC address (likely iPhone/Android/Windows)',
+                    'reason': 'Randomised MAC address',
                     'is_randomized': True
                 }
 
