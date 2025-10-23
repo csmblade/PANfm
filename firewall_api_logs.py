@@ -418,6 +418,9 @@ def get_traffic_logs(firewall_config, max_logs=50):
                 session_end_reason = entry.find('session_end_reason')
                 from_zone = entry.find('from')
                 to_zone = entry.find('to')
+                # Extract VLAN interface information
+                inbound_if = entry.find('inbound_if')
+                outbound_if = entry.find('outbound_if')
 
                 traffic_logs.append({
                     'time': time_generated,
@@ -434,7 +437,9 @@ def get_traffic_logs(firewall_config, max_logs=50):
                     'packets': packets.text if packets is not None else '0',
                     'session_end_reason': session_end_reason.text if session_end_reason is not None else '',
                     'from_zone': from_zone.text if from_zone is not None else '',
-                    'to_zone': to_zone.text if to_zone is not None else ''
+                    'to_zone': to_zone.text if to_zone is not None else '',
+                    'inbound_if': inbound_if.text if inbound_if is not None else '',
+                    'outbound_if': outbound_if.text if outbound_if is not None else ''
                 })
 
             debug(f"Found {len(traffic_logs)} traffic log entries")
@@ -512,11 +517,36 @@ def get_top_applications(firewall_config, top_count=5):
         return {'apps': [], 'total_count': 0}
 
 
+def extract_vlan_from_interface(interface_name):
+    """
+    Extract VLAN ID from interface name
+    Common formats: ethernet1/1.10, ae1.100, vlan.100, etc.
+    Returns VLAN ID as string or None if not found
+    """
+    if not interface_name:
+        return None
+
+    # Check for sub-interface format (e.g., ethernet1/1.10, ae1.100)
+    if '.' in interface_name:
+        parts = interface_name.split('.')
+        if len(parts) >= 2 and parts[-1].isdigit():
+            return f"VLAN {parts[-1]}"
+
+    # Check for vlan interface format (e.g., vlan.100)
+    if interface_name.lower().startswith('vlan'):
+        parts = interface_name.split('.')
+        if len(parts) >= 2 and parts[-1].isdigit():
+            return f"VLAN {parts[-1]}"
+
+    return None
+
 def get_application_statistics(firewall_config, max_logs=1000):
     """
     Fetch application statistics from traffic logs
     Returns aggregated data by application name with sessions, bytes, source IPs, destinations, etc.
     Also returns summary statistics for the dashboard
+
+    VLAN information is extracted from inbound_if and outbound_if fields (not zones)
     """
     debug("=== get_application_statistics called ===")
     try:
@@ -542,12 +572,17 @@ def get_application_statistics(firewall_config, max_logs=1000):
             dport = log.get('dport', '')
             from_zone = log.get('from_zone', '')
             to_zone = log.get('to_zone', '')
+            inbound_if = log.get('inbound_if', '')
+            outbound_if = log.get('outbound_if', '')
 
-            # Track VLANs from zones if they contain VLAN information
-            if from_zone:
-                vlans.add(from_zone)
-            if to_zone:
-                vlans.add(to_zone)
+            # Extract VLANs from interface names (not zones)
+            inbound_vlan = extract_vlan_from_interface(inbound_if)
+            outbound_vlan = extract_vlan_from_interface(outbound_if)
+
+            if inbound_vlan:
+                vlans.add(inbound_vlan)
+            if outbound_vlan:
+                vlans.add(outbound_vlan)
 
             # Update summary totals
             total_sessions += 1
@@ -587,8 +622,12 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 app_stats[app]['dest_details'][dest_key]['bytes'] += bytes_val
             if proto: app_stats[app]['protocols'].add(proto)
             if dport: app_stats[app]['ports'].add(dport)
-            if from_zone: app_stats[app]['vlans'].add(from_zone)
-            if to_zone: app_stats[app]['vlans'].add(to_zone)
+            # Track VLANs from interfaces (not zones)
+            if inbound_vlan: app_stats[app]['vlans'].add(inbound_vlan)
+            if outbound_vlan: app_stats[app]['vlans'].add(outbound_vlan)
+
+        # Log VLAN detection summary
+        debug(f"Detected {len(vlans)} unique VLANs from interface data: {sorted(vlans)}")
 
         # Convert sets to lists and format result
         result = []
