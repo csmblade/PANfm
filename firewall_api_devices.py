@@ -46,10 +46,19 @@ def get_software_updates(firewall_config):
                         check_root = ET.fromstring(check_response.text)
                         debug(f"Update check response (first 1500 chars):\n{check_response.text[:1500]}")
 
+                        # Export full XML for inspection
+                        try:
+                            with open('software_update_check.xml', 'w') as f:
+                                f.write(check_response.text)
+                            debug("Exported full update check XML to software_update_check.xml")
+                        except Exception as e:
+                            debug(f"Error exporting update check XML: {e}")
+
                         # Find all entries with version information
                         entries = check_root.findall('.//entry')
                         current_version = None
                         latest_available = None
+                        all_versions = []
 
                         for entry in entries:
                             version_elem = entry.find('.//version')
@@ -58,20 +67,32 @@ def get_software_updates(firewall_config):
                             latest_elem = entry.find('.//latest')
 
                             version_num = version_elem.text if version_elem is not None and version_elem.text else None
+                            is_downloaded = downloaded_elem.text if downloaded_elem is not None and downloaded_elem.text else 'no'
                             is_current = current_elem.text if current_elem is not None and current_elem.text else 'no'
                             is_latest = latest_elem.text if latest_elem is not None and latest_elem.text else 'no'
 
-                            debug(f"  Entry: version={version_num}, current={is_current}, latest={is_latest}")
+                            debug(f"  Entry: version={version_num}, current={is_current}, latest={is_latest}, downloaded={is_downloaded}")
+
+                            if version_num:
+                                all_versions.append({
+                                    'version': version_num,
+                                    'current': is_current,
+                                    'latest': is_latest,
+                                    'downloaded': is_downloaded
+                                })
 
                             # Track the current version
                             if is_current == 'yes' and version_num:
                                 current_version = version_num
 
-                            # Track latest available version (that's not current)
-                            if is_latest == 'yes' and is_current == 'no' and version_num:
-                                latest_available = version_num
+                            # Track latest available version (marked as latest='yes', regardless of current status)
+                            if is_latest == 'yes' and version_num:
+                                # If this is also current, no update; otherwise it's the update
+                                if is_current != 'yes':
+                                    latest_available = version_num
 
-                        debug(f"  Found current: {current_version}, latest available: {latest_available}")
+                        debug(f"  All versions found: {all_versions}")
+                        debug(f"  Current version: {current_version}, Latest available: {latest_available}")
 
                         # Return status
                         if latest_available:
