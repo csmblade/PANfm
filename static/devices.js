@@ -225,11 +225,19 @@ async function onDeviceChange() {
                 // If device doesn't have interface saved yet, save the default
                 if (!device.monitored_interface) {
                     console.log('Device has no interface saved, saving default...');
-                    device.monitored_interface = deviceInterface;
+                    // Create update payload WITHOUT api_key to avoid double encryption
+                    const deviceUpdatePayload = {
+                        name: device.name,
+                        ip: device.ip,
+                        group: device.group || 'Default',
+                        description: device.description || '',
+                        enabled: device.enabled !== undefined ? device.enabled : true,
+                        monitored_interface: deviceInterface
+                    };
                     const deviceUpdateResponse = await fetch(`/api/devices/${selectedDeviceId}`, {
                         method: 'PUT',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(device)
+                        body: JSON.stringify(deviceUpdatePayload)
                     });
                     console.log('Device update response:', deviceUpdateResponse.status);
                 }
