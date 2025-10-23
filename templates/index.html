@@ -609,44 +609,51 @@
 
         <div class="error-message" id="errorMessage"></div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Inbound Traffic</div>
-                <div class="stat-value" id="inboundValue">-</div>
-                <div class="stat-unit">Mbps</div>
+        <!-- Summary Statistics Tiles -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <!-- Traffic Tile (Combined) -->
+            <div style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(250, 88, 45, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">NETWORK TRAFFIC</div>
+                <div id="totalValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Total Mbps</div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.75em;">
+                    <div>
+                        <div style="opacity: 0.8;">IN</div>
+                        <div id="inboundValue" style="font-weight: 600;">-</div>
+                    </div>
+                    <div>
+                        <div style="opacity: 0.8;">OUT</div>
+                        <div id="outboundValue" style="font-weight: 600;">-</div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Outbound Traffic</div>
-                <div class="stat-value" id="outboundValue">-</div>
-                <div class="stat-unit">Mbps</div>
+
+            <!-- Active Sessions Tile -->
+            <div style="background: linear-gradient(135deg, #E04F26 0%, #FF6B3D 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(224, 79, 38, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">ACTIVE SESSIONS</div>
+                <div id="sessionValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Total connections</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Total Traffic</div>
-                <div class="stat-value" id="totalValue">-</div>
-                <div class="stat-unit">Mbps</div>
+
+            <!-- TCP Sessions Tile -->
+            <div style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(198, 70, 32, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">TCP SESSIONS</div>
+                <div id="tcpValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">TCP connections</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Active Sessions</div>
-                <div class="stat-value" id="sessionValue">-</div>
-                <div class="stat-unit">sessions</div>
-                <canvas class="mini-chart" id="sessionChart"></canvas>
+
+            <!-- UDP Sessions Tile -->
+            <div style="background: linear-gradient(135deg, #AD3D1A 0%, #D14925 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(173, 61, 26, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">UDP SESSIONS</div>
+                <div id="udpValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">UDP connections</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">TCP Sessions</div>
-                <div class="stat-value" id="tcpValue">-</div>
-                <div class="stat-unit">sessions</div>
-                <canvas class="mini-chart" id="tcpChart"></canvas>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">UDP Sessions</div>
-                <div class="stat-value" id="udpValue">-</div>
-                <div class="stat-unit">sessions</div>
-                <canvas class="mini-chart" id="udpChart"></canvas>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">ICMP Sessions</div>
-                <div class="stat-value" id="icmpValue">-</div>
-                <div class="stat-unit">sessions</div>
+
+            <!-- ICMP Sessions Tile -->
+            <div style="background: linear-gradient(135deg, #933414 0%, #B8421D 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(147, 52, 20, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">ICMP SESSIONS</div>
+                <div id="icmpValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">ICMP connections</div>
             </div>
         </div>
 
