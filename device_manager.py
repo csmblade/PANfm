@@ -8,8 +8,9 @@ from datetime import datetime
 import requests
 import xml.etree.ElementTree as ET
 from config import DEVICES_FILE
-from logger import debug, error, exception
-from encryption import encrypt_dict, decrypt_dict, migrate_unencrypted_data
+from logger import debug, error, exception, warning
+# Only import what we need: encrypt_string and decrypt_string for API keys only
+from encryption import encrypt_string, decrypt_string
 
 class DeviceManager:
     """Manages multiple firewall devices"""
@@ -48,7 +49,6 @@ class DeviceManager:
                     for device in devices:
                         device_copy = device.copy()
                         if 'api_key' in device_copy and device_copy['api_key']:
-                            from encryption import decrypt_string
                             try:
                                 decrypted_key = decrypt_string(device_copy['api_key'])
                                 device_copy['api_key'] = decrypted_key
@@ -82,7 +82,6 @@ class DeviceManager:
             for device in devices:
                 device_copy = device.copy()
                 if 'api_key' in device_copy and device_copy['api_key']:
-                    from encryption import encrypt_string
                     try:
                         device_copy['api_key'] = encrypt_string(device_copy['api_key'])
                     except:
@@ -175,38 +174,8 @@ class DeviceManager:
         except Exception as e:
             return {"success": False, "message": f"Connection failed: {str(e)}"}
 
-    def migrate_existing_devices(self):
-        """
-        Migrate existing unencrypted device data to encrypted format.
-        This is a one-time operation for upgrading existing installations.
-        """
-        debug("Starting device data migration")
-        try:
-            if os.path.exists(self.devices_file):
-                with open(self.devices_file, 'r') as f:
-                    data = json.load(f)
-
-                devices = data.get('devices', [])
-
-                # Migrate and encrypt each device
-                encrypted_devices = []
-                for device in devices:
-                    encrypted_device = migrate_unencrypted_data(device)
-                    encrypted_devices.append(encrypted_device)
-
-                data['devices'] = encrypted_devices
-
-                with open(self.devices_file, 'w') as f:
-                    json.dump(data, f, indent=2)
-
-                debug("Device data migration completed successfully")
-                return True
-            else:
-                debug("No existing devices file to migrate")
-                return True
-        except Exception as e:
-            error(f"Failed to migrate devices: {e}")
-            return False
+    # Note: Device migration is handled by the standalone migrate_api_keys.py script
+    # Only API keys need encryption, all other device fields remain in plain text
 
 # Initialize device manager
 device_manager = DeviceManager()

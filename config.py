@@ -3,7 +3,8 @@ Configuration constants and settings for the Palo Alto Firewall Dashboard
 """
 import os
 import json
-from encryption import encrypt_dict, decrypt_dict, migrate_unencrypted_data
+# Note: Settings are stored as plain JSON (no encryption)
+# Only API keys in devices.json are encrypted
 
 # Palo Alto Firewall Configuration (moved to settings)
 # These are fallback defaults only
@@ -83,33 +84,8 @@ def save_settings(settings):
         return False
 
 
-def migrate_existing_settings():
-    """
-    Migrate existing unencrypted settings to encrypted format.
-    This is a one-time operation for upgrading existing installations.
-    """
-    debug, error, _ = _get_logger()
-    debug("Starting settings migration")
-    try:
-        if os.path.exists(SETTINGS_FILE):
-            with open(SETTINGS_FILE, 'r') as f:
-                settings = json.load(f)
-
-            # Migrate and save encrypted settings
-            encrypted_settings = migrate_unencrypted_data(settings)
-            with open(SETTINGS_FILE, 'w') as f:
-                json.dump(encrypted_settings, f, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
-
-            debug("Settings migration completed successfully")
-            return True
-        else:
-            debug("No existing settings file to migrate")
-            return True
-    except Exception as e:
-        error(f"Failed to migrate settings: {e}")
-        return False
+# Note: Settings migration is not needed - settings are stored as plain JSON
+# Only API keys (stored in devices.json) need encryption
 
 
 def load_vendor_database():
