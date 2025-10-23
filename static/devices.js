@@ -384,10 +384,20 @@ async function saveDevice(event) {
             await loadDevices();
             console.log('Devices reloaded, currentDevices count:', currentDevices.length);
 
-            // If a new device was added (not edited), select it
+            // If a new device was added (not edited), only select it if no device is currently selected
             if (newDeviceId && !deviceId) {
-                console.log('Setting newly added device as selected:', newDeviceId);
-                await selectNewDevice(newDeviceId);
+                // Check if there's already a device selected
+                const currentSettings = await fetch('/api/settings').then(r => r.json());
+                const hasSelectedDevice = currentSettings.status === 'success' &&
+                                         currentSettings.settings.selected_device_id;
+
+                if (!hasSelectedDevice) {
+                    // No device currently selected, so select the new one
+                    console.log('No device currently selected, setting newly added device as selected:', newDeviceId);
+                    await selectNewDevice(newDeviceId);
+                } else {
+                    console.log('Device already selected, not switching to newly added device');
+                }
             }
 
             alert(data.message);
