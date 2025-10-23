@@ -346,6 +346,12 @@ def register_routes(app):
         """Update a device"""
         try:
             data = request.get_json()
+
+            # If api_key is empty or not provided, remove it from updates to preserve existing key
+            if 'api_key' in data and not data['api_key']:
+                debug("API key is empty, removing from updates to preserve existing key")
+                del data['api_key']
+
             updated_device = device_manager.update_device(device_id, data)
             if updated_device:
                 return jsonify({
