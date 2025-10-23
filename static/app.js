@@ -679,6 +679,9 @@ function initSidebarResize() {
 }
 
 // Page navigation
+// Track currently visible page for device change refreshes
+let currentVisiblePage = 'homepage';
+
 function initPageNavigation() {
     const menuItems = document.querySelectorAll('.menu-item');
     const pages = {
@@ -694,6 +697,7 @@ function initPageNavigation() {
     menuItems.forEach(item => {
         item.addEventListener('click', () => {
             const targetPage = item.getAttribute('data-page');
+            currentVisiblePage = targetPage; // Track current page
 
             // Update active menu item
             menuItems.forEach(mi => mi.classList.remove('active'));
@@ -1005,6 +1009,25 @@ function refreshAllDataForDevice() {
     }
 
     console.log('All page data refresh triggered');
+
+    // Force refresh of currently visible page to ensure UI updates
+    console.log('Current visible page:', currentVisiblePage);
+    console.log('Forcing explicit refresh of visible page...');
+
+    if (currentVisiblePage === 'connected-devices' && typeof loadConnectedDevices === 'function') {
+        console.log('Force refreshing Connected Devices page');
+        loadConnectedDevices();
+    } else if (currentVisiblePage === 'applications' && typeof loadApplications === 'function') {
+        console.log('Force refreshing Applications page');
+        loadApplications();
+    } else if (currentVisiblePage === 'device-info' && typeof loadPolicies === 'function') {
+        console.log('Force refreshing Device Info page (Policies)');
+        loadPolicies();
+    } else if (currentVisiblePage === 'logs' && typeof loadSystemLogs === 'function') {
+        console.log('Force refreshing Logs page (System Logs)');
+        loadSystemLogs();
+    }
+
     console.log('=== refreshAllDataForDevice complete ===');
 }
 
