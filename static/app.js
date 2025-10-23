@@ -594,29 +594,16 @@ async function fetchThroughputData() {
         if (data.status === 'success') {
             updateStats(data);
             updateChart(data);
-            // Get current device name to preserve in status
-            const deviceName = getCurrentDeviceName();
-            updateStatus(true, '', deviceName);
+            updateStatus(true);
         } else {
-            const deviceName = getCurrentDeviceName();
-            updateStatus(false, '', deviceName);
+            updateStatus(false);
             showError(data.message || 'Failed to fetch data');
         }
     } catch (error) {
         console.error('Fetch error:', error);
-        const deviceName = getCurrentDeviceName();
-        updateStatus(false, '', deviceName);
+        updateStatus(false);
         showError('Connection error: ' + error.message);
     }
-}
-
-// Helper function to get current device name
-function getCurrentDeviceName() {
-    if (typeof selectedDeviceId !== 'undefined' && selectedDeviceId && typeof currentDevices !== 'undefined') {
-        const device = currentDevices.find(d => d.id === selectedDeviceId);
-        return device ? device.name : '';
-    }
-    return '';
 }
 
 // Add smooth number animation
@@ -691,23 +678,15 @@ async function updateMonitoredInterface() {
             return;
         }
 
-        // Create update payload with only the fields we want to change
-        const updatePayload = {
-            name: device.name,
-            ip: device.ip,
-            api_key: device.api_key,
-            group: device.group || 'Default',
-            description: device.description || '',
-            enabled: device.enabled !== undefined ? device.enabled : true,
-            monitored_interface: newInterface
-        };
+        // Update device with new interface
+        device.monitored_interface = newInterface;
         console.log('Updating device with interface:', newInterface);
 
         // Save device via API
         const updateResponse = await fetch(`/api/devices/${selectedDeviceId}`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(updatePayload)
+            body: JSON.stringify(device)
         });
 
         if (!updateResponse.ok) {
