@@ -336,6 +336,7 @@ function showDeviceModal(deviceId = null) {
             document.getElementById('deviceIp').value = device.ip;
             document.getElementById('deviceApiKey').value = '';  // Don't populate encrypted key
             document.getElementById('deviceApiKey').placeholder = 'Leave blank to keep existing API key';
+            document.getElementById('deviceApiKey').removeAttribute('required');  // Not required when editing
             document.getElementById('deviceGroup').value = device.group || 'Default';
             document.getElementById('deviceDescription').value = device.description || '';
             document.getElementById('deviceWanInterface').value = device.wan_interface || '';
@@ -344,6 +345,7 @@ function showDeviceModal(deviceId = null) {
         title.textContent = 'Add Device';
         document.getElementById('deviceId').value = '';
         document.getElementById('deviceApiKey').placeholder = '';
+        document.getElementById('deviceApiKey').setAttribute('required', 'required');  // Required when adding
     }
 
     modal.style.display = 'flex';
