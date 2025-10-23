@@ -64,7 +64,7 @@ async function loadDevices() {
     }
 }
 
-function updateDeviceSelector() {
+async function updateDeviceSelector() {
     console.log('=== updateDeviceSelector called ===');
     const selector = document.getElementById('deviceSelector');
     if (!selector) return;
@@ -153,18 +153,20 @@ function updateDeviceSelector() {
 
     if (shouldFetchSettings) {
         console.log('Fetching settings to get selected device...');
-        fetch('/api/settings')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    selectedDeviceId = data.settings.selected_device_id || '';
-                    console.log('Got selectedDeviceId from settings:', selectedDeviceId);
-                }
-                populateSelector();
-            });
+        try {
+            const response = await fetch('/api/settings');
+            const data = await response.json();
+            if (data.status === 'success') {
+                selectedDeviceId = data.settings.selected_device_id || '';
+                console.log('Got selectedDeviceId from settings:', selectedDeviceId);
+            }
+        } catch (error) {
+            console.error('Error fetching settings:', error);
+        }
+        await populateSelector();
     } else {
         console.log('Using existing selectedDeviceId');
-        populateSelector();
+        await populateSelector();
     }
 }
 
@@ -326,25 +328,31 @@ async function onDeviceChange() {
             updateIntervalId = setInterval(fetchThroughputData, UPDATE_INTERVAL);
             console.log(`Update interval restarted: ${UPDATE_INTERVAL}ms`);
 
-            // Refresh page-specific data if on those pages
-            const currentPage = document.querySelector('.page-content:not([style*="display: none"])');
-            if (currentPage) {
-                const pageId = currentPage.id;
-                console.log('Current page:', pageId);
-                if (pageId === 'policies-content') {
-                    loadPolicies();
-                } else if (pageId === 'system-logs-content') {
-                    loadSystemLogs();
-                } else if (pageId === 'traffic-content') {
-                    updateTrafficPage();
-                } else if (pageId === 'software-updates-content') {
-                    loadSoftwareUpdates();
-                } else if (pageId === 'applications-content') {
-                    loadApplications();
-                } else if (pageId === 'connected-devices-content') {
-                    loadConnectedDevices();
-                }
+            // Refresh ALL pages data (not just the current visible page)
+            // This ensures all pages have fresh data when switching devices
+            console.log('Refreshing all pages data for new device...');
+
+            // Check which functions exist before calling them
+            if (typeof loadPolicies === 'function') {
+                loadPolicies();
             }
+            if (typeof loadSystemLogs === 'function') {
+                loadSystemLogs();
+            }
+            if (typeof updateTrafficPage === 'function') {
+                updateTrafficPage();
+            }
+            if (typeof loadSoftwareUpdates === 'function') {
+                loadSoftwareUpdates();
+            }
+            if (typeof loadApplications === 'function') {
+                loadApplications();
+            }
+            if (typeof loadConnectedDevices === 'function') {
+                loadConnectedDevices();
+            }
+
+            console.log('All pages data refresh triggered');
         }
     } catch (error) {
         console.error('Error in onDeviceChange:', error);
