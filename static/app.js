@@ -648,6 +648,110 @@ async function init() {
     updateIntervalId = setInterval(fetchThroughputData, UPDATE_INTERVAL);
 }
 
+// Update monitored interface from dashboard
+async function updateMonitoredInterface() {
+    console.log('=== updateMonitoredInterface fired ===');
+    try {
+        const interfaceInput = document.getElementById('monitoredInterfaceInput');
+        const newInterface = interfaceInput.value.trim();
+        console.log('New interface:', newInterface);
+
+        if (!newInterface) {
+            alert('Please enter an interface name (e.g., ethernet1/12)');
+            return;
+        }
+
+        // IMPORTANT: Save interface to the currently selected device
+        if (!selectedDeviceId) {
+            alert('No device selected. Please select a device first.');
+            console.error('No device selected');
+            return;
+        }
+
+        console.log('Selected device ID:', selectedDeviceId);
+        const device = currentDevices.find(d => d.id === selectedDeviceId);
+        console.log('Found device:', device);
+
+        if (!device) {
+            alert('Could not find selected device');
+            console.error('Device not found:', selectedDeviceId);
+            return;
+        }
+
+        // Update device with new interface
+        device.monitored_interface = newInterface;
+        console.log('Updating device with interface:', newInterface);
+
+        // Save device via API
+        const updateResponse = await fetch(`/api/devices/${selectedDeviceId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(device)
+        });
+
+        if (!updateResponse.ok) {
+            throw new Error(`Device update failed: ${updateResponse.status}`);
+        }
+
+        const updateData = await updateResponse.json();
+        console.log('Device update response:', updateData);
+
+        if (updateData.status !== 'success') {
+            throw new Error(updateData.message || 'Failed to update device');
+        }
+
+        // Also save to global settings for backward compatibility
+        console.log('Updating global settings...');
+        const currentSettings = await fetch('/api/settings').then(r => r.json());
+        if (currentSettings.status === 'success') {
+            const settings = currentSettings.settings;
+            settings.monitored_interface = newInterface;
+
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(settings)
+            });
+        }
+
+        // Reload devices to ensure consistency
+        if (typeof loadDevices === 'function') {
+            console.log('Reloading devices...');
+            await loadDevices();
+        }
+
+        // Reset chart data
+        console.log('Clearing chart data...');
+        chartData.labels = [];
+        chartData.inbound = [];
+        chartData.outbound = [];
+        chartData.total = [];
+        chart.update();
+
+        // Show success message on button
+        const btn = document.getElementById('updateInterfaceBtn');
+        const originalText = btn.textContent;
+        const originalBg = btn.style.background;
+        btn.textContent = '✓ Updated!';
+        btn.style.background = '#10b981';
+
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = originalBg || 'linear-gradient(135deg, #FA582D 0%, #FF7A55 100%)';
+        }, 2000);
+
+        // Refresh data immediately
+        console.log('Fetching new throughput data...');
+        fetchThroughputData();
+
+        console.log('Interface update successful');
+    } catch (error) {
+        console.error('Error updating interface:', error);
+        alert('Error updating interface: ' + error.message);
+    }
+    console.log('=== updateMonitoredInterface complete ===');
+}
+
 // Sidebar resize functionality
 function initSidebarResize() {
     const sidebar = document.querySelector('.sidebar');
