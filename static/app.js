@@ -8,12 +8,14 @@ const MAX_MINI_POINTS = 20; // Mini charts show last 20 points
 let updateIntervalId = null; // Store interval ID for updates
 
 // Data storage
-let chartData = {
+// Make chartData globally accessible
+window.chartData = {
     labels: [],
     inbound: [],
     outbound: [],
     total: []
 };
+const chartData = window.chartData; // Create local alias for convenience
 
 let miniChartData = {
     sessions: [],
@@ -52,7 +54,8 @@ let ppsChart = null;
 
 // Initialize Chart.js
 const ctx = document.getElementById('throughputChart').getContext('2d');
-const chart = new Chart(ctx, {
+// Make chart globally accessible
+const chart = window.chart = new Chart(ctx, {
     type: 'line',
     data: {
         labels: chartData.labels,

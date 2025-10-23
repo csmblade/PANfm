@@ -581,14 +581,14 @@ async function updateMonitoredInterface() {
         console.log('Reloading devices...');
         await loadDevices();
 
-        // Reset chart data (access from global scope)
-        if (typeof chartData !== 'undefined' && typeof chart !== 'undefined') {
+        // Reset chart data (access from window global scope)
+        if (typeof window.chartData !== 'undefined' && typeof window.chart !== 'undefined') {
             console.log('Clearing chart data...');
-            chartData.labels = [];
-            chartData.inbound = [];
-            chartData.outbound = [];
-            chartData.total = [];
-            chart.update();
+            window.chartData.labels = [];
+            window.chartData.inbound = [];
+            window.chartData.outbound = [];
+            window.chartData.total = [];
+            window.chart.update();
         }
 
         // Show success message on button
