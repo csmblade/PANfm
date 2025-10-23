@@ -963,6 +963,22 @@ function refreshAllDataForDevice() {
         interfaceErrorsElement.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
     }
 
+    // Network Traffic PPS (packets per second) counters
+    const totalPps = document.getElementById('totalPps');
+    if (totalPps) {
+        totalPps.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const inboundPps = document.getElementById('inboundPps');
+    if (inboundPps) {
+        inboundPps.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const outboundPps = document.getElementById('outboundPps');
+    if (outboundPps) {
+        outboundPps.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
     console.log('Dashboard values reset to loading');
 
     // ========================================================================
