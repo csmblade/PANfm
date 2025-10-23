@@ -679,18 +679,18 @@
         <!-- Network Traffic and Active Sessions Container -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
             <!-- Traffic Tile -->
-            <div style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 12px; box-shadow: 0 2px 8px rgba(198, 70, 32, 0.3); color: white;">
-                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 3px; font-weight: 500; letter-spacing: 0.3px; font-family: var(--font-primary);">NETWORK TRAFFIC</div>
-                <div id="totalPps" style="font-size: 1.6em; font-weight: 700; line-height: 1; font-family: var(--font-primary);">-</div>
-                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 2px; font-family: var(--font-secondary);">Total packets per second</div>
+            <div style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(198, 70, 32, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 2px; font-weight: 500; letter-spacing: 0.3px; font-family: var(--font-primary);">NETWORK TRAFFIC</div>
+                <div id="totalPps" style="font-size: 1.5em; font-weight: 700; line-height: 1; font-family: var(--font-primary);">-</div>
+                <div style="font-size: 0.6em; opacity: 0.8; margin-top: 2px; font-family: var(--font-secondary);">Total packets per second</div>
 
                 <!-- Mini Chart -->
-                <div style="margin-top: 8px; height: 60px;">
+                <div style="margin-top: 6px; height: 50px;">
                     <canvas id="ppsChart"></canvas>
                 </div>
 
                 <!-- Traffic Stats -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.7em;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.65em;">
                     <div style="text-align: center;">
                         <div style="opacity: 0.8; font-family: var(--font-secondary);">Inbound PPS</div>
                         <div id="inboundPps" style="font-weight: 600; font-family: var(--font-primary);">-</div>
@@ -703,11 +703,18 @@
             </div>
 
             <!-- Active Sessions Tile -->
-            <div style="background: linear-gradient(135deg, #E04F26 0%, #FF6B3D 100%); border-radius: 8px; padding: 12px; box-shadow: 0 2px 8px rgba(224, 79, 38, 0.3); color: white;">
-                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 3px; font-weight: 500; letter-spacing: 0.3px; font-family: var(--font-primary);">ACTIVE SESSIONS</div>
-                <div id="sessionValue" style="font-size: 1.6em; font-weight: 700; line-height: 1; font-family: var(--font-primary);">-</div>
-                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 2px; font-family: var(--font-secondary);">Total connections</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.7em;">
+            <div style="background: linear-gradient(135deg, #E04F26 0%, #FF6B3D 100%); border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(224, 79, 38, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 2px; font-weight: 500; letter-spacing: 0.3px; font-family: var(--font-primary);">ACTIVE SESSIONS</div>
+                <div id="sessionValue" style="font-size: 1.5em; font-weight: 700; line-height: 1; font-family: var(--font-primary);">-</div>
+                <div style="font-size: 0.6em; opacity: 0.8; margin-top: 2px; font-family: var(--font-secondary);">Total connections</div>
+
+                <!-- Mini Chart -->
+                <div style="margin-top: 6px; height: 50px;">
+                    <canvas id="sessionChart"></canvas>
+                </div>
+
+                <!-- Session Stats -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.65em;">
                     <div style="text-align: center;">
                         <div style="opacity: 0.8; font-family: var(--font-secondary);">TCP</div>
                         <div id="tcpValue" style="font-weight: 600; font-family: var(--font-primary);">-</div>
