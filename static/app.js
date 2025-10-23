@@ -339,6 +339,7 @@ function updateStats(data) {
     if (data.top_applications) {
         const topAppsValueElement = document.getElementById('topAppsValue');
         const topAppsContainer = document.getElementById('topAppsContainer');
+        const topAppNameElement = document.getElementById('topAppName');
 
         // Store for modals
         currentTopApps = data.top_applications.apps || [];
@@ -346,6 +347,15 @@ function updateStats(data) {
         // Update total count
         if (topAppsValueElement) {
             topAppsValueElement.textContent = data.top_applications.total_count || 0;
+        }
+
+        // Update top application name
+        if (topAppNameElement) {
+            if (data.top_applications.apps && data.top_applications.apps.length > 0) {
+                topAppNameElement.textContent = data.top_applications.apps[0].name;
+            } else {
+                topAppNameElement.textContent = 'N/A';
+            }
         }
 
         // Update the list of apps
