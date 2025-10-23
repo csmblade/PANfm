@@ -261,23 +261,24 @@ def get_license_info(firewall_config):
         }
 
 
-def is_virtual_mac(mac_address):
+def is_virtual_mac(mac_address, vendor_name=None):
     """
     Determine if a MAC address is virtual/locally administered.
 
     Returns dict with:
     - is_virtual: bool
     - reason: string explaining why (if virtual)
+    - is_randomized: bool (for privacy features like iOS/Android)
     """
     if not mac_address or mac_address == 'N/A':
-        return {'is_virtual': False, 'reason': None}
+        return {'is_virtual': False, 'reason': None, 'is_randomized': False}
 
     try:
         # Normalize MAC address
         mac_clean = mac_address.upper().replace(':', '').replace('-', '')
 
         if len(mac_clean) < 2:
-            return {'is_virtual': False, 'reason': None}
+            return {'is_virtual': False, 'reason': None, 'is_randomized': False}
 
         # Check locally administered bit (2nd bit of 1st octet)
         first_octet = int(mac_clean[:2], 16)
@@ -301,21 +302,49 @@ def is_virtual_mac(mac_address):
             if mac_clean.startswith(prefix):
                 return {
                     'is_virtual': True,
-                    'reason': f'{vm_type} virtual MAC'
+                    'reason': f'{vm_type} virtual MAC',
+                    'is_randomized': False
                 }
 
-        # Check locally administered bit
+        # Check for randomized MAC addresses (privacy features)
+        # iOS (iPhone/iPad), Android, Windows 10+ use randomization
         if is_locally_administered:
-            return {
-                'is_virtual': True,
-                'reason': 'Locally administered (virtual/custom)'
-            }
+            # If vendor shows Apple but MAC is locally administered = randomized iPhone/iPad/Mac
+            if vendor_name and 'Apple' in vendor_name:
+                return {
+                    'is_virtual': True,
+                    'reason': 'Apple device with randomized MAC (Privacy)',
+                    'is_randomized': True
+                }
+            # Generic randomized MAC detection
+            elif vendor_name and any(brand in vendor_name for brand in ['Samsung', 'Google', 'Xiaomi', 'OnePlus']):
+                return {
+                    'is_virtual': True,
+                    'reason': 'Android device with randomized MAC (Privacy)',
+                    'is_randomized': True
+                }
+            # Windows randomization
+            elif vendor_name and 'Microsoft' in vendor_name:
+                return {
+                    'is_virtual': True,
+                    'reason': 'Windows device with randomized MAC (Privacy)',
+                    'is_randomized': True
+                }
+            else:
+                # Unknown locally administered - could be iPhone without vendor match
+                # Check for common randomized MAC patterns
+                # Randomized MACs often have specific patterns in 2nd-3rd octets
+                return {
+                    'is_virtual': True,
+                    'reason': 'Randomized MAC address (likely iPhone/Android/Windows)',
+                    'is_randomized': True
+                }
 
-        return {'is_virtual': False, 'reason': None}
+        return {'is_virtual': False, 'reason': None, 'is_randomized': False}
 
     except Exception as e:
         debug(f"Error checking if MAC is virtual: {str(e)}")
-        return {'is_virtual': False, 'reason': None}
+        return {'is_virtual': False, 'reason': None, 'is_randomized': False}
 
 
 def lookup_mac_vendor(mac_address):
@@ -415,15 +444,17 @@ def get_connected_devices(firewall_config):
                     except:
                         pass
 
-                # Check if MAC is virtual/locally administered
-                virtual_info = is_virtual_mac(mac_address)
-                device_entry['is_virtual'] = virtual_info['is_virtual']
-                device_entry['virtual_type'] = virtual_info['reason']
-
-                # Lookup vendor name for MAC address
+                # Lookup vendor name for MAC address first
                 vendor_name = lookup_mac_vendor(mac_address)
                 if vendor_name:
                     device_entry['vendor'] = vendor_name
+
+                # Check if MAC is virtual/locally administered
+                # Pass vendor name to help detect randomized Apple/Android devices
+                virtual_info = is_virtual_mac(mac_address, vendor_name)
+                device_entry['is_virtual'] = virtual_info['is_virtual']
+                device_entry['virtual_type'] = virtual_info['reason']
+                device_entry['is_randomized'] = virtual_info.get('is_randomized', False)
 
                 devices.append(device_entry)
 

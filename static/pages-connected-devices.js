@@ -201,9 +201,15 @@ function renderConnectedDevicesTable() {
         // Format MAC address cell with vendor name and virtual indicator
         let macCell = `<div style="font-family: monospace; color: #333;">${device.mac}`;
 
-        // Add virtual MAC indicator if detected
+        // Add badge for virtual/randomized MACs
         if (device.is_virtual) {
-            macCell += ` <span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600; margin-left: 4px;" title="${device.virtual_type || 'Virtual/Locally Administered MAC'}">VIRTUAL</span>`;
+            // Different badge for privacy/randomized MACs (iPhone, Android, Windows)
+            if (device.is_randomized) {
+                macCell += ` <span style="background: #9c27b0; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600; margin-left: 4px;" title="${device.virtual_type || 'Randomized MAC for Privacy'}">🔒 PRIVATE</span>`;
+            } else {
+                // Regular virtual MAC (VMs, containers)
+                macCell += ` <span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600; margin-left: 4px;" title="${device.virtual_type || 'Virtual/Locally Administered MAC'}">VIRTUAL</span>`;
+            }
         }
 
         macCell += `</div>`;
@@ -215,7 +221,8 @@ function renderConnectedDevicesTable() {
 
         // Add virtual type detail if available
         if (device.is_virtual && device.virtual_type) {
-            macCell += `<div style="font-size: 0.75em; color: #ff9800; margin-top: 2px; font-style: italic;">${device.virtual_type}</div>`;
+            const detailColor = device.is_randomized ? '#9c27b0' : '#ff9800';
+            macCell += `<div style="font-size: 0.75em; color: ${detailColor}; margin-top: 2px; font-style: italic;">${device.virtual_type}</div>`;
         }
 
         html += `
