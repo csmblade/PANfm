@@ -18,7 +18,8 @@ let chartData = {
 let miniChartData = {
     sessions: [],
     tcp: [],
-    udp: []
+    udp: [],
+    pps: []
 };
 
 // Historical data for trend calculation (last 5 minutes worth of data)
@@ -47,6 +48,7 @@ let currentTopApps = [];
 let sessionChart = null;
 let tcpChart = null;
 let udpChart = null;
+let ppsChart = null;
 
 // Initialize Chart.js
 const ctx = document.getElementById('throughputChart').getContext('2d');
@@ -286,7 +288,7 @@ function updateStats(data) {
             sidebarUptimeElement.textContent = data.cpu.uptime;
         }
 
-        // Update PPS display in Active Sessions tile
+        // Update PPS display in Network Traffic tile
         const totalPpsElement = document.getElementById('totalPps');
         const inboundPpsElement = document.getElementById('inboundPps');
         const outboundPpsElement = document.getElementById('outboundPps');
@@ -299,6 +301,15 @@ function updateStats(data) {
         }
         if (data.outbound_pps !== undefined && outboundPpsElement) {
             outboundPpsElement.textContent = data.outbound_pps.toLocaleString();
+        }
+
+        // Update PPS mini chart
+        if (data.total_pps !== undefined) {
+            miniChartData.pps.push(data.total_pps);
+            if (miniChartData.pps.length > MAX_MINI_POINTS) {
+                miniChartData.pps.shift();
+            }
+            updateMiniChart(ppsChart, miniChartData.pps, '#ffffff');
         }
 
     }
@@ -627,6 +638,7 @@ async function init() {
     sessionChart = createMiniChart('sessionChart', '#ff6600');
     tcpChart = createMiniChart('tcpChart', '#3b82f6');
     udpChart = createMiniChart('udpChart', '#8b5cf6');
+    ppsChart = createMiniChart('ppsChart', '#ffffff');
 
     // Set up interface update button
     const updateInterfaceBtn = document.getElementById('updateInterfaceBtn');
