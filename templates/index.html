@@ -657,33 +657,44 @@
             </div>
         </div>
 
-        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #d96500 0%, #a64f00 100%); border-left: 4px solid #ffffff;">
-                <div class="stat-label" style="color: #ffffff;">Critical Threats</div>
-                <div class="stat-value" style="color: #ffffff;" id="criticalValue">-</div>
-                <div class="threat-logs-container">
+        <!-- Threat and Application Statistics Tiles -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <!-- Critical Threats Tile -->
+            <div style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(250, 88, 45, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">CRITICAL THREATS</div>
+                <div id="criticalValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">High severity alerts</div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
                     <div id="criticalLogs"></div>
                 </div>
             </div>
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #e67300 0%, #b35900 100%); border-left: 4px solid #ffffff;">
-                <div class="stat-label" style="color: #ffffff;">Medium Threats</div>
-                <div class="stat-value" style="color: #ffffff;" id="mediumValue">-</div>
-                <div class="threat-logs-container">
+
+            <!-- Medium Threats Tile -->
+            <div style="background: linear-gradient(135deg, #E04F26 0%, #FF6B3D 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(224, 79, 38, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">MEDIUM THREATS</div>
+                <div id="mediumValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Moderate severity</div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
                     <div id="mediumLogs"></div>
                 </div>
             </div>
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #ffffff;">
-                <div class="stat-label" style="color: #ffffff;">Blocked URLs</div>
-                <div class="stat-value" style="color: #ffffff;" id="blockedUrlValue">-</div>
-                <div class="threat-logs-container">
+
+            <!-- Blocked URLs Tile -->
+            <div style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(198, 70, 32, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">BLOCKED URLS</div>
+                <div id="blockedUrlValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">URL filtering blocks</div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
                     <div id="blockedUrlLogs"></div>
                 </div>
             </div>
 
-            <div class="stat-card threat-card" style="background: linear-gradient(135deg, #f28000 0%, #bf6600 100%); border-left: 4px solid #ffffff;">
-                <div class="stat-label" style="color: #ffffff;">Top Applications</div>
-                <div class="stat-value" style="color: #ffffff;" id="topAppsValue">-</div>
-                <div class="threat-logs-container">
+            <!-- Top Applications Tile -->
+            <div style="background: linear-gradient(135deg, #AD3D1A 0%, #D14925 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(173, 61, 26, 0.3); color: white;">
+                <div style="font-size: 0.7em; opacity: 0.9; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.3px;">TOP APPLICATIONS</div>
+                <div id="topAppsValue" style="font-size: 1.8em; font-weight: 700; line-height: 1;">-</div>
+                <div style="font-size: 0.65em; opacity: 0.8; margin-top: 3px;">Most active apps</div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); max-height: 60px; overflow-y: auto; font-size: 0.7em;">
                     <div id="topAppsContainer"></div>
                 </div>
             </div>
