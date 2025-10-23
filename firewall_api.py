@@ -581,6 +581,8 @@ def get_throughput_data():
             update_available = False
             latest_version = None
 
+            debug(f"Software info returned: {software_info}")
+
             if software_info.get('status') == 'success':
                 # Find PAN-OS version from software list
                 for sw in software_info.get('software', []):
@@ -592,13 +594,25 @@ def get_throughput_data():
                         # Check if update is available
                         # If 'latest' field contains a version number (not 'yes' or 'N/A'), that's the available update
                         latest_field = sw.get('latest', 'N/A')
-                        if latest_field not in ['yes', 'N/A', None, '']:
-                            # latest field contains a version number - update is available
+                        current_field = sw.get('current', 'yes')
+
+                        debug(f"Checking update: latest_field='{latest_field}', current_field='{current_field}'")
+
+                        # Update is available if:
+                        # 1. latest field contains a version number (not 'yes', 'N/A', etc.)
+                        # 2. OR current='no' and latest contains a version
+                        if latest_field not in ['yes', 'N/A', None, ''] and latest_field != panos_version:
+                            # latest field contains a version number different from current
                             update_available = True
                             latest_version = latest_field
-                            debug(f"Update available: {latest_version}")
+                            debug(f"✓ Update available: {latest_version} (current: {panos_version})")
+                        elif current_field == 'no' and latest_field not in ['N/A', None, '']:
+                            # This version entry is not current, so an update exists
+                            update_available = True
+                            latest_version = latest_field
+                            debug(f"✓ Update available via current=no: {latest_version}")
                         else:
-                            debug(f"No update available (latest field: {latest_field})")
+                            debug(f"✗ No update available (latest field: {latest_field})")
                         break
 
             return {
