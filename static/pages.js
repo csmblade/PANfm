@@ -856,7 +856,7 @@ function renderApplicationsTable() {
 
         html += `
             <tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                <td style="padding: 10px; color: #333; font-weight: 600; font-size: 0.9em;">${app.name}</td>
+                <td onclick="showAppDetails(${index})" style="padding: 10px; color: #FA582D; font-weight: 600; font-size: 0.9em; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#C64620'" onmouseout="this.style.color='#FA582D'">${app.name}</td>
                 <td onclick="showAppDestinations(${index})" style="padding: 10px; cursor: pointer;">
                     <span style="background: ${categoryColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; display: inline-block; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                         ${category}
@@ -1043,18 +1043,33 @@ function setupApplicationsEventListeners() {
         exportJSONBtn.addEventListener('click', exportApplicationsJSON);
     }
 
-    // Modal close button
-    const closeModalBtn = document.getElementById('closeAppDestModalBtn');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', hideAppDestinations);
+    // Destinations modal close button
+    const closeDestModalBtn = document.getElementById('closeAppDestModalBtn');
+    if (closeDestModalBtn) {
+        closeDestModalBtn.addEventListener('click', hideAppDestinations);
     }
 
-    // Close modal when clicking outside
-    const modal = document.getElementById('appDestinationsModal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+    // Application details modal close button
+    const closeAppDetailsBtn = document.getElementById('closeAppDetailsModalBtn');
+    if (closeAppDetailsBtn) {
+        closeAppDetailsBtn.addEventListener('click', hideAppDetails);
+    }
+
+    // Close modals when clicking outside
+    const destModal = document.getElementById('appDestinationsModal');
+    if (destModal) {
+        destModal.addEventListener('click', (e) => {
+            if (e.target === destModal) {
                 hideAppDestinations();
+            }
+        });
+    }
+
+    const detailsModal = document.getElementById('appDetailsModal');
+    if (detailsModal) {
+        detailsModal.addEventListener('click', (e) => {
+            if (e.target === detailsModal) {
+                hideAppDetails();
             }
         });
     }
@@ -1127,6 +1142,105 @@ function showAppDestinations(appIndex) {
 
 function hideAppDestinations() {
     const modal = document.getElementById('appDestinationsModal');
+    modal.style.display = 'none';
+}
+
+function showAppDetails(appIndex) {
+    const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
+    const vlanFilter = document.getElementById('applicationsVlanFilter').value;
+    const categoryFilter = document.getElementById('applicationsCategoryFilter').value;
+    const limit = parseInt(document.getElementById('applicationsLimit').value);
+
+    // Get the filtered and sorted list (same logic as table rendering)
+    let filtered = allApplications.filter(app => {
+        if (searchTerm && !app.name.toLowerCase().includes(searchTerm)) return false;
+        if (vlanFilter && (!app.vlans || !app.vlans.includes(vlanFilter))) return false;
+        if (categoryFilter && app.category !== categoryFilter) return false;
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let aVal = a[applicationsSortBy];
+        let bVal = b[applicationsSortBy];
+        if (typeof aVal === 'string') {
+            return applicationsSortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+        }
+        return applicationsSortDesc ? bVal - aVal : aVal - bVal;
+    });
+
+    const displayed = limit === -1 ? filtered : filtered.slice(0, limit);
+    const app = displayed[appIndex];
+
+    if (!app) {
+        console.error('Application not found at index:', appIndex);
+        return;
+    }
+
+    // Populate modal header
+    document.getElementById('appDetailsName').textContent = app.name;
+    document.getElementById('appDetailsCategory').textContent = app.category || 'unknown';
+
+    // Populate summary stats
+    document.getElementById('appDetailsSessions').textContent = app.sessions.toLocaleString();
+    document.getElementById('appDetailsVolume').textContent = formatBytesHuman(app.bytes);
+    document.getElementById('appDetailsSourceIPs').textContent = app.source_count;
+    document.getElementById('appDetailsDestinations').textContent = app.dest_count;
+
+    // Populate source IP addresses
+    const sourceList = document.getElementById('appDetailsSourceList');
+    if (app.source_ips && app.source_ips.length > 0) {
+        let sourceHtml = '';
+        app.source_ips.forEach(ip => {
+            sourceHtml += `
+                <div style="background: white; border: 2px solid #FA582D; border-radius: 6px; padding: 8px 12px; font-family: monospace; color: #333; font-size: 0.9em; font-weight: 500;">
+                    ${ip}
+                </div>
+            `;
+        });
+        sourceList.innerHTML = sourceHtml;
+    } else {
+        sourceList.innerHTML = '<div style="padding: 10px; color: #999;">-</div>';
+    }
+
+    // Populate protocols
+    const protocolsDiv = document.getElementById('appDetailsProtocols');
+    if (app.protocols && app.protocols.length > 0) {
+        protocolsDiv.textContent = app.protocols.join(', ');
+    } else {
+        protocolsDiv.textContent = '-';
+    }
+
+    // Populate top ports
+    const topPortsDiv = document.getElementById('appDetailsTopPorts');
+    if (app.ports && app.ports.length > 0) {
+        // Format ports with protocol hints
+        const portLabels = app.ports.map(port => {
+            if (port === '443') return '443 (https)';
+            if (port === '80') return '80 (http)';
+            if (port === '22') return '22 (ssh)';
+            if (port === '3389') return '3389 (rdp)';
+            return port;
+        });
+        topPortsDiv.textContent = portLabels.join(', ');
+    } else {
+        topPortsDiv.textContent = '-';
+    }
+
+    // Populate VLANs
+    const vlansDiv = document.getElementById('appDetailsVLANs');
+    if (app.vlans && app.vlans.length > 0) {
+        vlansDiv.textContent = app.vlans.join(', ');
+    } else {
+        vlansDiv.textContent = '-';
+    }
+
+    // Show modal
+    const modal = document.getElementById('appDetailsModal');
+    modal.style.display = 'flex';
+}
+
+function hideAppDetails() {
+    const modal = document.getElementById('appDetailsModal');
     modal.style.display = 'none';
 }
 
