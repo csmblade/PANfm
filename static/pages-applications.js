@@ -22,7 +22,7 @@ let categoryChart = null;
 async function loadApplications() {
     console.log('=== loadApplications called ===');
     try {
-        const response = await fetch('/api/applications?max_logs=1000');
+        const response = await fetch('/api/applications?max_logs=5000');
         const data = await response.json();
 
         console.log('Applications API response:', data);
@@ -33,10 +33,12 @@ async function loadApplications() {
             // Update summary statistics tiles
             const summary = data.summary || {};
             document.getElementById('appStatTotalApps').textContent = summary.total_applications || 0;
-            document.getElementById('appStatTotalSessions').textContent = (summary.total_sessions || 0).toLocaleString();
             document.getElementById('appStatTotalVolume').textContent = formatBytesHuman(summary.total_bytes || 0);
             document.getElementById('appStatVlans').textContent = summary.vlans_detected || 0;
             document.getElementById('appStatZones').textContent = summary.zones_detected || 0;
+
+            // Update time range display
+            updateTimeRangeDisplay(summary.earliest_time, summary.latest_time);
 
             // Populate filter dropdowns
             populateApplicationFilters();
@@ -276,9 +278,6 @@ function renderApplicationsTable() {
                         <th onclick="sortApplications('category')" style="padding: 10px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
                             Category${getSortIndicator('category')}
                         </th>
-                        <th onclick="sortApplications('sessions')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
-                            Sessions${getSortIndicator('sessions')}
-                        </th>
                         <th onclick="sortApplications('bytes_sent')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
                             Bytes Sent${getSortIndicator('bytes_sent')}
                         </th>
@@ -330,7 +329,6 @@ function renderApplicationsTable() {
                         ${category}
                     </span>
                 </td>
-                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${app.sessions.toLocaleString()}</td>
                 <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${bytesSent}</td>
                 <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${bytesReceived}</td>
                 <td style="padding: 10px; color: #FA582D; text-align: right; font-weight: 600; font-size: 0.9em;">${totalVolume}</td>
@@ -383,7 +381,7 @@ function exportApplicationsCSV() {
     });
 
     // CSV Headers
-    const headers = ['Application', 'Category', 'Sessions', 'Bytes Sent', 'Bytes Received', 'Total Volume', 'Sources', 'Destinations', 'Protocols', 'Top Ports', 'VLANs'];
+    const headers = ['Application', 'Category', 'Bytes Sent', 'Bytes Received', 'Total Volume', 'Sources', 'Destinations', 'Protocols', 'Top Ports', 'VLANs'];
     let csv = headers.join(',') + '\n';
 
     // CSV Rows
@@ -391,7 +389,6 @@ function exportApplicationsCSV() {
         const row = [
             `"${app.name}"`,
             `"${app.category || 'unknown'}"`,
-            app.sessions,
             app.bytes_sent || 0,
             app.bytes_received || 0,
             app.bytes,
@@ -436,7 +433,6 @@ function exportApplicationsJSON() {
         applications: filtered.map(app => ({
             name: app.name,
             category: app.category || 'unknown',
-            sessions: app.sessions,
             bytes_sent: app.bytes_sent || 0,
             bytes_received: app.bytes_received || 0,
             total_bytes: app.bytes,
@@ -656,7 +652,6 @@ function showAppDetails(appIndex) {
     document.getElementById('appDetailsCategory').textContent = app.category || 'unknown';
 
     // Populate summary stats
-    document.getElementById('appDetailsSessions').textContent = app.sessions.toLocaleString();
     document.getElementById('appDetailsVolume').textContent = formatBytesHuman(app.bytes);
     document.getElementById('appDetailsSourceIPs').textContent = app.source_count;
     document.getElementById('appDetailsDestinations').textContent = app.dest_count;
@@ -717,5 +712,47 @@ function showAppDetails(appIndex) {
 function hideAppDetails() {
     const modal = document.getElementById('appDetailsModal');
     modal.style.display = 'none';
+}
+
+function updateTimeRangeDisplay(earliestTime, latestTime) {
+    const timeRangeElement = document.getElementById('applicationsTimeRange');
+
+    if (!earliestTime || !latestTime) {
+        timeRangeElement.textContent = '';
+        return;
+    }
+
+    // Convert timestamps to Date objects
+    const earliest = new Date(earliestTime);
+    const latest = new Date(latestTime);
+
+    // Calculate duration
+    const durationMs = latest - earliest;
+    const durationMins = Math.floor(durationMs / 1000 / 60);
+    const durationHours = Math.floor(durationMins / 60);
+    const durationDays = Math.floor(durationHours / 24);
+
+    // Format duration display
+    let durationText = '';
+    if (durationDays > 0) {
+        durationText = `${durationDays} day${durationDays > 1 ? 's' : ''}`;
+    } else if (durationHours > 0) {
+        durationText = `${durationHours} hour${durationHours > 1 ? 's' : ''}`;
+    } else {
+        durationText = `${durationMins} minute${durationMins > 1 ? 's' : ''}`;
+    }
+
+    // Format display
+    const formatOptions = {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+
+    const earliestFormatted = earliest.toLocaleString('en-US', formatOptions);
+    const latestFormatted = latest.toLocaleString('en-US', formatOptions);
+
+    timeRangeElement.textContent = `Data period: ${earliestFormatted} to ${latestFormatted} (${durationText})`;
 }
 

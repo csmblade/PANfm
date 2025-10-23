@@ -540,7 +540,7 @@ def extract_vlan_from_interface(interface_name):
 
     return None
 
-def get_application_statistics(firewall_config, max_logs=1000):
+def get_application_statistics(firewall_config, max_logs=5000):
     """
     Fetch application statistics from traffic logs
     Returns aggregated data by application name with sessions, bytes, source IPs, destinations, etc.
@@ -559,12 +559,23 @@ def get_application_statistics(firewall_config, max_logs=1000):
         total_bytes = 0
         vlans = set()
         zones = set()
+        earliest_time = None
+        latest_time = None
 
         for log in traffic_logs:
             app = log.get('app', 'unknown')
             category = log.get('category', 'unknown')
             src = log.get('src', '')
             dst = log.get('dst', '')
+            log_time = log.get('time', '')
+
+            # Track earliest and latest timestamps
+            if log_time:
+                if earliest_time is None or log_time < earliest_time:
+                    earliest_time = log_time
+                if latest_time is None or log_time > latest_time:
+                    latest_time = log_time
+
             # Calculate total bytes (sent + received)
             bytes_sent = int(log.get('bytes_sent', 0))
             bytes_received = int(log.get('bytes_received', 0))
@@ -686,7 +697,9 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 'total_sessions': total_sessions,
                 'total_bytes': total_bytes,
                 'vlans_detected': len(vlans),
-                'zones_detected': len(zones)
+                'zones_detected': len(zones),
+                'earliest_time': earliest_time,
+                'latest_time': latest_time
             }
         }
 
@@ -699,6 +712,8 @@ def get_application_statistics(firewall_config, max_logs=1000):
                 'total_sessions': 0,
                 'total_bytes': 0,
                 'vlans_detected': 0,
-                'zones_detected': 0
+                'zones_detected': 0,
+                'earliest_time': None,
+                'latest_time': None
             }
         }

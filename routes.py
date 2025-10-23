@@ -150,7 +150,7 @@ def register_routes(app):
         debug("=== Applications API endpoint called ===")
         try:
             firewall_config = get_firewall_config()
-            max_logs = request.args.get('max_logs', 1000, type=int)
+            max_logs = request.args.get('max_logs', 5000, type=int)
             data = get_application_statistics(firewall_config, max_logs)
             applications = data.get('applications', [])
             summary = data.get('summary', {})
