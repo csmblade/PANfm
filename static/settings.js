@@ -17,8 +17,6 @@ async function loadSettings() {
 
         if (data.status === 'success') {
             document.getElementById('refreshInterval').value = data.settings.refresh_interval;
-            document.getElementById('matchCount').value = data.settings.match_count;
-            document.getElementById('topAppsCount').value = data.settings.top_apps_count || 5;
             document.getElementById('debugLogging').checked = data.settings.debug_logging || false;
 
             // Monitored interface will be loaded from the selected device in updateDeviceSelector
@@ -34,16 +32,12 @@ async function loadSettings() {
 async function saveSettingsData() {
     try {
         const refreshInterval = parseInt(document.getElementById('refreshInterval').value);
-        const matchCount = parseInt(document.getElementById('matchCount').value);
-        const topAppsCount = parseInt(document.getElementById('topAppsCount').value);
         const debugLogging = document.getElementById('debugLogging').checked;
 
         // Get current settings to preserve selected_device_id and monitored_interface
         const currentSettings = await fetch('/api/settings').then(r => r.json());
         const settingsToSave = {
             refresh_interval: refreshInterval,
-            match_count: matchCount,
-            top_apps_count: topAppsCount,
             debug_logging: debugLogging
         };
 
@@ -70,11 +64,6 @@ async function saveSettingsData() {
         if (data.status === 'success') {
             // Update local variables
             UPDATE_INTERVAL = refreshInterval * 1000;
-            MATCH_COUNT = matchCount;
-            TOP_APPS_COUNT = topAppsCount;
-
-            // Update tile headings
-            updateTileHeadings();
 
             // Restart update interval with new timing
             if (updateIntervalId) {
@@ -106,33 +95,12 @@ async function saveSettingsData() {
 }
 
 function resetSettingsData() {
-    document.getElementById('refreshInterval').value = 5;
-    document.getElementById('matchCount').value = 5;
-    document.getElementById('topAppsCount').value = 5;
+    document.getElementById('refreshInterval').value = 15;
     document.getElementById('debugLogging').checked = false;
 }
 
 // Update monitored interface from dashboard
 // updateMonitoredInterface function moved to app.js to access device variables
-
-function updateTileHeadings() {
-    // Update the "last X matches" text in tile headings
-    const matchText = `last ${MATCH_COUNT} matches`;
-    document.querySelectorAll('.stat-unit').forEach(el => {
-        if (el.textContent.includes('last') && el.textContent.includes('matches')) {
-            el.textContent = matchText;
-        }
-        if (el.textContent.includes('last') && el.textContent.includes('events')) {
-            el.textContent = `last ${MATCH_COUNT} events`;
-        }
-    });
-
-    // Update Top Applications unit text
-    const topAppsUnitElement = document.getElementById('topAppsUnit');
-    if (topAppsUnitElement) {
-        topAppsUnitElement.textContent = `last ${TOP_APPS_COUNT} matches`;
-    }
-}
 
 async function initSettings() {
     // Load settings on startup
@@ -142,9 +110,6 @@ async function initSettings() {
 
         if (data.status === 'success') {
             UPDATE_INTERVAL = data.settings.refresh_interval * 1000;
-            MATCH_COUNT = data.settings.match_count;
-            TOP_APPS_COUNT = data.settings.top_apps_count || 5;
-            updateTileHeadings();
 
             // Show debug alert if debug logging is enabled
             const debugAlert = document.getElementById('debugAlert');

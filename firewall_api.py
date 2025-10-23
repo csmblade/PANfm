@@ -563,10 +563,9 @@ def get_throughput_data():
             # Get system resource data
             resource_data = get_system_resources()
 
-            # Load settings to get max_logs and top_apps_count
-            settings = load_settings()
-            max_logs = settings.get('match_count', 5)
-            top_apps_count = settings.get('top_apps_count', 5)
+            # Use top 10 for all modal displays
+            max_logs = 10
+            top_apps_count = 10
 
             # Build firewall config tuple to pass to imported functions
             firewall_config = (firewall_ip, api_key, base_url)

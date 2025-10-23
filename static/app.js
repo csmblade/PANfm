@@ -1,7 +1,5 @@
 // Configuration (will be loaded from settings)
 let UPDATE_INTERVAL = 5000; // Update every 5 seconds (default)
-let MATCH_COUNT = 5; // Number of matches to display (default)
-let TOP_APPS_COUNT = 5; // Number of top apps to display (default)
 const MAX_DATA_POINTS = 30; // Show last 30 data points
 const MAX_MINI_POINTS = 20; // Mini charts show last 20 points
 
