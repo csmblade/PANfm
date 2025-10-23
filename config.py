@@ -42,7 +42,7 @@ def ensure_settings_file_exists():
 def load_settings():
     """
     Load settings from file or return defaults.
-    Automatically decrypts encrypted settings.
+    Settings are stored as plain JSON (no decryption needed).
 
     Note: This function does NOT use logging to avoid circular dependencies
     since logger.is_debug_enabled() calls load_settings().
@@ -53,10 +53,7 @@ def load_settings():
     try:
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, 'r') as f:
-                encrypted_settings = json.load(f)
-
-                # Decrypt all string values in settings
-                settings = decrypt_dict(encrypted_settings)
+                settings = json.load(f)
                 return settings
 
         return DEFAULT_SETTINGS.copy()
@@ -65,18 +62,17 @@ def load_settings():
 
 def save_settings(settings):
     """
-    Save settings to file with encryption.
-    All string values are encrypted before saving.
+    Save settings to file.
+    Settings are stored in plain JSON (no encryption needed for non-sensitive data).
+    Only API keys in devices.json are encrypted.
     """
     debug, error, _ = _get_logger()
-    debug("Saving settings to file")
+    debug(f"Saving settings to file: {settings}")
     try:
-        # Encrypt all string values in settings
-        encrypted_settings = encrypt_dict(settings)
-        debug(f"Encrypted {len(settings)} settings")
-
+        # Save settings as plain JSON (no encryption)
+        # Only API keys need encryption, and those are in devices.json
         with open(SETTINGS_FILE, 'w') as f:
-            json.dump(encrypted_settings, f, indent=2)
+            json.dump(settings, f, indent=2)
             f.flush()
             os.fsync(f.fileno())
 
