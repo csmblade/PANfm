@@ -139,10 +139,13 @@ const chart = new Chart(ctx, {
                 },
                 ticks: {
                     font: {
-                        size: 11
+                        size: 10
                     },
-                    maxRotation: 45,
-                    minRotation: 45
+                    maxRotation: 0,
+                    minRotation: 0,
+                    maxTicksLimit: 10,
+                    autoSkip: true,
+                    autoSkipPadding: 10
                 }
             },
             y: {
@@ -283,19 +286,19 @@ function updateStats(data) {
             sidebarUptimeElement.textContent = data.cpu.uptime;
         }
 
-        // Update PPS display in sidebar
-        const sidebarTotalPpsElement = document.getElementById('sidebarTotalPps');
-        const sidebarInboundPpsElement = document.getElementById('sidebarInboundPps');
-        const sidebarOutboundPpsElement = document.getElementById('sidebarOutboundPps');
+        // Update PPS display in Active Sessions tile
+        const totalPpsElement = document.getElementById('totalPps');
+        const inboundPpsElement = document.getElementById('inboundPps');
+        const outboundPpsElement = document.getElementById('outboundPps');
 
-        if (data.total_pps !== undefined && sidebarTotalPpsElement) {
-            sidebarTotalPpsElement.textContent = data.total_pps.toLocaleString();
+        if (data.total_pps !== undefined && totalPpsElement) {
+            totalPpsElement.textContent = data.total_pps.toLocaleString();
         }
-        if (data.inbound_pps !== undefined && sidebarInboundPpsElement) {
-            sidebarInboundPpsElement.textContent = data.inbound_pps.toLocaleString();
+        if (data.inbound_pps !== undefined && inboundPpsElement) {
+            inboundPpsElement.textContent = data.inbound_pps.toLocaleString();
         }
-        if (data.outbound_pps !== undefined && sidebarOutboundPpsElement) {
-            sidebarOutboundPpsElement.textContent = data.outbound_pps.toLocaleString();
+        if (data.outbound_pps !== undefined && outboundPpsElement) {
+            outboundPpsElement.textContent = data.outbound_pps.toLocaleString();
         }
 
     }

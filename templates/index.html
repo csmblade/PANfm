@@ -516,23 +516,6 @@
             </div>
         </div>
 
-        <!-- Packets Per Second (PPS) -->
-        <div style="padding: 20px 15px; border-top: 1px solid rgba(255, 102, 0, 0.2);">
-            <div style="font-size: 0.75em; color: #FA582D; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Traffic</div>
-            <div style="margin-bottom: 8px;">
-                <div style="color: #999; font-size: 0.7em;">Total PPS</div>
-                <div id="sidebarTotalPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
-            </div>
-            <div style="margin-bottom: 8px;">
-                <div style="color: #999; font-size: 0.7em;">Inbound PPS</div>
-                <div id="sidebarInboundPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
-            </div>
-            <div style="margin-bottom: 8px;">
-                <div style="color: #999; font-size: 0.7em;">Outbound PPS</div>
-                <div id="sidebarOutboundPps" style="color: #FA582D; font-size: 0.75em; font-weight: 600;">-</div>
-            </div>
-        </div>
-
         <!-- System Stats -->
         <div style="padding: 20px 15px; border-top: 1px solid rgba(255, 102, 0, 0.2);">
             <div style="font-size: 0.75em; color: #FA582D; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-primary);">System Info</div>
@@ -697,6 +680,21 @@
                 <div style="text-align: center;">
                     <div style="opacity: 0.8; font-family: var(--font-secondary);">ICMP</div>
                     <div id="icmpValue" style="font-weight: 600; font-family: var(--font-primary);">-</div>
+                </div>
+            </div>
+            <!-- Traffic Stats -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.7em;">
+                <div style="text-align: center;">
+                    <div style="opacity: 0.8; font-family: var(--font-secondary);">Total PPS</div>
+                    <div id="totalPps" style="font-weight: 600; font-family: var(--font-primary);">-</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="opacity: 0.8; font-family: var(--font-secondary);">Inbound PPS</div>
+                    <div id="inboundPps" style="font-weight: 600; font-family: var(--font-primary);">-</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="opacity: 0.8; font-family: var(--font-secondary);">Outbound PPS</div>
+                    <div id="outboundPps" style="font-weight: 600; font-family: var(--font-primary);">-</div>
                 </div>
             </div>
         </div>
