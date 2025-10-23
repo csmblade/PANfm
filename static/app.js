@@ -101,16 +101,7 @@ const chart = new Chart(ctx, {
         },
         plugins: {
             legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                    font: {
-                        size: 14,
-                        family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                    },
-                    padding: 15,
-                    usePointStyle: true
-                }
+                display: false
             },
             tooltip: {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
