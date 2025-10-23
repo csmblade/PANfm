@@ -638,8 +638,15 @@ function animateValue(element, start, end, duration) {
 }
 
 // Initialize the application
+let isInitialized = false;
 async function init() {
+    if (isInitialized) {
+        console.log('App already initialized, skipping...');
+        return;
+    }
+
     console.log('Initializing Palo Alto Firewall Monitor...');
+    isInitialized = true;
 
     // Load settings first
     await initSettings();
@@ -650,7 +657,12 @@ async function init() {
         console.log('Devices loaded on initialization');
     }
 
-    // Initialize mini charts
+    // Initialize mini charts (destroy existing ones first to avoid "Canvas already in use" error)
+    if (sessionChart) sessionChart.destroy();
+    if (tcpChart) tcpChart.destroy();
+    if (udpChart) udpChart.destroy();
+    if (ppsChart) ppsChart.destroy();
+
     sessionChart = createMiniChart('sessionChart', '#ffffff');
     tcpChart = createMiniChart('tcpChart', '#3b82f6');
     udpChart = createMiniChart('udpChart', '#8b5cf6');
