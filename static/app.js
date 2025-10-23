@@ -389,19 +389,19 @@ function updateStats(data) {
         currentMediumLogs = data.threats.medium_logs || [];
         currentBlockedUrlLogs = data.threats.blocked_url_logs || [];
 
-        // Update sidebar last seen stats
-        const sidebarCritical = document.getElementById('sidebarCriticalLastSeen');
-        const sidebarMedium = document.getElementById('sidebarMediumLastSeen');
-        const sidebarBlocked = document.getElementById('sidebarBlockedUrlLastSeen');
+        // Update last seen stats in tiles
+        const criticalLastSeen = document.getElementById('criticalLastSeen');
+        const mediumLastSeen = document.getElementById('mediumLastSeen');
+        const blockedUrlLastSeen = document.getElementById('blockedUrlLastSeen');
 
-        if (sidebarCritical) {
-            sidebarCritical.textContent = formatDaysAgo(data.threats.critical_last_seen);
+        if (criticalLastSeen) {
+            criticalLastSeen.textContent = formatDaysAgo(data.threats.critical_last_seen);
         }
-        if (sidebarMedium) {
-            sidebarMedium.textContent = formatDaysAgo(data.threats.medium_last_seen);
+        if (mediumLastSeen) {
+            mediumLastSeen.textContent = formatDaysAgo(data.threats.medium_last_seen);
         }
-        if (sidebarBlocked) {
-            sidebarBlocked.textContent = formatDaysAgo(data.threats.blocked_url_last_seen);
+        if (blockedUrlLastSeen) {
+            blockedUrlLastSeen.textContent = formatDaysAgo(data.threats.blocked_url_last_seen);
         }
     }
 
