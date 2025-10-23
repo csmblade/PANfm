@@ -197,12 +197,17 @@ def register_routes(app):
                 selected_device_id = new_settings.get('selected_device_id', '')
                 debug(f"selected_device_id to save: {selected_device_id}")
 
+                # Get monitored interface
+                monitored_interface = new_settings.get('monitored_interface', 'ethernet1/12')
+                debug(f"monitored_interface to save: {monitored_interface}")
+
                 settings_data = {
                     'refresh_interval': refresh_interval,
                     'match_count': match_count,
                     'top_apps_count': top_apps_count,
                     'debug_logging': debug_logging,
-                    'selected_device_id': selected_device_id
+                    'selected_device_id': selected_device_id,
+                    'monitored_interface': monitored_interface
                 }
 
                 if save_settings(settings_data):
