@@ -24,7 +24,6 @@ from logger import debug, info, error
 
 def register_routes(app):
     """Register all Flask routes"""
-
     @app.route('/')
     def index():
         """Serve the main dashboard"""
@@ -434,15 +433,12 @@ def register_routes(app):
                     'status': 'error',
                     'message': 'No file provided'
                 }), 400
-
             file = request.files['file']
-
             if file.filename == '':
                 return jsonify({
                     'status': 'error',
                     'message': 'No file selected'
                 }), 400
-
             if not file.filename.endswith('.json'):
                 return jsonify({
                     'status': 'error',
