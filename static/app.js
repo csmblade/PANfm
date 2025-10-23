@@ -558,18 +558,19 @@ function updateMiniChart(chart, data, color) {
 }
 
 // Update status indicator
-function updateStatus(isOnline, message = '') {
+function updateStatus(isOnline, message = '', deviceName = '') {
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
 
     if (isOnline) {
         statusDot.classList.remove('offline');
         statusDot.classList.add('online');
-        statusText.textContent = 'Connected';
+        // Show device name if provided, otherwise just "Connected"
+        statusText.textContent = deviceName ? `Connected: ${deviceName}` : 'Connected';
     } else {
         statusDot.classList.remove('online');
         statusDot.classList.add('offline');
-        statusText.textContent = 'Disconnected';
+        statusText.textContent = deviceName ? `Disconnected: ${deviceName}` : 'Disconnected';
     }
 }
 

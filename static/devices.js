@@ -104,6 +104,12 @@ async function updateDeviceSelector() {
             interfaceInput.value = deviceInterface;
             console.log('Loaded interface for selected device:', deviceInterface);
         }
+
+        // Update the status bubble to show the connected device name
+        if (typeof updateStatus === 'function') {
+            updateStatus(true, '', device.name);
+            console.log('Updated status bubble with device name:', device.name);
+        }
     }
 
     // If we auto-selected, save it to settings
@@ -188,6 +194,12 @@ async function onDeviceChange() {
                 if (interfaceInput) {
                     interfaceInput.value = deviceInterface;
                     console.log('Updated interface input to:', deviceInterface);
+                }
+
+                // Update the status bubble to show the new device name
+                if (typeof updateStatus === 'function') {
+                    updateStatus(true, '', device.name);
+                    console.log('Updated status bubble with new device name:', device.name);
                 }
 
                 // Update settings with device's interface
