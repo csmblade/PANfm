@@ -339,6 +339,10 @@ async function onDeviceChange() {
                     updateTrafficPage();
                 } else if (pageId === 'software-updates-content') {
                     loadSoftwareUpdates();
+                } else if (pageId === 'applications-content') {
+                    loadApplications();
+                } else if (pageId === 'connected-devices-content') {
+                    loadConnectedDevices();
                 }
             }
         }
