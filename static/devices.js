@@ -53,8 +53,13 @@ async function loadDevices() {
 
 async function updateDeviceSelector() {
     console.log('=== updateDeviceSelector called ===');
+    console.log('currentDevices length:', currentDevices.length);
     const selector = document.getElementById('deviceSelector');
-    if (!selector) return;
+    if (!selector) {
+        console.error('deviceSelector element not found!');
+        return;
+    }
+    console.log('deviceSelector element found');
 
     // ALWAYS fetch selected device from backend settings (source of truth)
     console.log('Fetching settings to get selected device...');
@@ -369,7 +374,9 @@ async function saveDevice(event) {
 
         if (data.status === 'success') {
             hideDeviceModal();
+            console.log('Device saved successfully, reloading devices...');
             await loadDevices();
+            console.log('Devices reloaded, currentDevices count:', currentDevices.length);
             alert(data.message);
         } else {
             alert('Error: ' + data.message);
@@ -397,7 +404,9 @@ async function deleteDevice(deviceId) {
         const data = await response.json();
 
         if (data.status === 'success') {
+            console.log('Device deleted successfully, reloading devices...');
             await loadDevices();
+            console.log('Devices reloaded, currentDevices count:', currentDevices.length);
             alert(data.message);
         } else {
             alert('Error: ' + data.message);
