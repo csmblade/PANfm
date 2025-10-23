@@ -354,7 +354,7 @@ function renderDevicesTable() {
     if (currentDevices.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
+                <td colspan="7" style="padding: 40px; text-align: center; color: #999;">
                     No devices found. Click "Add Device" to get started.
                 </td>
             </tr>
@@ -368,6 +368,7 @@ function renderDevicesTable() {
             <td style="padding: 12px; color: #666;">${device.ip}</td>
             <td style="padding: 12px; color: #666;">${device.group || 'Default'}</td>
             <td style="padding: 12px; color: #666;">${device.uptime || 'N/A'}</td>
+            <td style="padding: 12px; color: #666;">${device.version || 'N/A'}</td>
             <td style="padding: 12px;">
                 <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; ${device.enabled ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
                     ${device.enabled ? '🟢 Enabled' : '🔴 Disabled'}
