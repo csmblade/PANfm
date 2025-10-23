@@ -123,12 +123,19 @@ async function updateDeviceSelector() {
                 }
 
                 // Save settings
-                await fetch('/api/settings', {
+                const autoSaveResponse = await fetch('/api/settings', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(settings)
                 });
-                console.log('Auto-selected device saved to settings');
+                const autoSaveData = await autoSaveResponse.json();
+                console.log('Auto-selected device save response:', autoSaveData);
+
+                if (autoSaveData.status !== 'success') {
+                    console.error('Failed to save auto-selected device:', autoSaveData.message);
+                } else {
+                    console.log('Auto-selected device saved to settings successfully');
+                }
             }
         } catch (error) {
             console.error('Error saving auto-selected device:', error);
@@ -155,11 +162,19 @@ async function onDeviceChange() {
             settings.selected_device_id = selectedDeviceId;
 
             console.log('Saving device selection to settings...');
-            await fetch('/api/settings', {
+            const saveResponse = await fetch('/api/settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(settings)
             });
+            const saveData = await saveResponse.json();
+            console.log('Device selection save response:', saveData);
+
+            if (saveData.status !== 'success') {
+                console.error('Failed to save device selection:', saveData.message);
+                alert('Failed to save device selection: ' + (saveData.message || 'Unknown error'));
+                return;
+            }
 
             // Load interface for this device
             const device = currentDevices.find(d => d.id === selectedDeviceId);
@@ -183,7 +198,12 @@ async function onDeviceChange() {
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(settings)
                 });
-                console.log('Interface save response:', interfaceSaveResponse.status);
+                const interfaceSaveData = await interfaceSaveResponse.json();
+                console.log('Interface save response:', interfaceSaveData);
+
+                if (interfaceSaveData.status !== 'success') {
+                    console.error('Failed to save interface:', interfaceSaveData.message);
+                }
 
                 // If device doesn't have interface saved yet, save the default
                 if (!device.monitored_interface) {
