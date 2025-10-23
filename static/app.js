@@ -641,6 +641,12 @@ async function init() {
     // Load settings first
     await initSettings();
 
+    // Load devices and populate device selector
+    if (typeof loadDevices === 'function') {
+        await loadDevices();
+        console.log('Devices loaded on initialization');
+    }
+
     // Initialize mini charts
     sessionChart = createMiniChart('sessionChart', '#ffffff');
     tcpChart = createMiniChart('tcpChart', '#3b82f6');
@@ -659,6 +665,9 @@ async function init() {
     // Set up polling with the loaded UPDATE_INTERVAL
     updateIntervalId = setInterval(fetchThroughputData, UPDATE_INTERVAL);
 }
+
+// Start the app when DOM is ready
+document.addEventListener('DOMContentLoaded', init);
 
 // updateMonitoredInterface function moved to devices.js where selectedDeviceId and currentDevices are defined
 
