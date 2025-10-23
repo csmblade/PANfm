@@ -578,41 +578,12 @@ def get_throughput_data():
             # Get software version information (from firewall_api_devices module)
             software_info = get_software_updates(firewall_config)
             panos_version = None
-            update_available = False
-            latest_version = None
-
-            debug(f"Software info returned: {software_info}")
 
             if software_info.get('status') == 'success':
                 # Find PAN-OS version from software list
                 for sw in software_info.get('software', []):
                     if sw['name'] == 'PAN-OS':
                         panos_version = sw['version']
-                        debug(f"PAN-OS current version: {panos_version}")
-                        debug(f"PAN-OS update fields - current: {sw.get('current')}, latest: {sw.get('latest')}, downloaded: {sw.get('downloaded')}")
-
-                        # Check if update is available
-                        # If 'latest' field contains a version number (not 'yes' or 'N/A'), that's the available update
-                        latest_field = sw.get('latest', 'N/A')
-                        current_field = sw.get('current', 'yes')
-
-                        debug(f"Checking update: latest_field='{latest_field}', current_field='{current_field}'")
-
-                        # Update is available if:
-                        # 1. latest field contains a version number (not 'yes', 'N/A', etc.)
-                        # 2. OR current='no' and latest contains a version
-                        if latest_field not in ['yes', 'N/A', None, ''] and latest_field != panos_version:
-                            # latest field contains a version number different from current
-                            update_available = True
-                            latest_version = latest_field
-                            debug(f"✓ Update available: {latest_version} (current: {panos_version})")
-                        elif current_field == 'no' and latest_field not in ['N/A', None, '']:
-                            # This version entry is not current, so an update exists
-                            update_available = True
-                            latest_version = latest_field
-                            debug(f"✓ Update available via current=no: {latest_version}")
-                        else:
-                            debug(f"✗ No update available (latest field: {latest_field})")
                         break
 
             return {
@@ -632,8 +603,6 @@ def get_throughput_data():
                 'license': license_info.get('license', {'expired': 0, 'licensed': 0}),
                 'api_stats': get_api_stats(),
                 'panos_version': panos_version,
-                'version_update_available': update_available,
-                'latest_panos_version': latest_version,
                 'status': 'success'
             }
         else:

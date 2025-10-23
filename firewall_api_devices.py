@@ -152,10 +152,9 @@ def get_software_updates(firewall_config):
             wildfire_cmd = '<request><wildfire><upgrade><check></check></upgrade></wildfire></request>'
             add_software_entry('WildFire', wildfire_version, wildfire_cmd)
 
-            # PAN-OS version - check for updates
+            # PAN-OS version - no update check needed
             sw_version = root.find('.//sw-version')
-            panos_cmd = '<request><system><software><check></check></software></system></request>'
-            add_software_entry('PAN-OS', sw_version, panos_cmd)
+            add_software_entry('PAN-OS', sw_version)
 
             debug(f"Software versions found: {software_info}")
 
