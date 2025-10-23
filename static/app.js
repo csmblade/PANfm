@@ -179,11 +179,11 @@ function calculateTrend(dataArray) {
     const percentChange = ((secondAvg - firstAvg) / firstAvg) * 100;
 
     if (percentChange > 5) {
-        return '<span style="color: #22c55e; font-size: 0.8em; margin-left: 5px; opacity: 0.8;">▲</span>';
+        return '<span style="color: #ffffff; font-size: 0.8em; margin-left: 5px; opacity: 0.8;">▲</span>';
     } else if (percentChange < -5) {
-        return '<span style="color: #ef4444; font-size: 0.8em; margin-left: 5px; opacity: 0.8;">▼</span>';
+        return '<span style="color: #ffffff; font-size: 0.8em; margin-left: 5px; opacity: 0.8;">▼</span>';
     } else {
-        return '<span style="color: #94a3b8; font-size: 0.8em; margin-left: 5px; opacity: 0.8;">━</span>';
+        return '<span style="color: #ffffff; font-size: 0.8em; margin-left: 5px; opacity: 0.8;">━</span>';
     }
 }
 
