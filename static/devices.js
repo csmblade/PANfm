@@ -296,8 +296,8 @@ function renderDevicesTable() {
             <td style="padding: 12px; color: #666;">${device.uptime || 'N/A'}</td>
             <td style="padding: 12px; color: #666;">${device.version || 'N/A'}</td>
             <td style="padding: 12px;">
-                <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; ${device.enabled ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
-                    ${device.enabled ? '🟢 Enabled' : '🔴 Disabled'}
+                <span style="display: inline-block; padding: 6px 8px; border-radius: 12px; font-size: 0.85em; font-weight: 600; ${device.enabled ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
+                    ${device.enabled ? '🟢' : '🔴'}
                 </span>
             </td>
             <td style="padding: 12px; text-align: center;">
