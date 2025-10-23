@@ -900,21 +900,62 @@ function refreshAllDataForDevice() {
     // 3. RESET DASHBOARD VALUES TO LOADING STATE
     // ========================================================================
     // Throughput stats
-    document.getElementById('inboundValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('outboundValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('totalValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    const inboundValue = document.getElementById('inboundValue');
+    if (inboundValue) {
+        inboundValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const outboundValue = document.getElementById('outboundValue');
+    if (outboundValue) {
+        outboundValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const totalValue = document.getElementById('totalValue');
+    if (totalValue) {
+        totalValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
 
     // Session stats
-    document.getElementById('sessionValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('tcpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('udpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('icmpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    const sessionValue = document.getElementById('sessionValue');
+    if (sessionValue) {
+        sessionValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const tcpValue = document.getElementById('tcpValue');
+    if (tcpValue) {
+        tcpValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const udpValue = document.getElementById('udpValue');
+    if (udpValue) {
+        udpValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const icmpValue = document.getElementById('icmpValue');
+    if (icmpValue) {
+        icmpValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
 
     // Threat stats
-    document.getElementById('criticalValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('mediumValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('blockedUrlValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('topAppsValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    const criticalValue = document.getElementById('criticalValue');
+    if (criticalValue) {
+        criticalValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const mediumValue = document.getElementById('mediumValue');
+    if (mediumValue) {
+        mediumValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const blockedUrlValue = document.getElementById('blockedUrlValue');
+    if (blockedUrlValue) {
+        blockedUrlValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    const topAppsValue = document.getElementById('topAppsValue');
+    if (topAppsValue) {
+        topAppsValue.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
 
     // Interface errors
     const interfaceErrorsElement = document.getElementById('interfaceErrorsValue');
@@ -983,10 +1024,25 @@ function refreshAllDataForDevice() {
     // ========================================================================
     // 6. CLEAR THREAT LOGS AND APPLICATION DISPLAYS
     // ========================================================================
-    document.getElementById('criticalLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
-    document.getElementById('mediumLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
-    document.getElementById('blockedUrlLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
-    document.getElementById('topAppsContainer').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    const criticalLogs = document.getElementById('criticalLogs');
+    if (criticalLogs) {
+        criticalLogs.innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    }
+
+    const mediumLogs = document.getElementById('mediumLogs');
+    if (mediumLogs) {
+        mediumLogs.innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    }
+
+    const blockedUrlLogs = document.getElementById('blockedUrlLogs');
+    if (blockedUrlLogs) {
+        blockedUrlLogs.innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    }
+
+    const topAppsContainer = document.getElementById('topAppsContainer');
+    if (topAppsContainer) {
+        topAppsContainer.innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    }
 
     console.log('Threat logs and app displays cleared');
 
