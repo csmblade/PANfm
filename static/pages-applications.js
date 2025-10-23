@@ -788,20 +788,37 @@ function hideAppDetails() {
 function updateTimeRangeDisplay(earliestTime, latestTime) {
     const timeRangeElement = document.getElementById('applicationsTimeRange');
 
+    console.log('updateTimeRangeDisplay called with:', { earliestTime, latestTime });
+
     if (!earliestTime || !latestTime) {
-        timeRangeElement.textContent = 'Loading time period...';
+        timeRangeElement.textContent = 'No time data available';
+        timeRangeElement.style.color = '#999';
         return;
     }
 
     // Convert timestamps to Date objects
-    const earliest = new Date(earliestTime);
-    const latest = new Date(latestTime);
+    // Handle format: "2025/10/23 14:30:00" (PAN-OS format)
+    const earliest = new Date(earliestTime.replace(/\//g, '-'));
+    const latest = new Date(latestTime.replace(/\//g, '-'));
+
+    console.log('Parsed dates:', { earliest, latest });
+
+    // Validate parsed dates
+    if (isNaN(earliest.getTime()) || isNaN(latest.getTime())) {
+        console.error('Failed to parse dates:', { earliestTime, latestTime });
+        timeRangeElement.textContent = 'Invalid time data';
+        timeRangeElement.style.color = '#999';
+        return;
+    }
 
     // Calculate duration in minutes
     const durationMs = latest - earliest;
     const durationMins = Math.round(durationMs / 1000 / 60);
 
+    console.log('Duration:', durationMins, 'minutes');
+
     // Display the time period in minutes
     timeRangeElement.textContent = `Data gathered over ${durationMins} minute${durationMins !== 1 ? 's' : ''}`;
+    timeRangeElement.style.color = '#FA582D';
 }
 
