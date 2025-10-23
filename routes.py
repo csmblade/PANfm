@@ -21,6 +21,7 @@ from firewall_api import (
     get_application_statistics
 )
 from logger import debug, info, error
+from utils import reverse_dns_lookup
 
 def register_routes(app):
     """Register all Flask routes"""
@@ -517,6 +518,64 @@ def register_routes(app):
             }), 400
         except Exception as e:
             error(f"Error uploading vendor DB: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @app.route('/api/reverse-dns', methods=['POST'])
+    def reverse_dns_api():
+        """
+        Perform reverse DNS lookups on a list of IP addresses.
+
+        Request body:
+            {
+                "ip_addresses": ["8.8.8.8", "1.1.1.1", ...],
+                "timeout": 2  (optional, default: 2)
+            }
+
+        Response:
+            {
+                "status": "success",
+                "results": {
+                    "8.8.8.8": "dns.google",
+                    "1.1.1.1": "one.one.one.one",
+                    ...
+                }
+            }
+        """
+        debug("=== Reverse DNS API endpoint called ===")
+        try:
+            data = request.get_json()
+            ip_addresses = data.get('ip_addresses', [])
+            timeout = data.get('timeout', 2)
+
+            # Validate input
+            if not isinstance(ip_addresses, list):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'ip_addresses must be a list'
+                }), 400
+
+            if len(ip_addresses) == 0:
+                return jsonify({
+                    'status': 'success',
+                    'results': {}
+                })
+
+            debug("Processing reverse DNS lookup for %d IP addresses", len(ip_addresses))
+
+            # Perform reverse DNS lookups
+            results = reverse_dns_lookup(ip_addresses, timeout)
+
+            debug("Reverse DNS lookup completed successfully")
+            return jsonify({
+                'status': 'success',
+                'results': results
+            })
+
+        except Exception as e:
+            error(f"Error performing reverse DNS lookup: {str(e)}")
             return jsonify({
                 'status': 'error',
                 'message': str(e)

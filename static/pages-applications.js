@@ -546,7 +546,7 @@ function setupApplicationsEventListeners() {
     }
 }
 
-function showAppDestinations(appIndex) {
+async function showAppDestinations(appIndex) {
     const searchTerm = document.getElementById('applicationsSearchInput').value.toLowerCase();
     const limit = parseInt(document.getElementById('applicationsLimit').value);
 
@@ -581,18 +581,89 @@ function showAppDestinations(appIndex) {
     // Populate destinations list
     const destinationsList = document.getElementById('appDestinationsList');
     if (app.destinations && app.destinations.length > 0) {
-        let destHtml = '';
-        app.destinations.forEach(dest => {
-            const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
-            const portDisplay = dest.port ? `:${dest.port}` : '';
-            destHtml += `
-                <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
-                    <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
-                    <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
-                </div>
-            `;
-        });
-        destinationsList.innerHTML = destHtml;
+        // Check if reverse DNS lookup is enabled
+        const reverseDnsEnabled = document.getElementById('enableReverseDnsCheckbox').checked;
+
+        if (reverseDnsEnabled) {
+            // Show loading indicator
+            destinationsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;"><i class="fas fa-spinner fa-spin"></i> Performing reverse DNS lookups...</div>';
+
+            // Show modal immediately with loading state
+            const modal = document.getElementById('appDestinationsModal');
+            modal.style.display = 'flex';
+
+            try {
+                // Extract IP addresses from destinations
+                const ipAddresses = app.destinations.map(dest => dest.ip);
+
+                // Call reverse DNS API
+                const response = await fetch('/api/reverse-dns', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ip_addresses: ipAddresses,
+                        timeout: 2
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // Render destinations with hostnames
+                    let destHtml = '';
+                    app.destinations.forEach(dest => {
+                        const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
+                        const hostname = data.results[dest.ip];
+                        const showHostname = hostname && hostname !== dest.ip;
+
+                        destHtml += `
+                            <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
+                                ${showHostname ? `<div style="color: #333; font-weight: 600; margin-bottom: 3px;">${hostname}</div>` : ''}
+                                <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
+                                <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
+                            </div>
+                        `;
+                    });
+                    destinationsList.innerHTML = destHtml;
+                } else {
+                    throw new Error(data.message || 'Failed to perform reverse DNS lookup');
+                }
+            } catch (error) {
+                console.error('Error performing reverse DNS lookup:', error);
+                // Fall back to showing IPs without hostnames
+                let destHtml = '';
+                app.destinations.forEach(dest => {
+                    const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
+                    destHtml += `
+                        <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
+                            <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
+                            <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
+                            <div style="font-size: 0.8em; color: #d9534f; margin-top: 3px;">DNS lookup failed</div>
+                        </div>
+                    `;
+                });
+                destinationsList.innerHTML = destHtml;
+            }
+        } else {
+            // Render destinations without hostnames (original behavior)
+            let destHtml = '';
+            app.destinations.forEach(dest => {
+                const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
+                destHtml += `
+                    <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
+                        <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
+                        <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
+                    </div>
+                `;
+            });
+            destinationsList.innerHTML = destHtml;
+
+            // Show modal
+            const modal = document.getElementById('appDestinationsModal');
+            modal.style.display = 'flex';
+        }
 
         // Update note
         const totalDests = app.dest_count;
@@ -604,11 +675,11 @@ function showAppDestinations(appIndex) {
     } else {
         destinationsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No destination data available</div>';
         document.getElementById('appDestNote').textContent = 'No destinations found';
-    }
 
-    // Show modal
-    const modal = document.getElementById('appDestinationsModal');
-    modal.style.display = 'flex';
+        // Show modal
+        const modal = document.getElementById('appDestinationsModal');
+        modal.style.display = 'flex';
+    }
 }
 
 function hideAppDestinations() {
