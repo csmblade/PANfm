@@ -439,14 +439,14 @@ function updateStats(data) {
 
         if (expiredElement) {
             expiredElement.textContent = data.license.expired || 0;
-            // Color code: red if expired > 0, green otherwise
-            expiredElement.style.color = data.license.expired > 0 ? '#ef4444' : '#10b981';
+            // Use brand theme color
+            expiredElement.style.color = '#FA582D';
         }
 
         if (licensedElement) {
             licensedElement.textContent = data.license.licensed || 0;
-            // Color code: green if licensed > 0, gray otherwise
-            licensedElement.style.color = data.license.licensed > 0 ? '#10b981' : '#999';
+            // Use brand theme color
+            licensedElement.style.color = '#FA582D';
         }
     }
 }
