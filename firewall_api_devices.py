@@ -104,7 +104,7 @@ def get_software_updates(firewall_config):
 
             # PAN-OS version - check for updates
             sw_version = root.find('.//sw-version')
-            panos_cmd = '<request><system><software><check></check></software></system></request>'
+            panos_cmd = '<request><system><software><info></info></software></system></request>'
             add_software_entry('PAN-OS', sw_version, panos_cmd)
 
             debug(f"Software versions found: {software_info}")
