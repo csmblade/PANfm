@@ -821,6 +821,193 @@ function initPageNavigation() {
     }
 }
 
+/**
+ * CRITICAL: Centralized Device Change Handler
+ *
+ * This function is responsible for clearing and refreshing ALL data when
+ * the connected device changes. Any new features that display data MUST
+ * be registered here to ensure proper refresh on device change.
+ *
+ * Called by: onDeviceChange() in devices.js
+ *
+ * Responsibilities:
+ * 1. Clear all chart data and reset charts
+ * 2. Zero/reset all dashboard values and show loading states
+ * 3. Clear all historical data arrays
+ * 4. Reset all mini charts
+ * 5. Clear threat logs and application displays
+ * 6. Trigger refresh of all page-specific data
+ * 7. Restart update interval with fresh data
+ *
+ * IMPORTANT: When adding new data displays to the dashboard or any page,
+ * you MUST update this function to clear/reset those values.
+ */
+function refreshAllDataForDevice() {
+    console.log('=== refreshAllDataForDevice called ===');
+
+    // ========================================================================
+    // 1. CLEAR MAIN CHART DATA
+    // ========================================================================
+    chartData.labels = [];
+    chartData.inbound = [];
+    chartData.outbound = [];
+    chartData.total = [];
+
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    chart.data.datasets[1].data = [];
+    chart.data.datasets[2].data = [];
+    chart.update('none');
+    console.log('Main chart cleared');
+
+    // ========================================================================
+    // 2. CLEAR HISTORICAL DATA ARRAYS
+    // ========================================================================
+    historicalData.inbound = [];
+    historicalData.outbound = [];
+    historicalData.total = [];
+    historicalData.sessions = [];
+    historicalData.tcp = [];
+    historicalData.udp = [];
+    historicalData.icmp = [];
+    historicalData.criticalThreats = [];
+    historicalData.mediumThreats = [];
+    historicalData.blockedUrls = [];
+    historicalData.urlFiltering = [];
+    historicalData.interfaceErrors = [];
+    console.log('Historical data arrays cleared');
+
+    // ========================================================================
+    // 3. RESET DASHBOARD VALUES TO LOADING STATE
+    // ========================================================================
+    // Throughput stats
+    document.getElementById('inboundValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('outboundValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('totalValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+
+    // Session stats
+    document.getElementById('sessionValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('tcpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('udpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('icmpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+
+    // Threat stats
+    document.getElementById('criticalValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('mediumValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('blockedUrlValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    document.getElementById('topAppsValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+
+    // Interface errors
+    const interfaceErrorsElement = document.getElementById('interfaceErrorsValue');
+    if (interfaceErrorsElement) {
+        interfaceErrorsElement.innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
+    }
+
+    console.log('Dashboard values reset to loading');
+
+    // ========================================================================
+    // 4. RESET SIDEBAR STATS
+    // ========================================================================
+    const sidebarPPS = document.getElementById('sidebarPPS');
+    const sidebarUptime = document.getElementById('sidebarUptime');
+    const sidebarApiStats = document.getElementById('sidebarApiStats');
+    const sidebarLastUpdate = document.getElementById('sidebarLastUpdate');
+    const sidebarPanosVersion = document.getElementById('sidebarPanosVersion');
+    const sidebarLicenseExpired = document.getElementById('sidebarLicenseExpired');
+    const sidebarLicenseLicensed = document.getElementById('sidebarLicenseLicensed');
+
+    if (sidebarPPS) sidebarPPS.textContent = '0 PPS';
+    if (sidebarUptime) sidebarUptime.textContent = '-';
+    if (sidebarApiStats) sidebarApiStats.textContent = '-';
+    if (sidebarLastUpdate) sidebarLastUpdate.textContent = '-';
+    if (sidebarPanosVersion) sidebarPanosVersion.textContent = '-';
+    if (sidebarLicenseExpired) sidebarLicenseExpired.textContent = '0';
+    if (sidebarLicenseLicensed) sidebarLicenseLicensed.textContent = '0';
+
+    // Sidebar last seen stats
+    const sidebarCritical = document.getElementById('sidebarCriticalLastSeen');
+    const sidebarMedium = document.getElementById('sidebarMediumLastSeen');
+    const sidebarBlocked = document.getElementById('sidebarBlockedUrlLastSeen');
+    if (sidebarCritical) sidebarCritical.textContent = '-';
+    if (sidebarMedium) sidebarMedium.textContent = '-';
+    if (sidebarBlocked) sidebarBlocked.textContent = '-';
+
+    console.log('Sidebar stats reset');
+
+    // ========================================================================
+    // 5. RESET MINI CHARTS
+    // ========================================================================
+    miniChartData.sessions = [];
+    miniChartData.tcp = [];
+    miniChartData.udp = [];
+    miniChartData.pps = [];
+
+    if (sessionChart) {
+        sessionChart.data.datasets[0].data = [];
+        sessionChart.update('none');
+    }
+    if (tcpChart) {
+        tcpChart.data.datasets[0].data = [];
+        tcpChart.update('none');
+    }
+    if (udpChart) {
+        udpChart.data.datasets[0].data = [];
+        udpChart.update('none');
+    }
+    if (ppsChart) {
+        ppsChart.data.datasets[0].data = [];
+        ppsChart.update('none');
+    }
+
+    console.log('Mini charts reset');
+
+    // ========================================================================
+    // 6. CLEAR THREAT LOGS AND APPLICATION DISPLAYS
+    // ========================================================================
+    document.getElementById('criticalLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    document.getElementById('mediumLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    document.getElementById('blockedUrlLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+    document.getElementById('topAppsContainer').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
+
+    console.log('Threat logs and app displays cleared');
+
+    // ========================================================================
+    // 7. REFRESH ALL PAGE DATA
+    // ========================================================================
+    console.log('Triggering refresh of all page data...');
+
+    // Restart update interval for dashboard data
+    if (updateIntervalId) {
+        clearInterval(updateIntervalId);
+    }
+    fetchThroughputData();
+    updateIntervalId = setInterval(fetchThroughputData, UPDATE_INTERVAL);
+    console.log(`Update interval restarted: ${UPDATE_INTERVAL}ms`);
+
+    // Refresh all page-specific data (safely check if functions exist)
+    if (typeof loadPolicies === 'function') {
+        loadPolicies();
+    }
+    if (typeof loadSystemLogs === 'function') {
+        loadSystemLogs();
+    }
+    if (typeof updateTrafficPage === 'function') {
+        updateTrafficPage();
+    }
+    if (typeof loadSoftwareUpdates === 'function') {
+        loadSoftwareUpdates();
+    }
+    if (typeof loadApplications === 'function') {
+        loadApplications();
+    }
+    if (typeof loadConnectedDevices === 'function') {
+        loadConnectedDevices();
+    }
+
+    console.log('All page data refresh triggered');
+    console.log('=== refreshAllDataForDevice complete ===');
+}
+
 // Note: Modal functions (showCriticalThreatsModal, showMediumThreatsModal, showBlockedUrlsModal, showTopAppsModal)
 // have been moved to pages.js for better code organization
 

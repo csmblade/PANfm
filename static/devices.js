@@ -11,22 +11,19 @@
 
 function initDeviceSelector() {
     console.log('=== initDeviceSelector called ===');
+
+    // Add event listener to device selector ONCE
+    const deviceSelector = document.getElementById('deviceSelector');
+    console.log('Device selector element:', deviceSelector);
+    if (deviceSelector) {
+        console.log('Attaching change event listener to device selector');
+        deviceSelector.addEventListener('change', onDeviceChange);
+    } else {
+        console.error('Device selector not found!');
+    }
+
     // Load devices and populate selector
     loadDevices();
-
-    // Add event listener to device selector - use a function that re-attaches if needed
-    setTimeout(() => {
-        const deviceSelector = document.getElementById('deviceSelector');
-        console.log('Device selector element:', deviceSelector);
-        if (deviceSelector) {
-            // Remove any existing listeners to avoid duplicates
-            deviceSelector.removeEventListener('change', onDeviceChange);
-            console.log('Attaching change event listener to device selector');
-            deviceSelector.addEventListener('change', onDeviceChange);
-        } else {
-            console.error('Device selector not found!');
-        }
-    }, 100);
 }
 
 // ============================================================================
@@ -48,16 +45,6 @@ async function loadDevices() {
             renderDevicesTable();
             updateGroupOptions();
             await updateDeviceSelector();
-
-            // Re-attach event listener after updating selector
-            setTimeout(() => {
-                const deviceSelector = document.getElementById('deviceSelector');
-                if (deviceSelector) {
-                    deviceSelector.removeEventListener('change', onDeviceChange);
-                    deviceSelector.addEventListener('change', onDeviceChange);
-                    console.log('Event listener re-attached after loadDevices');
-                }
-            }, 50);
         }
     } catch (error) {
         console.error('Error loading devices:', error);
@@ -69,104 +56,83 @@ async function updateDeviceSelector() {
     const selector = document.getElementById('deviceSelector');
     if (!selector) return;
 
-    console.log('Current selectedDeviceId before update:', selectedDeviceId);
+    // ALWAYS fetch selected device from backend settings (source of truth)
+    console.log('Fetching settings to get selected device...');
+    try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        if (data.status === 'success') {
+            selectedDeviceId = data.settings.selected_device_id || '';
+            console.log('Got selectedDeviceId from settings:', selectedDeviceId);
+        }
+    } catch (error) {
+        console.error('Error fetching settings:', error);
+        selectedDeviceId = '';
+    }
 
-    // Only fetch settings if we don't have a selected device yet
-    const shouldFetchSettings = !selectedDeviceId;
+    // Populate selector
+    if (currentDevices.length === 0) {
+        selector.innerHTML = '<option value="">No devices configured</option>';
+        selectedDeviceId = '';
+        return;
+    }
 
-    const populateSelector = async () => {
-        console.log('Populating selector with selectedDeviceId:', selectedDeviceId);
+    // Auto-select first device if none is selected
+    let didAutoSelect = false;
+    if (!selectedDeviceId && currentDevices.length > 0) {
+        selectedDeviceId = currentDevices[0].id;
+        didAutoSelect = true;
+        console.log('Auto-selected first device:', selectedDeviceId);
+    }
 
-        // Populate selector
-        if (currentDevices.length === 0) {
-            selector.innerHTML = '<option value="">No devices configured</option>';
-        } else {
-            let options = '';
+    // Build options
+    let options = '';
+    currentDevices.forEach(device => {
+        const selected = device.id === selectedDeviceId ? 'selected' : '';
+        options += `<option value="${device.id}" ${selected}>${device.name} (${device.ip})</option>`;
+    });
+    selector.innerHTML = options;
+    selector.value = selectedDeviceId;
+    console.log('Set selector value to:', selectedDeviceId);
 
-            // Auto-select first device if none is selected
-            let didAutoSelect = false;
-            if (!selectedDeviceId && currentDevices.length > 0) {
-                selectedDeviceId = currentDevices[0].id;
-                didAutoSelect = true;
-                console.log('Auto-selected first device:', selectedDeviceId);
-            }
+    // Load interface for the selected device
+    const device = currentDevices.find(d => d.id === selectedDeviceId);
+    if (device) {
+        const deviceInterface = device.monitored_interface || 'ethernet1/12';
+        const interfaceInput = document.getElementById('monitoredInterfaceInput');
+        if (interfaceInput) {
+            interfaceInput.value = deviceInterface;
+            console.log('Loaded interface for selected device:', deviceInterface);
+        }
+    }
 
-            currentDevices.forEach(device => {
-                const selected = device.id === selectedDeviceId ? 'selected' : '';
-                options += `<option value="${device.id}" ${selected}>${device.name} (${device.ip})</option>`;
-            });
-            selector.innerHTML = options;
+    // If we auto-selected, save it to settings
+    if (didAutoSelect) {
+        console.log('Auto-selection triggered, saving device to settings...');
+        try {
+            const currentSettings = await fetch('/api/settings').then(r => r.json());
+            if (currentSettings.status === 'success') {
+                const settings = currentSettings.settings;
+                settings.selected_device_id = selectedDeviceId;
 
-            // Set the value explicitly
-            if (selectedDeviceId) {
-                selector.value = selectedDeviceId;
-                console.log('Set selector value to:', selectedDeviceId);
-
-                // Load interface for the selected device
+                // Get device's interface and save it too
                 const device = currentDevices.find(d => d.id === selectedDeviceId);
                 if (device) {
                     const deviceInterface = device.monitored_interface || 'ethernet1/12';
-                    const interfaceInput = document.getElementById('monitoredInterfaceInput');
-                    if (interfaceInput) {
-                        interfaceInput.value = deviceInterface;
-                        console.log('Loaded interface for selected device:', deviceInterface);
-                    }
+                    settings.monitored_interface = deviceInterface;
                 }
-            }
 
-            // If we auto-selected, save it and load its interface
-            if (didAutoSelect) {
-                console.log('Auto-selection triggered, saving device and loading interface...');
-                try {
-                    const currentSettings = await fetch('/api/settings').then(r => r.json());
-                    if (currentSettings.status === 'success') {
-                        const settings = currentSettings.settings;
-                        settings.selected_device_id = selectedDeviceId;
-
-                        // Get device's interface
-                        const device = currentDevices.find(d => d.id === selectedDeviceId);
-                        if (device) {
-                            const deviceInterface = device.monitored_interface || 'ethernet1/12';
-                            settings.monitored_interface = deviceInterface;
-
-                            // Update interface input
-                            const interfaceInput = document.getElementById('monitoredInterfaceInput');
-                            if (interfaceInput) {
-                                interfaceInput.value = deviceInterface;
-                            }
-                        }
-
-                        // Save settings
-                        await fetch('/api/settings', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(settings)
-                        });
-                        console.log('Auto-selected device saved to settings');
-                    }
-                } catch (error) {
-                    console.error('Error saving auto-selected device:', error);
-                }
-            }
-        }
-    };
-
-    if (shouldFetchSettings) {
-        console.log('Fetching settings to get selected device...');
-        try {
-            const response = await fetch('/api/settings');
-            const data = await response.json();
-            if (data.status === 'success') {
-                selectedDeviceId = data.settings.selected_device_id || '';
-                console.log('Got selectedDeviceId from settings:', selectedDeviceId);
+                // Save settings
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(settings)
+                });
+                console.log('Auto-selected device saved to settings');
             }
         } catch (error) {
-            console.error('Error fetching settings:', error);
+            console.error('Error saving auto-selected device:', error);
         }
-        await populateSelector();
-    } else {
-        console.log('Using existing selectedDeviceId');
-        await populateSelector();
     }
 }
 
@@ -177,88 +143,6 @@ async function onDeviceChange() {
     const selector = document.getElementById('deviceSelector');
     selectedDeviceId = selector.value;
     console.log('Selected device ID:', selectedDeviceId);
-
-    // Reset chart data when switching devices
-    chartData.labels = [];
-    chartData.inbound = [];
-    chartData.outbound = [];
-    chartData.total = [];
-
-    // Update chart datasets directly
-    chart.data.labels = [];
-    chart.data.datasets[0].data = [];
-    chart.data.datasets[1].data = [];
-    chart.data.datasets[2].data = [];
-    chart.update('none');
-    console.log('Chart data cleared and updated');
-
-    // Show loading state in ALL dashboard statistics
-    // Throughput stats
-    document.getElementById('inboundValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('outboundValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('totalValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-
-    // Session stats
-    document.getElementById('sessionValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('tcpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('udpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('icmpValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-
-    // Threat stats
-    document.getElementById('criticalValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('mediumValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('blockedUrlValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-    document.getElementById('topAppsValue').innerHTML = '<span style="font-size: 0.7em;">Loading...</span>';
-
-    // Sidebar stats - reset to zero/loading immediately
-    const sidebarPPS = document.getElementById('sidebarPPS');
-    const sidebarUptime = document.getElementById('sidebarUptime');
-    const sidebarApiStats = document.getElementById('sidebarApiStats');
-    const sidebarLastUpdate = document.getElementById('sidebarLastUpdate');
-
-    if (sidebarPPS) sidebarPPS.textContent = '0 PPS';
-    if (sidebarUptime) sidebarUptime.textContent = '-';
-    if (sidebarApiStats) sidebarApiStats.textContent = '-';
-    if (sidebarLastUpdate) sidebarLastUpdate.textContent = '-';
-
-    // Sidebar last seen stats - reset to dash immediately
-    const sidebarCritical = document.getElementById('sidebarCriticalLastSeen');
-    const sidebarMedium = document.getElementById('sidebarMediumLastSeen');
-    const sidebarBlocked = document.getElementById('sidebarBlockedUrlLastSeen');
-    if (sidebarCritical) sidebarCritical.textContent = '-';
-    if (sidebarMedium) sidebarMedium.textContent = '-';
-    if (sidebarBlocked) sidebarBlocked.textContent = '-';
-
-    // Clear mini charts
-    if (sessionChart) {
-        sessionChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        sessionChart.update();
-    }
-    if (tcpChart) {
-        tcpChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        tcpChart.update();
-    }
-    if (udpChart) {
-        udpChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        udpChart.update();
-    }
-
-    // Clear historical data arrays
-    historicalData.inbound = [];
-    historicalData.outbound = [];
-    historicalData.total = [];
-    historicalData.sessions = [];
-    historicalData.tcp = [];
-    historicalData.udp = [];
-    historicalData.icmp = [];
-
-    // Clear threat tile contents
-    document.getElementById('criticalLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
-    document.getElementById('mediumLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
-    document.getElementById('blockedUrlLogs').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
-    document.getElementById('topAppsContainer').innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">Loading...</div>';
-
-    console.log('All dashboard stats reset to zero');
 
     // Save selected device to settings
     try {
@@ -314,45 +198,18 @@ async function onDeviceChange() {
                 }
             }
 
-            // Wait a moment to ensure settings are fully saved before fetching new data
-            console.log('Waiting for settings to save, then fetching throughput data...');
+            // Wait a moment to ensure settings are fully saved before refreshing data
+            console.log('Waiting for settings to save...');
             await new Promise(resolve => setTimeout(resolve, 200));
-            console.log('Now fetching throughput data from new device...');
 
-            // Restart the update interval to ensure proper timing
-            console.log('Restarting update interval...');
-            if (updateIntervalId) {
-                clearInterval(updateIntervalId);
+            // Call centralized function to clear and refresh ALL data
+            // This function is defined in app.js and handles all data clearing/refreshing
+            console.log('Calling refreshAllDataForDevice()...');
+            if (typeof refreshAllDataForDevice === 'function') {
+                refreshAllDataForDevice();
+            } else {
+                console.error('refreshAllDataForDevice function not found!');
             }
-            fetchThroughputData();
-            updateIntervalId = setInterval(fetchThroughputData, UPDATE_INTERVAL);
-            console.log(`Update interval restarted: ${UPDATE_INTERVAL}ms`);
-
-            // Refresh ALL pages data (not just the current visible page)
-            // This ensures all pages have fresh data when switching devices
-            console.log('Refreshing all pages data for new device...');
-
-            // Check which functions exist before calling them
-            if (typeof loadPolicies === 'function') {
-                loadPolicies();
-            }
-            if (typeof loadSystemLogs === 'function') {
-                loadSystemLogs();
-            }
-            if (typeof updateTrafficPage === 'function') {
-                updateTrafficPage();
-            }
-            if (typeof loadSoftwareUpdates === 'function') {
-                loadSoftwareUpdates();
-            }
-            if (typeof loadApplications === 'function') {
-                loadApplications();
-            }
-            if (typeof loadConnectedDevices === 'function') {
-                loadConnectedDevices();
-            }
-
-            console.log('All pages data refresh triggered');
         }
     } catch (error) {
         console.error('Error in onDeviceChange:', error);
