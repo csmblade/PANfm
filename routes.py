@@ -412,6 +412,7 @@ def register_routes(app, csrf, limiter):
             }), 500
 
     @app.route('/api/devices', methods=['POST'])
+    @csrf.exempt
     @login_required
     @limiter.limit("20 per hour")
     def create_device():
@@ -433,6 +434,14 @@ def register_routes(app, csrf, limiter):
                 }), 400
 
             new_device = device_manager.add_device(name, ip, api_key, group, description, wan_interface=wan_interface)
+
+            # Auto-select this device if no device is currently selected
+            settings = load_settings()
+            if not settings.get('selected_device_id'):
+                settings['selected_device_id'] = new_device['id']
+                save_settings(settings)
+                info(f"Auto-selected device {new_device['name']} ({new_device['id']}) as no device was previously selected")
+
             return jsonify({
                 'status': 'success',
                 'device': new_device,
@@ -469,6 +478,7 @@ def register_routes(app, csrf, limiter):
             }), 500
 
     @app.route('/api/devices/<device_id>', methods=['PUT'])
+    @csrf.exempt
     @login_required
     @limiter.limit("20 per hour")
     def update_device(device_id):
@@ -500,6 +510,7 @@ def register_routes(app, csrf, limiter):
             }), 500
 
     @app.route('/api/devices/<device_id>', methods=['DELETE'])
+    @csrf.exempt
     @login_required
     @limiter.limit("20 per hour")
     def delete_device(device_id):
@@ -507,6 +518,21 @@ def register_routes(app, csrf, limiter):
         try:
             success = device_manager.delete_device(device_id)
             if success:
+                # Check if the deleted device was the selected one
+                settings = load_settings()
+                if settings.get('selected_device_id') == device_id:
+                    # Get remaining devices
+                    remaining_devices = device_manager.get_all_devices()
+                    if remaining_devices:
+                        # Select the first remaining device
+                        settings['selected_device_id'] = remaining_devices[0]['id']
+                        info(f"Deleted device was selected. Auto-selected device {remaining_devices[0]['name']} ({remaining_devices[0]['id']})")
+                    else:
+                        # No devices left, clear selection
+                        settings['selected_device_id'] = ''
+                        info("Deleted last device. Cleared device selection")
+                    save_settings(settings)
+
                 return jsonify({
                     'status': 'success',
                     'message': 'Device deleted successfully'
@@ -546,6 +572,7 @@ def register_routes(app, csrf, limiter):
             }), 500
 
     @app.route('/api/devices/test-connection', methods=['POST'])
+    @csrf.exempt
     @login_required
     def test_new_device_connection():
         """Test connection to a device (before saving)"""
