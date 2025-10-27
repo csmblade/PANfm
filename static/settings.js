@@ -51,10 +51,14 @@ async function saveSettingsData() {
             }
         }
 
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
         const response = await fetch('/api/settings', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify(settingsToSave)
         });
@@ -224,8 +228,14 @@ async function uploadVendorDb() {
         const formData = new FormData();
         formData.append('file', file);
 
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
         const response = await fetch('/api/vendor-db/upload', {
             method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
             body: formData
         });
 

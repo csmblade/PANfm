@@ -351,17 +351,26 @@ async function saveDevice(event) {
     };
 
     try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
         let response;
         if (deviceId) {
             response = await fetch(`/api/devices/${deviceId}`, {
                 method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
                 body: JSON.stringify(deviceData)
             });
         } else {
             response = await fetch('/api/devices', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
                 body: JSON.stringify(deviceData)
             });
         }
@@ -421,8 +430,14 @@ async function deleteDevice(deviceId) {
     }
 
     try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
         const response = await fetch(`/api/devices/${deviceId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
         });
 
         const data = await response.json();
