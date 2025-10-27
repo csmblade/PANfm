@@ -416,7 +416,8 @@ def register_routes(app, csrf, limiter):
     @login_required
     @limiter.limit("20 per hour")
     def create_device():
-        """Add a new device"""
+        """Add a new device and manage selected_device_id"""
+        debug("Create device request received")
         try:
             data = request.get_json()
             name = data.get('name', '').strip()
@@ -426,23 +427,45 @@ def register_routes(app, csrf, limiter):
             description = data.get('description', '')
             wan_interface = data.get('wan_interface', '').strip()
 
+            debug(f"Adding new device: name={name}, ip={ip}, group={group}")
+
             # Validate required fields
             if not name or not ip or not api_key:
+                debug("Validation failed: missing required fields")
                 return jsonify({
                     'status': 'error',
                     'message': 'Name, IP, and API Key are required'
                 }), 400
 
-            new_device = device_manager.add_device(name, ip, api_key, group, description, wan_interface=wan_interface)
+            # Get device count before adding
+            existing_devices = device_manager.load_devices(decrypt_api_keys=False)
+            was_first_device = len(existing_devices) == 0
+            debug(f"Existing device count: {len(existing_devices)}, is_first_device: {was_first_device}")
 
-            # Auto-select this device if no device is currently selected
+            new_device = device_manager.add_device(name, ip, api_key, group, description, wan_interface=wan_interface)
+            debug(f"Device added successfully: {new_device['name']} ({new_device['id']})")
+
+            # Auto-select this device if it's the first device OR no device is currently selected
             settings = load_settings()
+            current_selected = settings.get('selected_device_id', '')
             auto_selected = False
-            if not settings.get('selected_device_id'):
+
+            # Check if current selection is valid
+            if current_selected:
+                # Verify the currently selected device still exists
+                selected_device_exists = device_manager.get_device(current_selected) is not None
+                debug(f"Current selected device {current_selected} exists: {selected_device_exists}")
+                if not selected_device_exists:
+                    current_selected = ''
+
+            if not current_selected or was_first_device:
                 settings['selected_device_id'] = new_device['id']
                 save_settings(settings)
                 auto_selected = True
-                info(f"Auto-selected device {new_device['name']} ({new_device['id']}) as no device was previously selected")
+                info(f"Auto-selected device {new_device['name']} ({new_device['id']}) - first_device={was_first_device}, no_selection={not current_selected}")
+                debug(f"Updated selected_device_id to: {new_device['id']}")
+            else:
+                debug(f"Device not auto-selected. Current selection: {current_selected}")
 
             return jsonify({
                 'status': 'success',
@@ -451,6 +474,7 @@ def register_routes(app, csrf, limiter):
                 'message': 'Device added successfully'
             })
         except Exception as e:
+            exception(f"Error creating device: {str(e)}")
             return jsonify({
                 'status': 'error',
                 'message': str(e)
@@ -517,35 +541,54 @@ def register_routes(app, csrf, limiter):
     @login_required
     @limiter.limit("20 per hour")
     def delete_device(device_id):
-        """Delete a device"""
+        """Delete a device and manage selected_device_id"""
+        debug(f"Delete device request for device_id: {device_id}")
         try:
+            # Get device info before deleting for logging
+            device_to_delete = device_manager.get_device(device_id)
+            device_name = device_to_delete.get('name', 'unknown') if device_to_delete else 'unknown'
+
             success = device_manager.delete_device(device_id)
             if success:
+                debug(f"Device {device_name} ({device_id}) deleted successfully")
+
                 # Check if the deleted device was the selected one
                 settings = load_settings()
-                if settings.get('selected_device_id') == device_id:
-                    # Get remaining devices
-                    remaining_devices = device_manager.get_all_devices()
+                was_selected = settings.get('selected_device_id') == device_id
+                debug(f"Deleted device was selected: {was_selected}")
+
+                if was_selected:
+                    # Get remaining devices (use load_devices, not decrypt for API responses)
+                    remaining_devices = device_manager.load_devices(decrypt_api_keys=False)
+                    debug(f"Remaining devices after deletion: {len(remaining_devices)}")
+
                     if remaining_devices:
                         # Select the first remaining device
-                        settings['selected_device_id'] = remaining_devices[0]['id']
-                        info(f"Deleted device was selected. Auto-selected device {remaining_devices[0]['name']} ({remaining_devices[0]['id']})")
+                        new_selected_id = remaining_devices[0]['id']
+                        new_selected_name = remaining_devices[0]['name']
+                        settings['selected_device_id'] = new_selected_id
+                        save_settings(settings)
+                        info(f"Deleted device was selected. Auto-selected device {new_selected_name} ({new_selected_id})")
+                        debug(f"Updated selected_device_id to: {new_selected_id}")
                     else:
                         # No devices left, clear selection
                         settings['selected_device_id'] = ''
+                        save_settings(settings)
                         info("Deleted last device. Cleared device selection")
-                    save_settings(settings)
+                        debug("Cleared selected_device_id (no devices remaining)")
 
                 return jsonify({
                     'status': 'success',
                     'message': 'Device deleted successfully'
                 })
             else:
+                error(f"Failed to delete device {device_id}")
                 return jsonify({
                     'status': 'error',
                     'message': 'Failed to delete device'
                 }), 500
         except Exception as e:
+            exception(f"Error deleting device {device_id}: {str(e)}")
             return jsonify({
                 'status': 'error',
                 'message': str(e)

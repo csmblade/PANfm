@@ -133,6 +133,10 @@ async function onDeviceChange() {
 
     // Save selected device to settings
     try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        console.log('CSRF token:', csrfToken ? 'found' : 'missing');
+
         console.log('Fetching current settings...');
         const currentSettings = await fetch('/api/settings').then(r => r.json());
         console.log('Current settings:', currentSettings);
@@ -144,7 +148,10 @@ async function onDeviceChange() {
             console.log('Saving device selection to settings...');
             const saveResponse = await fetch('/api/settings', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
                 body: JSON.stringify(settings)
             });
             const saveData = await saveResponse.json();
@@ -181,7 +188,10 @@ async function onDeviceChange() {
                 console.log('Saving interface to settings...');
                 const interfaceSaveResponse = await fetch('/api/settings', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
                     body: JSON.stringify(settings)
                 });
                 const interfaceSaveData = await interfaceSaveResponse.json();
@@ -205,7 +215,10 @@ async function onDeviceChange() {
                     };
                     const deviceUpdateResponse = await fetch(`/api/devices/${selectedDeviceId}`, {
                         method: 'PUT',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
                         body: JSON.stringify(deviceUpdatePayload)
                     });
                     console.log('Device update response:', deviceUpdateResponse.status);
@@ -478,6 +491,9 @@ async function testConnection() {
 async function updateMonitoredInterface() {
     console.log('=== updateMonitoredInterface fired ===');
     try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
         const interfaceInput = document.getElementById('monitoredInterfaceInput');
         const newInterface = interfaceInput.value.trim();
         console.log('New interface:', newInterface);
@@ -520,7 +536,10 @@ async function updateMonitoredInterface() {
         // Save device via API
         const updateResponse = await fetch(`/api/devices/${selectedDeviceId}`, {
             method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify(updatePayload)
         });
 
@@ -545,7 +564,10 @@ async function updateMonitoredInterface() {
 
             await fetch('/api/settings', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
                 body: JSON.stringify(settings)
             });
         }

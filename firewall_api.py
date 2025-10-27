@@ -38,7 +38,13 @@ previous_stats = {}
 
 
 def get_firewall_config(device_id=None):
-    """Get firewall IP and API key from settings or from a specific device"""
+    """Get firewall IP and API key from settings or from a specific device
+
+    Returns:
+        tuple: (firewall_ip, api_key, base_url) or (None, None, None) if no device configured
+    """
+    debug("get_firewall_config called with device_id: %s", device_id)
+
     if device_id:
         # Get configuration for a specific device
         device = device_manager.get_device(device_id)
@@ -53,7 +59,7 @@ def get_firewall_config(device_id=None):
     settings = load_settings()
     firewall_ip = settings.get('firewall_ip', DEFAULT_FIREWALL_IP)
     api_key = settings.get('api_key', DEFAULT_API_KEY)
-    debug(f"get_firewall_config: Loaded from settings - API key starts with: {api_key[:20] if api_key else 'NONE'}...")
+    debug(f"get_firewall_config: Loaded from settings - firewall_ip={firewall_ip}, API key starts with: {api_key[:20] if api_key else 'NONE'}...")
 
     # Check if we have a selected device in settings
     selected_device_id = settings.get('selected_device_id')
@@ -64,15 +70,30 @@ def get_firewall_config(device_id=None):
             api_key = device['api_key']
             debug(f"get_firewall_config: Using selected device {device.get('name')} - API key starts with: {api_key[:20] if api_key else 'NONE'}...")
 
+    # If no device is configured or selected, return None values
+    if not firewall_ip or not api_key:
+        debug("get_firewall_config: No device configured or selected - returning None")
+        return None, None, None
+
     base_url = f"https://{firewall_ip}/api/"
     debug(f"get_firewall_config: Final API key starts with: {api_key[:20] if api_key else 'NONE'}...")
     return firewall_ip, api_key, base_url
 
 
 def get_system_resources():
-    """Fetch system resource usage (CPU) from Palo Alto firewall"""
+    """Fetch system resource usage (CPU) from Palo Alto firewall
+
+    Returns:
+        tuple: (data_plane_cpu, mgmt_plane_cpu) or (0, 0) if no device configured
+    """
+    debug("get_system_resources called")
     try:
         _, api_key, base_url = get_firewall_config()
+
+        # Check if no device is configured
+        if not api_key or not base_url:
+            debug("No device configured - returning 0 CPU values")
+            return 0, 0
 
         # Query for dataplane CPU load
         cmd = "<show><running><resource-monitor></resource-monitor></running></show>"
@@ -336,9 +357,19 @@ def get_wan_interface_ip(wan_interface):
 
 
 def get_interface_stats():
-    """Fetch interface statistics from Palo Alto firewall"""
+    """Fetch interface statistics from Palo Alto firewall
+
+    Returns:
+        tuple: (interfaces_list, total_errors, total_drops) or ([], 0, 0) if no device configured
+    """
+    debug("get_interface_stats called")
     try:
         _, api_key, base_url = get_firewall_config()
+
+        # Check if no device is configured
+        if not api_key or not base_url:
+            debug("No device configured - returning empty interface stats")
+            return [], 0, 0
 
         # Get interface statistics
         cmd = "<show><counter><interface>all</interface></counter></show>"
@@ -400,9 +431,19 @@ def get_interface_stats():
 
 
 def get_session_count():
-    """Fetch session count from Palo Alto firewall"""
+    """Fetch session count from Palo Alto firewall
+
+    Returns:
+        tuple: (num_active, num_tcp, num_udp, num_icmp, num_ssl_proxy, pps) or (0, 0, 0, 0, 0, 0) if no device
+    """
+    debug("get_session_count called")
     try:
         _, api_key, base_url = get_firewall_config()
+
+        # Check if no device is configured
+        if not api_key or not base_url:
+            debug("No device configured - returning 0 session counts")
+            return 0, 0, 0, 0, 0, 0
 
         cmd = "<show><session><info></info></session></show>"
         params = {
@@ -486,13 +527,30 @@ def get_device_version(device_id):
 
 
 def get_throughput_data():
-    """Fetch throughput data from Palo Alto firewall"""
+    """Fetch throughput data from Palo Alto firewall
+
+    Returns:
+        dict: Throughput data with status 'success' or 'error'
+    """
+    debug("=== get_throughput_data called ===")
+
     try:
         # Load settings to get match count and firewall config
         settings = load_settings()
         max_logs = settings.get('match_count', 5)
         selected_device_id = settings.get('selected_device_id', '')
+        debug(f"Selected device from settings: {selected_device_id}")
+
         firewall_ip, api_key, base_url = get_firewall_config()
+
+        # Check if no device is configured
+        if not firewall_ip or not api_key or not base_url:
+            debug("No device configured or selected - returning empty data")
+            return {
+                'status': 'error',
+                'message': 'No device configured. Please add a device in the Managed Devices page.',
+                'data': {}
+            }
 
         # Get monitored interface and WAN interface from the device, not from settings
         monitored_interface = 'ethernet1/12'  # default
@@ -505,8 +563,6 @@ def get_throughput_data():
                 if device.get('wan_interface'):
                     wan_interface = device['wan_interface']
 
-        debug(f"=== get_throughput_data called ===")
-        debug(f"Selected device from settings: {selected_device_id}")
         debug(f"Fetching throughput data from device: {firewall_ip}")
         debug(f"Monitored interface: {monitored_interface}")
         debug(f"WAN interface: {wan_interface}")
