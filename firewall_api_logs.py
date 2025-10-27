@@ -7,6 +7,7 @@ import time
 import sys
 from utils import api_request_get
 from logger import debug, info, warning, error, exception
+from firewall_api_devices import get_dhcp_leases
 
 
 def get_system_logs(firewall_config, max_logs=50):
@@ -553,6 +554,10 @@ def get_application_statistics(firewall_config, max_logs=5000):
         traffic_logs = get_traffic_logs(firewall_config, max_logs)
         debug(f"Retrieved {len(traffic_logs)} traffic logs for application analysis")
 
+        # Get DHCP leases for hostname resolution
+        dhcp_hostnames = get_dhcp_leases(firewall_config)
+        debug(f"Retrieved {len(dhcp_hostnames)} DHCP hostname mappings for source IP enrichment")
+
         # Aggregate by application
         app_stats = {}
         total_sessions = 0
@@ -616,6 +621,7 @@ def get_application_statistics(firewall_config, max_logs=5000):
                     'bytes_received': 0,
                     'source_ips': set(),
                     'dest_ips': set(),
+                    'source_details': {},  # Track bytes per source IP
                     'dest_details': {},  # Track bytes per destination
                     'protocols': set(),
                     'ports': set(),
@@ -627,7 +633,15 @@ def get_application_statistics(firewall_config, max_logs=5000):
             app_stats[app]['bytes'] += bytes_val
             app_stats[app]['bytes_sent'] += bytes_sent
             app_stats[app]['bytes_received'] += bytes_received
-            if src: app_stats[app]['source_ips'].add(src)
+            if src:
+                app_stats[app]['source_ips'].add(src)
+                # Track bytes per source IP
+                if src not in app_stats[app]['source_details']:
+                    app_stats[app]['source_details'][src] = {
+                        'ip': src,
+                        'bytes': 0
+                    }
+                app_stats[app]['source_details'][src]['bytes'] += bytes_val
             if dst:
                 app_stats[app]['dest_ips'].add(dst)
                 # Track bytes per destination with port
@@ -655,6 +669,17 @@ def get_application_statistics(firewall_config, max_logs=5000):
         # Convert sets to lists and format result
         result = []
         for app_name, stats in app_stats.items():
+            # Convert source_details dict to sorted list with hostname enrichment
+            source_list = []
+            for src_ip, src_info in stats['source_details'].items():
+                source_list.append({
+                    'ip': src_info['ip'],
+                    'bytes': src_info['bytes'],
+                    'hostname': dhcp_hostnames.get(src_info['ip'], '')
+                })
+            # Sort sources by bytes descending
+            source_list.sort(key=lambda x: x['bytes'], reverse=True)
+
             # Convert dest_details dict to sorted list
             dest_list = []
             for dest_key, dest_info in stats['dest_details'].items():
@@ -675,7 +700,8 @@ def get_application_statistics(firewall_config, max_logs=5000):
                 'bytes_received': stats['bytes_received'],
                 'source_count': len(stats['source_ips']),
                 'dest_count': len(stats['dest_ips']),
-                'source_ips': list(stats['source_ips'])[:50],  # Limit to 50
+                'source_ips': list(stats['source_ips'])[:50],  # Limit to 50 (legacy, for backward compatibility)
+                'sources': source_list[:50],  # Top 50 sources with bytes
                 'dest_ips': list(stats['dest_ips'])[:50],
                 'destinations': dest_list[:50],  # Top 50 destinations with details
                 'protocols': list(stats['protocols']),

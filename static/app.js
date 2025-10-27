@@ -648,6 +648,7 @@ async function fetchThroughputData() {
             updateStats(data);
             updateChart(data);
             updateStatus(true);
+
         } else {
             updateStatus(false);
             showError(data.message || 'Failed to fetch data');
@@ -822,8 +823,8 @@ function initPageNavigation() {
                 if (pageKey === targetPage) {
                     pages[pageKey].style.display = 'block';
                     if (pageKey === 'device-info') {
-                        // Load policies by default (first tab)
-                        loadPolicies();
+                        // Load software updates by default (first tab)
+                        loadSoftwareUpdates();
                     } else if (pageKey === 'connected-devices') {
                         loadConnectedDevices();
                     } else if (pageKey === 'applications') {
@@ -922,17 +923,16 @@ function initPageNavigation() {
                 tab.style.borderBottom = '3px solid #FA582D';
 
                 // Show target tab content, hide others
-                const policiesTab = document.getElementById('policies-tab');
                 const softwareUpdatesTab = document.getElementById('software-updates-tab');
+                const techSupportTab = document.getElementById('tech-support-tab');
 
-                if (targetTab === 'policies') {
-                    policiesTab.style.display = 'block';
-                    softwareUpdatesTab.style.display = 'none';
-                    loadPolicies();
-                } else if (targetTab === 'software-updates') {
-                    policiesTab.style.display = 'none';
+                if (targetTab === 'software-updates') {
                     softwareUpdatesTab.style.display = 'block';
+                    techSupportTab.style.display = 'none';
                     loadSoftwareUpdates();
+                } else if (targetTab === 'tech-support') {
+                    softwareUpdatesTab.style.display = 'none';
+                    techSupportTab.style.display = 'block';
                 }
             });
         });

@@ -23,13 +23,15 @@ from firewall_api_logs import (
     get_top_applications,
     get_application_statistics
 )
-from firewall_api_policies import get_policy_hit_counts
 from firewall_api_devices import (
     get_software_updates,
     get_license_info,
     lookup_mac_vendor,
     is_virtual_mac,
-    get_connected_devices
+    get_connected_devices,
+    generate_tech_support_file,
+    check_tech_support_job_status,
+    get_tech_support_file_url
 )
 
 # Store previous values for throughput calculation
@@ -788,11 +790,12 @@ __all__ = [
     'get_threat_stats',
     'get_traffic_logs',
     'get_top_applications',
-    # Re-exported from firewall_api_policies
-    'get_policy_hit_counts',
     # Re-exported from firewall_api_devices
     'get_software_updates',
     'get_license_info',
     'lookup_mac_vendor',
-    'get_connected_devices'
+    'get_connected_devices',
+    'generate_tech_support_file',
+    'check_tech_support_job_status',
+    'get_tech_support_file_url'
 ]

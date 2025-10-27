@@ -12,17 +12,20 @@ from firewall_api import (
     get_throughput_data,
     get_system_logs,
     get_traffic_logs,
-    get_policy_hit_counts,
     get_software_updates,
     get_license_info,
     get_connected_devices,
     get_firewall_config,
     get_device_uptime,
     get_device_version,
-    get_application_statistics
+    get_application_statistics,
+    generate_tech_support_file,
+    check_tech_support_job_status,
+    get_tech_support_file_url
 )
 from logger import debug, info, error
 from utils import reverse_dns_lookup
+from version import get_version_info, get_display_version
 
 def register_routes(app, csrf, limiter):
     """Register all Flask routes with authentication, CSRF protection, and rate limiting"""
@@ -165,6 +168,11 @@ def register_routes(app, csrf, limiter):
         """Health check endpoint"""
         return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
+    @app.route('/api/version')
+    def version():
+        """Version information endpoint (public - no auth required)"""
+        return jsonify(get_version_info())
+
     @app.route('/api/system-logs')
     @login_required
     def system_logs_api():
@@ -212,16 +220,6 @@ def register_routes(app, csrf, limiter):
                 'logs': []
             })
 
-    @app.route('/api/policies')
-    @login_required
-    def policies():
-        """API endpoint for policy hit counts"""
-        debug("=== Policies API endpoint called ===")
-        settings = load_settings()
-        debug(f"Selected device ID from settings: {settings.get('selected_device_id', 'NONE')}")
-        firewall_config = get_firewall_config()
-        data = get_policy_hit_counts(firewall_config)
-        return jsonify(data)
 
     @app.route('/api/software-updates')
     @login_required
@@ -232,6 +230,33 @@ def register_routes(app, csrf, limiter):
         debug(f"Selected device ID from settings: {settings.get('selected_device_id', 'NONE')}")
         firewall_config = get_firewall_config()
         data = get_software_updates(firewall_config)
+        return jsonify(data)
+
+    @app.route('/api/tech-support/generate', methods=['POST'])
+    @login_required
+    def tech_support_generate():
+        """API endpoint to generate tech support file"""
+        debug("=== Tech Support Generate API endpoint called ===")
+        firewall_config = get_firewall_config()
+        data = generate_tech_support_file(firewall_config)
+        return jsonify(data)
+
+    @app.route('/api/tech-support/status/<job_id>')
+    @login_required
+    def tech_support_status(job_id):
+        """API endpoint to check tech support job status"""
+        debug(f"=== Tech Support Status API endpoint called for job: {job_id} ===")
+        firewall_config = get_firewall_config()
+        data = check_tech_support_job_status(firewall_config, job_id)
+        return jsonify(data)
+
+    @app.route('/api/tech-support/download/<job_id>')
+    @login_required
+    def tech_support_download(job_id):
+        """API endpoint to get tech support file download URL"""
+        debug(f"=== Tech Support Download API endpoint called for job: {job_id} ===")
+        firewall_config = get_firewall_config()
+        data = get_tech_support_file_url(firewall_config, job_id)
         return jsonify(data)
 
     @app.route('/api/license')

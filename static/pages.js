@@ -2,105 +2,48 @@
  * pages.js - Page-Specific Functions Module
  *
  * Handles page-specific functionality including:
- * - Policies page (load, display, format)
  * - Software updates page
  * - Connected devices page
  * - Homepage modals (threat logs, top applications)
  * - Export functionality (CSV, XML)
  */
 
-// Load policies data
-async function loadPolicies() {
-    try {
-        const response = await fetch('/api/policies');
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            displayPolicies(data.policies);
-        } else {
-            showPoliciesError(data.message || 'Failed to load policies');
-        }
-    } catch (error) {
-        console.error('Error loading policies:', error);
-        showPoliciesError('Connection error: ' + error.message);
-    }
-}
-
-// Display policies in a table
-function displayPolicies(policies) {
-    const container = document.getElementById('policiesTable');
-
-    if (policies.length === 0) {
-        container.innerHTML = '<div style="color: white; padding: 20px; text-align: center;">No policies found</div>';
-        return;
-    }
-
-    let html = `
-        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-top: 4px solid #ff6600;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="border-bottom: 2px solid #ff6600;">
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Policy Name</th>
-                        <th style="padding: 12px; text-align: right; color: #333; font-weight: 600;">Hit Count</th>
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">First Hit</th>
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Latest Hit</th>
-                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Type</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    policies.forEach((policy, index) => {
-        const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
-        const hitCountColor = policy.hit_count > 1000 ? '#ff6600' : '#333';
-
-        // Show trend indicator if available
-        let trendIcon = '';
-        if (policy.trend) {
-            if (policy.trend === 'up') {
-                trendIcon = '<span style="color: #ff6600; margin-left: 5px;">▲</span>';
-            } else if (policy.trend === 'down') {
-                trendIcon = '<span style="color: #28a745; margin-left: 5px;">▼</span>';
-            } else {
-                trendIcon = '<span style="color: #999; margin-left: 5px;">━</span>';
-            }
-        }
-
-        html += `
-            <tr style="background: ${bgColor}; border-bottom: 1px solid #eee;">
-                <td style="padding: 12px; color: #333; font-weight: 500;">${policy.name}</td>
-                <td style="padding: 12px; text-align: right; color: ${hitCountColor}; font-weight: 600; font-size: 1.1em;">${policy.hit_count.toLocaleString()}${trendIcon}</td>
-                <td style="padding: 12px; color: #666; font-size: 0.9em;">${formatTimestamp(policy.first_hit)}</td>
-                <td style="padding: 12px; color: #666; font-size: 0.9em;">${formatTimestamp(policy.latest_hit)}</td>
-                <td style="padding: 12px; color: #666;">${policy.type}</td>
-            </tr>
-        `;
-    });
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    container.innerHTML = html;
-}
-
+// Format timestamp for display (YYYY-MM-DD HH:MM:SS)
 function formatTimestamp(timestamp) {
-    if (!timestamp || timestamp === 'Never' || timestamp === 'N/A') return 'N/A';
+    if (!timestamp || timestamp === 'Never' || timestamp === 'N/A') {
+        return 'N/A';
+    }
+
     try {
-        const date = new Date(timestamp);
+        // Handle Palo Alto timestamp format: "YYYY/MM/DD HH:MM:SS"
+        let dateStr = timestamp;
+        if (typeof timestamp === 'string' && timestamp.includes('/')) {
+            // Convert YYYY/MM/DD to YYYY-MM-DD for parsing
+            dateStr = timestamp.replace(/\//g, '-');
+        }
+
+        const date = new Date(dateStr);
         if (isNaN(date.getTime())) {
             return 'N/A';
         }
-        return date.toLocaleString();
+
+        // Format to match firewall: YYYY-MM-DD HH:MM:SS
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch (e) {
         return 'N/A';
     }
 }
 
+// Format timestamp to show how long ago (for threat last seen)
 function formatDaysAgo(timestamp) {
-    if (!timestamp || timestamp === 'N/A') {
+    if (!timestamp || timestamp === 'N/A' || timestamp === 'Never') {
         return 'Never';
     }
 
@@ -131,16 +74,6 @@ function formatDaysAgo(timestamp) {
     } catch (e) {
         return 'Never';
     }
-}
-
-function showPoliciesError(message) {
-    const errorDiv = document.getElementById('policiesErrorMessage');
-    errorDiv.textContent = `Error: ${message}`;
-    errorDiv.style.display = 'block';
-
-    setTimeout(() => {
-        errorDiv.style.display = 'none';
-    }, 5000);
 }
 
 // Sort system logs based on criteria
@@ -216,12 +149,12 @@ async function loadSoftwareUpdates() {
             let tableHtml = `
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr style="background: linear-gradient(135deg, #ff6600 0%, #ff9933 100%); color: white;">
-                            <th style="padding: 15px; text-align: left; font-size: 1.1em;">Component</th>
-                            <th style="padding: 15px; text-align: left; font-size: 1.1em;">Version</th>
-                            <th style="padding: 15px; text-align: center; font-size: 1.1em;">Downloaded</th>
-                            <th style="padding: 15px; text-align: center; font-size: 1.1em;">Current</th>
-                            <th style="padding: 15px; text-align: center; font-size: 1.1em;">Latest</th>
+                        <tr style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white;">
+                            <th style="padding: 15px; text-align: left; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Component</th>
+                            <th style="padding: 15px; text-align: left; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Version</th>
+                            <th style="padding: 15px; text-align: center; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Downloaded</th>
+                            <th style="padding: 15px; text-align: center; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Current</th>
+                            <th style="padding: 15px; text-align: center; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Latest</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -232,11 +165,11 @@ async function loadSoftwareUpdates() {
                 const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
                 tableHtml += `
                     <tr style="background: ${bgColor}; border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 15px; font-weight: 600; color: #333;">${item.name}</td>
+                        <td style="padding: 15px; font-weight: 600; color: #333; font-family: 'Roboto', sans-serif;">${item.name}</td>
                         <td style="padding: 15px; color: #666; font-family: monospace;">${item.version}</td>
-                        <td style="padding: 15px; text-align: center; color: ${item.downloaded === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.downloaded}</td>
-                        <td style="padding: 15px; text-align: center; color: ${item.current === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.current}</td>
-                        <td style="padding: 15px; text-align: center; color: ${item.latest === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.latest}</td>
+                        <td style="padding: 15px; text-align: center; color: ${item.downloaded === 'yes' ? '#28a745' : '#999'}; font-weight: 600; font-family: 'Roboto', sans-serif;">${item.downloaded}</td>
+                        <td style="padding: 15px; text-align: center; color: ${item.current === 'yes' ? '#28a745' : '#999'}; font-weight: 600; font-family: 'Roboto', sans-serif;">${item.current}</td>
+                        <td style="padding: 15px; text-align: center; color: ${item.latest === 'yes' ? '#28a745' : '#999'}; font-weight: 600; font-family: 'Roboto', sans-serif;">${item.latest}</td>
                     </tr>
                 `;
             });
@@ -244,7 +177,7 @@ async function loadSoftwareUpdates() {
             tableHtml += `
                     </tbody>
                 </table>
-                <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em;">
+                <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em; font-family: 'Open Sans', sans-serif;">
                     Last updated: ${new Date(data.timestamp).toLocaleString()}
                 </div>
             `;
@@ -537,4 +470,169 @@ window.addEventListener('click', function(event) {
         closeTopAppsModal();
     }
 });
+
+// ============================================================================
+// TECH SUPPORT FUNCTIONS
+// ============================================================================
+
+// Store job ID for polling
+let techSupportJobId = null;
+let techSupportPollingInterval = null;
+
+async function generateTechSupport() {
+    const statusDiv = document.getElementById('techSupportStatus');
+    const downloadDiv = document.getElementById('techSupportDownload');
+    const generateBtn = document.getElementById('generateTechSupportBtn');
+    const statusText = document.getElementById('techSupportStatusText');
+    const progressText = document.getElementById('techSupportProgressText');
+
+    // Reset UI
+    downloadDiv.style.display = 'none';
+    statusDiv.style.display = 'block';
+    generateBtn.disabled = true;
+    generateBtn.style.opacity = '0.5';
+    generateBtn.style.cursor = 'not-allowed';
+
+    statusText.textContent = 'Generating tech support file...';
+    progressText.textContent = 'Please wait, this may take several minutes.';
+
+    try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        // Request tech support file generation
+        const response = await fetch('/api/tech-support/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        console.log('Tech support generation response:', data);
+
+        if (data.status === 'success' && data.job_id) {
+            techSupportJobId = data.job_id;
+            statusText.textContent = 'Tech support file generation in progress...';
+            progressText.textContent = `Job ID: ${data.job_id} - Checking status...`;
+
+            // Start polling for job status
+            startTechSupportPolling();
+        } else {
+            const errorMsg = data.message || 'Failed to generate tech support file';
+            console.error('Tech support generation failed:', errorMsg, data);
+            throw new Error(errorMsg);
+        }
+    } catch (error) {
+        console.error('Error generating tech support file:', error);
+        statusDiv.style.display = 'none';
+        generateBtn.disabled = false;
+        generateBtn.style.opacity = '1';
+        generateBtn.style.cursor = 'pointer';
+
+        const errorDiv = document.getElementById('techSupportErrorMessage');
+        errorDiv.textContent = `Error: ${error.message}`;
+        errorDiv.style.display = 'block';
+
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+function startTechSupportPolling() {
+    // Poll every 5 seconds
+    techSupportPollingInterval = setInterval(checkTechSupportStatus, 5000);
+
+    // Check immediately
+    checkTechSupportStatus();
+}
+
+async function checkTechSupportStatus() {
+    if (!techSupportJobId) return;
+
+    const progressText = document.getElementById('techSupportProgressText');
+
+    try {
+        const response = await fetch(`/api/tech-support/status/${techSupportJobId}`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const jobStatus = data.job_status;
+            const progress = data.progress;
+
+            progressText.textContent = `Status: ${jobStatus} - Progress: ${progress}%`;
+
+            // Check if job is complete
+            if (data.ready) {
+                clearInterval(techSupportPollingInterval);
+                techSupportPollingInterval = null;
+
+                // Job is complete, get download URL
+                getTechSupportDownloadUrl();
+            }
+        } else {
+            throw new Error(data.message || 'Failed to check job status');
+        }
+    } catch (error) {
+        console.error('Error checking tech support status:', error);
+        clearInterval(techSupportPollingInterval);
+        techSupportPollingInterval = null;
+
+        const statusDiv = document.getElementById('techSupportStatus');
+        const generateBtn = document.getElementById('generateTechSupportBtn');
+
+        statusDiv.style.display = 'none';
+        generateBtn.disabled = false;
+        generateBtn.style.opacity = '1';
+        generateBtn.style.cursor = 'pointer';
+
+        const errorDiv = document.getElementById('techSupportErrorMessage');
+        errorDiv.textContent = `Error: ${error.message}`;
+        errorDiv.style.display = 'block';
+    }
+}
+
+async function getTechSupportDownloadUrl() {
+    const statusDiv = document.getElementById('techSupportStatus');
+    const downloadDiv = document.getElementById('techSupportDownload');
+    const generateBtn = document.getElementById('generateTechSupportBtn');
+    const fileNameText = document.getElementById('techSupportFileName');
+    const downloadLink = document.getElementById('techSupportDownloadLink');
+
+    try {
+        const response = await fetch(`/api/tech-support/download/${techSupportJobId}`);
+        const data = await response.json();
+
+        if (data.status === 'success' && data.download_url) {
+            // Hide status, show download
+            statusDiv.style.display = 'none';
+            downloadDiv.style.display = 'block';
+
+            // Set download link and filename
+            fileNameText.textContent = data.filename;
+            downloadLink.href = data.download_url;
+
+            // Re-enable generate button
+            generateBtn.disabled = false;
+            generateBtn.style.opacity = '1';
+            generateBtn.style.cursor = 'pointer';
+        } else {
+            throw new Error(data.message || 'Failed to get download URL');
+        }
+    } catch (error) {
+        console.error('Error getting download URL:', error);
+
+        statusDiv.style.display = 'none';
+        generateBtn.disabled = false;
+        generateBtn.style.opacity = '1';
+        generateBtn.style.cursor = 'pointer';
+
+        const errorDiv = document.getElementById('techSupportErrorMessage');
+        errorDiv.textContent = `Error: ${error.message}`;
+        errorDiv.style.display = 'block';
+    }
+}
 

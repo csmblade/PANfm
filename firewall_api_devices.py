@@ -721,3 +721,151 @@ def get_connected_devices(firewall_config):
     except Exception as e:
         exception(f"Error fetching connected devices: {str(e)}")
         return []
+
+
+def generate_tech_support_file(firewall_config):
+    """
+    Generate a tech support file on the Palo Alto firewall
+    This is an asynchronous operation that returns a job ID
+    """
+    try:
+        firewall_ip, api_key, base_url = firewall_config
+
+        debug("=== Requesting tech support file generation ===")
+
+        # Request tech support file generation
+        params = {
+            'type': 'export',
+            'category': 'tech-support',
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=30)
+        debug(f"Tech support request status: {response.status_code}")
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+            status = root.get('status')
+
+            if status == 'success':
+                # Extract job ID
+                job_elem = root.find('.//job')
+                if job_elem is not None and job_elem.text:
+                    job_id = job_elem.text
+                    debug(f"Tech support job ID: {job_id}")
+
+                    return {
+                        'status': 'success',
+                        'job_id': job_id,
+                        'message': 'Tech support file generation started'
+                    }
+                else:
+                    error("No job ID found in response")
+                    return {
+                        'status': 'error',
+                        'message': 'No job ID returned from firewall'
+                    }
+            else:
+                msg_elem = root.find('.//msg')
+                error_msg = msg_elem.text if msg_elem is not None else 'Unknown error'
+                error(f"Tech support request failed: {error_msg}")
+                return {
+                    'status': 'error',
+                    'message': error_msg
+                }
+        else:
+            error(f"Failed to request tech support file. Status: {response.status_code}")
+            return {
+                'status': 'error',
+                'message': f'HTTP error: {response.status_code}'
+            }
+
+    except Exception as e:
+        exception(f"Error generating tech support file: {str(e)}")
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+
+
+def check_tech_support_job_status(firewall_config, job_id):
+    """
+    Check the status of a tech support file generation job
+    """
+    try:
+        firewall_ip, api_key, base_url = firewall_config
+
+        debug(f"=== Checking tech support job status: {job_id} ===")
+
+        params = {
+            'type': 'export',
+            'category': 'tech-support',
+            'action': 'status',
+            'job-id': job_id,
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+        debug(f"Status check response code: {response.status_code}")
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+            status = root.get('status')
+
+            if status == 'success':
+                # Check job status
+                job_status_elem = root.find('.//status')
+                job_progress_elem = root.find('.//progress')
+
+                job_status = job_status_elem.text if job_status_elem is not None else 'Unknown'
+                job_progress = job_progress_elem.text if job_progress_elem is not None else '0'
+
+                debug(f"Job status: {job_status}, Progress: {job_progress}%")
+
+                return {
+                    'status': 'success',
+                    'job_status': job_status,
+                    'progress': job_progress,
+                    'ready': job_status == 'FIN'
+                }
+            else:
+                return {
+                    'status': 'error',
+                    'message': 'Failed to check job status'
+                }
+        else:
+            return {
+                'status': 'error',
+                'message': f'HTTP error: {response.status_code}'
+            }
+
+    except Exception as e:
+        exception(f"Error checking tech support job status: {str(e)}")
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+
+
+def get_tech_support_file_url(firewall_config, job_id):
+    """
+    Get the download URL for a completed tech support file
+    """
+    try:
+        firewall_ip, api_key, _ = firewall_config
+
+        # Construct download URL
+        download_url = f"https://{firewall_ip}/api/?type=export&category=tech-support&action=get&job-id={job_id}&key={api_key}"
+
+        return {
+            'status': 'success',
+            'download_url': download_url,
+            'filename': f'tech-support-{job_id}.tgz'
+        }
+
+    except Exception as e:
+        exception(f"Error getting tech support file URL: {str(e)}")
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
