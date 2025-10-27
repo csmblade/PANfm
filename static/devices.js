@@ -398,19 +398,20 @@ async function saveDevice(event) {
             await loadDevices();
             console.log('Devices reloaded, currentDevices count:', currentDevices.length);
 
-            // If a new device was added (not edited), only select it if no device is currently selected
+            // If a new device was added (not edited), refresh the UI and trigger data refresh
             if (newDeviceId && !deviceId) {
-                // Check if there's already a device selected
-                const currentSettings = await fetch('/api/settings').then(r => r.json());
-                const hasSelectedDevice = currentSettings.status === 'success' &&
-                                         currentSettings.settings.selected_device_id;
+                console.log('New device added, refreshing UI and data...');
 
-                if (!hasSelectedDevice) {
-                    // No device currently selected, so select the new one
-                    console.log('No device currently selected, setting newly added device as selected:', newDeviceId);
-                    await selectNewDevice(newDeviceId);
-                } else {
-                    console.log('Device already selected, not switching to newly added device');
+                // Wait a bit for backend to finish auto-selecting
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // Refresh device selector to pick up the auto-selected device
+                await updateDeviceSelector();
+
+                // Trigger a full data refresh if the function exists
+                if (typeof refreshAllDataForDevice === 'function') {
+                    console.log('Calling refreshAllDataForDevice to load data for newly added device');
+                    refreshAllDataForDevice();
                 }
             }
 
@@ -499,9 +500,13 @@ async function testConnection() {
     resultDiv.style.color = '#856404';
 
     try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const response = await fetch('/api/devices/test-connection', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify({ ip, api_key: apiKey })
         });
 
