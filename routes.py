@@ -740,6 +740,7 @@ def register_routes(app, csrf, limiter):
             }), 500
 
     @app.route('/api/reverse-dns', methods=['POST'])
+    @csrf.exempt
     @login_required
     def reverse_dns_api():
         """

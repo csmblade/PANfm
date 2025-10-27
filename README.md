@@ -1,4 +1,4 @@
-# PANfm - Palo Alto Network Firewall Monitor
+# PANfm - Palo Alto Networks Firewall Monitor
 
 A real-time monitoring dashboard for Palo Alto Networks firewalls built with Flask and Chart.js.
 

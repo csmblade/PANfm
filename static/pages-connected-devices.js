@@ -199,26 +199,26 @@ function renderConnectedDevicesTable() {
     // Create table HTML
     let html = `
         <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="padding: 15px 20px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 15px 20px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-primary);">
                 <div>
                     <strong style="font-size: 1.1em;">Connected Devices</strong>
-                    <span style="margin-left: 15px; opacity: 0.9;">Showing ${displayDevices.length} of ${filteredDevices.length} devices</span>
+                    <span style="margin-left: 15px; opacity: 0.9; font-family: var(--font-secondary);">Showing ${displayDevices.length} of ${filteredDevices.length} devices</span>
                 </div>
-                <div style="font-size: 0.9em; opacity: 0.9;">
+                <div style="font-size: 0.9em; opacity: 0.9; font-family: var(--font-secondary);">
                     Total: ${allConnectedDevices.length}
                 </div>
             </div>
             <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
+                <table style="width: 100%; border-collapse: collapse; font-family: var(--font-secondary); font-size: 0.85em;">
                     <thead>
                         <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Hostname</th>
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">IP Address</th>
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">MAC Address</th>
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">VLAN</th>
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Security Zone</th>
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Interface</th>
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; color: #333; white-space: nowrap;">Age (minutes)</th>
+                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Hostname</th>
+                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">IP Address</th>
+                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">MAC Address</th>
+                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">VLAN</th>
+                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Security Zone</th>
+                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Interface</th>
+                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Age (minutes)</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -253,13 +253,13 @@ function renderConnectedDevicesTable() {
 
         html += `
             <tr style="${rowStyle} border-bottom: 1px solid #dee2e6;">
-                <td style="padding: 12px 15px; color: #333;">${device.hostname}</td>
-                <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.ip}</td>
-                <td style="padding: 12px 15px;">${macCell}</td>
-                <td style="padding: 12px 15px; color: #333;">${device.vlan}</td>
-                <td style="padding: 12px 15px; color: #333;">${device.zone || '-'}</td>
-                <td style="padding: 12px 15px; color: #333; font-family: monospace;">${device.interface}</td>
-                <td style="padding: 12px 15px; color: #333;">${device.ttl}</td>
+                <td style="padding: 8px 12px; color: #333;">${device.hostname}</td>
+                <td style="padding: 8px 12px; color: #333; font-family: monospace;">${device.ip}</td>
+                <td style="padding: 8px 12px;">${macCell}</td>
+                <td style="padding: 8px 12px; color: #333;">${device.vlan}</td>
+                <td style="padding: 8px 12px; color: #333;">${device.zone || '-'}</td>
+                <td style="padding: 8px 12px; color: #333; font-family: monospace;">${device.interface}</td>
+                <td style="padding: 8px 12px; color: #333;">${device.ttl}</td>
             </tr>`;
     });
 

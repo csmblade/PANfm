@@ -40,58 +40,68 @@ def api_request_get(url, **kwargs):
     increment_api_call()
     return requests.get(url, **kwargs)
 
-def reverse_dns_lookup(ip_addresses, timeout=2):
+def reverse_dns_lookup(ip_addresses, timeout=5):
     """
-    Perform reverse DNS lookups on a list of IP addresses.
+    Perform reverse DNS lookups on a list of IP addresses using dnspython.
 
     Args:
         ip_addresses: List of IP addresses to lookup
-        timeout: Timeout in seconds for each lookup (default: 2)
+        timeout: Timeout in seconds for each lookup (default: 5)
 
     Returns:
         Dictionary mapping IP addresses to hostnames (or IP if lookup fails)
     """
+    try:
+        import dns.resolver
+        import dns.reversename
+    except ImportError:
+        debug("dnspython not available, DNS lookups will fail")
+        return {ip: ip for ip in ip_addresses}
+
     debug("Starting reverse DNS lookup for %d IP addresses with timeout=%ds", len(ip_addresses), timeout)
 
     results = {}
     success_count = 0
     fail_count = 0
 
-    # Set socket timeout
-    original_timeout = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(timeout)
+    # Create a resolver with custom timeout and public DNS servers
+    resolver = dns.resolver.Resolver()
+    resolver.timeout = timeout
+    resolver.lifetime = timeout
+    # Use Google and Cloudflare public DNS servers for better PTR record availability
+    resolver.nameservers = ['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']
 
-    try:
-        for ip in ip_addresses:
-            try:
-                # Perform reverse DNS lookup
-                hostname, _, _ = socket.gethostbyaddr(ip)
-                results[ip] = hostname
-                success_count += 1
-                debug("Successfully resolved %s to %s", ip, hostname)
-            except socket.herror:
-                # DNS lookup failed - no PTR record
-                results[ip] = ip
-                fail_count += 1
-                debug("No PTR record found for %s", ip)
-            except socket.gaierror:
-                # Address resolution error
-                results[ip] = ip
-                fail_count += 1
-                debug("Address resolution error for %s", ip)
-            except socket.timeout:
-                # Lookup timed out
-                results[ip] = ip
-                fail_count += 1
-                debug("DNS lookup timeout for %s", ip)
-            except Exception as e:
-                # Catch any other exceptions
-                results[ip] = ip
-                fail_count += 1
-                exception("Unexpected error during DNS lookup for %s: %s", ip, str(e))
-    finally:
-        # Restore original timeout
-        socket.setdefaulttimeout(original_timeout)
+    for ip in ip_addresses:
+        try:
+            # Convert IP to reverse DNS format (e.g., 8.8.8.8 -> 8.8.8.8.in-addr.arpa)
+            rev_name = dns.reversename.from_address(ip)
+
+            # Perform PTR lookup
+            answers = resolver.resolve(rev_name, "PTR")
+
+            # Get the first PTR record and remove trailing dot
+            hostname = str(answers[0]).rstrip('.')
+            results[ip] = hostname
+            success_count += 1
+            debug("Successfully resolved %s to %s", ip, hostname)
+
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            # No PTR record exists
+            results[ip] = ip
+            fail_count += 1
+            debug("No PTR record found for %s", ip)
+
+        except dns.exception.Timeout:
+            # DNS query timed out
+            results[ip] = ip
+            fail_count += 1
+            debug("DNS lookup timeout for %s", ip)
+
+        except Exception as e:
+            # Catch any other exceptions
+            results[ip] = ip
+            fail_count += 1
+            debug("DNS lookup error for %s: %s", ip, str(e))
 
     debug("Reverse DNS lookup completed: %d successful, %d failed", success_count, fail_count)
     return results

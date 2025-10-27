@@ -460,8 +460,115 @@ def get_interface_zones(firewall_config):
     return interface_zones
 
 
+def get_dhcp_leases(firewall_config):
+    """Fetch DHCP lease information from Palo Alto firewall
+
+    Returns:
+        dict: Dictionary mapping IP addresses to hostnames from DHCP leases
+              Format: {'192.168.1.10': 'hostname1', '192.168.1.11': 'hostname2', ...}
+    """
+    debug("=== Starting get_dhcp_leases ===")
+    dhcp_hostnames = {}
+
+    try:
+        firewall_ip, api_key, base_url = firewall_config
+        debug(f"Fetching DHCP leases from: {base_url}")
+
+        # Query for DHCP server lease information
+        params = {
+            'type': 'op',
+            'cmd': '<show><dhcp><server><lease></lease></server></dhcp></show>',
+            'key': api_key
+        }
+
+        debug("Making API request for DHCP leases")
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+
+        debug(f"DHCP lease API Response Status: {response.status_code}")
+
+        if response.status_code == 200:
+            debug(f"Response length: {len(response.text)} characters")
+            debug(f"Response preview (first 500 chars): {response.text[:500]}")
+
+            # Export full XML for debugging
+            try:
+                with open('/app/dhcp_leases_output.xml', 'w') as f:
+                    f.write(response.text)
+                info("Exported DHCP leases XML to /app/dhcp_leases_output.xml for debugging")
+            except Exception as export_err:
+                debug(f"Could not export DHCP XML: {export_err}")
+
+            root = ET.fromstring(response.text)
+
+            # Check for error response
+            status = root.get('status')
+            if status == 'error':
+                error_msg = root.find('.//msg')
+                error_text = error_msg.text if error_msg is not None else 'Unknown error'
+                warning(f"DHCP lease query returned error: {error_text}")
+                return dhcp_hostnames
+
+            # Parse DHCP lease entries
+            # Structure: <result><interface><entry><ip><hostname>...
+            lease_count = 0
+            entry_count = 0
+
+            # Use .// to find all entry elements regardless of nesting
+            for entry in root.findall('.//entry'):
+                entry_count += 1
+                ip_elem = entry.find('ip')
+                mac_elem = entry.find('mac')
+
+                # Try to find hostname element (try multiple possible names)
+                hostname_elem = None
+                for possible_name in ['hostname', 'host-name', 'name']:
+                    hostname_elem = entry.find(possible_name)
+                    if hostname_elem is not None:
+                        break
+
+                # Debug: Show all child elements for first entry
+                if entry_count == 1:
+                    child_names = [child.tag for child in entry]
+                    info(f"DHCP entry structure (first entry): tags={child_names}")
+                    if hostname_elem is not None:
+                        info(f"Found hostname element: tag='{hostname_elem.tag}', value='{hostname_elem.text}'")
+                    else:
+                        info("WARNING: No hostname element found in first entry!")
+
+                if ip_elem is not None and ip_elem.text:
+                    ip_address = ip_elem.text.strip()
+
+                    # Get hostname if available
+                    if hostname_elem is not None and hostname_elem.text:
+                        hostname = hostname_elem.text.strip()
+                        if hostname:  # Only add if hostname is not empty
+                            dhcp_hostnames[ip_address] = hostname
+                            lease_count += 1
+                            info(f"✓ DHCP match: IP={ip_address} → Hostname={hostname} (MAC={mac_elem.text if mac_elem is not None else 'N/A'})")
+                    else:
+                        # Log entries without hostnames for debugging (first 3 only)
+                        if entry_count <= 3:
+                            info(f"✗ DHCP entry missing hostname: IP={ip_address}, MAC={mac_elem.text if mac_elem is not None else 'N/A'}")
+
+            info(f"DHCP Summary: Processed {entry_count} total entries, found {lease_count} with hostnames")
+            if lease_count > 0:
+                info(f"Sample DHCP hostname mappings (first 5): {dict(list(dhcp_hostnames.items())[:5])}")
+            else:
+                info("No DHCP leases with hostnames found - this may be normal if DHCP is not configured on this firewall")
+
+        else:
+            warning(f"Failed to fetch DHCP leases: HTTP {response.status_code}")
+            debug(f"Response text: {response.text[:500]}")
+
+    except Exception as e:
+        exception(f"Error fetching DHCP leases: {str(e)}")
+
+    debug(f"=== Completed get_dhcp_leases with {len(dhcp_hostnames)} entries ===")
+    return dhcp_hostnames
+
+
 def get_connected_devices(firewall_config):
-    """Fetch ARP entries from all interfaces on the firewall"""
+    """Fetch ARP entries from all interfaces on the firewall and enrich with DHCP hostnames"""
     debug("=== Starting get_connected_devices ===")
     try:
         firewall_ip, api_key, base_url = firewall_config
@@ -469,6 +576,11 @@ def get_connected_devices(firewall_config):
 
         # Get interface-to-zone mappings first
         interface_zones = get_interface_zones(firewall_config)
+
+        # Get DHCP leases for hostname lookups
+        debug("Fetching DHCP leases for hostname resolution")
+        dhcp_hostnames = get_dhcp_leases(firewall_config)
+        debug(f"Retrieved {len(dhcp_hostnames)} DHCP hostname mappings")
 
         # Query for ARP table entries
         params = {
@@ -521,9 +633,17 @@ def get_connected_devices(firewall_config):
                         if base_interface in interface_zones:
                             zone = interface_zones[base_interface]
 
+                # Get IP address for hostname lookup
+                ip_address = ip.text if ip is not None and ip.text else '-'
+
+                # Lookup hostname from DHCP leases if available
+                hostname = dhcp_hostnames.get(ip_address, '-')
+                if hostname != '-':
+                    debug(f"Matched hostname '{hostname}' for IP {ip_address}")
+
                 device_entry = {
-                    'hostname': '-',  # ARP table typically doesn't have hostnames
-                    'ip': ip.text if ip is not None and ip.text else '-',
+                    'hostname': hostname,  # From DHCP leases if available
+                    'ip': ip_address,
                     'mac': mac_address,
                     'vlan': '-',  # Will be extracted from interface if available
                     'interface': interface_name,

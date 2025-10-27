@@ -593,11 +593,15 @@ async function showAppDestinations(appIndex) {
                 // Extract IP addresses from destinations
                 const ipAddresses = app.destinations.map(dest => dest.ip);
 
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
                 // Call reverse DNS API
                 const response = await fetch('/api/reverse-dns', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({
                         ip_addresses: ipAddresses,
@@ -606,6 +610,7 @@ async function showAppDestinations(appIndex) {
                 });
 
                 const data = await response.json();
+                console.log('Reverse DNS API response:', data);
 
                 if (data.status === 'success') {
                     // Render destinations with hostnames
@@ -614,6 +619,7 @@ async function showAppDestinations(appIndex) {
                         const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
                         const hostname = data.results[dest.ip];
                         const showHostname = hostname && hostname !== dest.ip;
+                        console.log(`IP: ${dest.ip}, Hostname: ${hostname}, Show: ${showHostname}`);
 
                         destHtml += `
                             <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
