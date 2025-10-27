@@ -79,15 +79,12 @@ async function updateDeviceSelector() {
     if (currentDevices.length === 0) {
         selector.innerHTML = '<option value="">No devices configured</option>';
         selectedDeviceId = '';
+        // Update status to show no device connected
+        if (typeof updateStatus === 'function') {
+            updateStatus(false, 'no_device');
+            console.log('No devices configured, updated status');
+        }
         return;
-    }
-
-    // Auto-select first device if none is selected
-    let didAutoSelect = false;
-    if (!selectedDeviceId && currentDevices.length > 0) {
-        selectedDeviceId = currentDevices[0].id;
-        didAutoSelect = true;
-        console.log('Auto-selected first device:', selectedDeviceId);
     }
 
     // Build options
@@ -100,56 +97,28 @@ async function updateDeviceSelector() {
     selector.value = selectedDeviceId;
     console.log('Set selector value to:', selectedDeviceId);
 
-    // Load interface for the selected device
-    const device = currentDevices.find(d => d.id === selectedDeviceId);
-    if (device) {
-        const deviceInterface = device.monitored_interface || 'ethernet1/12';
-        const interfaceInput = document.getElementById('monitoredInterfaceInput');
-        if (interfaceInput) {
-            interfaceInput.value = deviceInterface;
-            console.log('Loaded interface for selected device:', deviceInterface);
-        }
-
-        // Update the status bubble to show the connected device name
-        if (typeof updateStatus === 'function') {
-            updateStatus(true, '', device.name);
-            console.log('Updated status bubble with device name:', device.name);
-        }
-    }
-
-    // If we auto-selected, save it to settings
-    if (didAutoSelect) {
-        console.log('Auto-selection triggered, saving device to settings...');
-        try {
-            const currentSettings = await fetch('/api/settings').then(r => r.json());
-            if (currentSettings.status === 'success') {
-                const settings = currentSettings.settings;
-                settings.selected_device_id = selectedDeviceId;
-
-                // Get device's interface and save it too
-                const device = currentDevices.find(d => d.id === selectedDeviceId);
-                if (device) {
-                    const deviceInterface = device.monitored_interface || 'ethernet1/12';
-                    settings.monitored_interface = deviceInterface;
-                }
-
-                // Save settings
-                const autoSaveResponse = await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(settings)
-                });
-                const autoSaveData = await autoSaveResponse.json();
-                console.log('Auto-selected device save response:', autoSaveData);
-
-                if (autoSaveData.status !== 'success') {
-                    console.error('Failed to save auto-selected device:', autoSaveData.message);
-                } else {
-                    console.log('Auto-selected device saved to settings successfully');
-                }
+    // Load interface for the selected device (if one is selected)
+    if (selectedDeviceId) {
+        const device = currentDevices.find(d => d.id === selectedDeviceId);
+        if (device) {
+            const deviceInterface = device.monitored_interface || 'ethernet1/12';
+            const interfaceInput = document.getElementById('monitoredInterfaceInput');
+            if (interfaceInput) {
+                interfaceInput.value = deviceInterface;
+                console.log('Loaded interface for selected device:', deviceInterface);
             }
-        } catch (error) {
-            console.error('Error saving auto-selected device:', error);
+
+            // Update the status bubble to show the connected device name
+            if (typeof updateStatus === 'function') {
+                updateStatus(true, '', device.name);
+                console.log('Updated status bubble with device name:', device.name);
+            }
+        }
+    } else {
+        // No device selected even though devices exist
+        if (typeof updateStatus === 'function') {
+            updateStatus(false, 'no_device');
+            console.log('Devices exist but none selected, updated status');
         }
     }
 }
@@ -390,25 +359,22 @@ async function saveDevice(event) {
             hideDeviceModal();
             console.log('Device saved successfully, reloading devices...');
 
-            // Get the new device ID if this was an add operation
+            // Get the new device ID and auto_selected flag if this was an add operation
             const newDeviceId = data.device?.id || null;
+            const autoSelected = data.auto_selected || false;
             console.log('New device ID:', newDeviceId);
+            console.log('Auto-selected by backend:', autoSelected);
             console.log('Was this an edit? deviceId =', deviceId);
 
+            // Reload devices to get updated list
             await loadDevices();
             console.log('Devices reloaded, currentDevices count:', currentDevices.length);
 
-            // If a new device was added (not edited), refresh the UI and trigger data refresh
-            if (newDeviceId && !deviceId) {
-                console.log('New device added, refreshing UI and data...');
+            // If backend auto-selected this device (first device added), trigger data refresh
+            if (autoSelected && newDeviceId && !deviceId) {
+                console.log('Backend auto-selected new device, triggering data refresh...');
 
-                // Wait a bit for backend to finish auto-selecting
-                await new Promise(resolve => setTimeout(resolve, 300));
-
-                // Refresh device selector to pick up the auto-selected device
-                await updateDeviceSelector();
-
-                // Trigger a full data refresh if the function exists
+                // Trigger a full data refresh immediately
                 if (typeof refreshAllDataForDevice === 'function') {
                     console.log('Calling refreshAllDataForDevice to load data for newly added device');
                     refreshAllDataForDevice();
@@ -421,36 +387,6 @@ async function saveDevice(event) {
         }
     } catch (error) {
         alert('Error saving device: ' + error.message);
-    }
-}
-
-async function selectNewDevice(newDeviceId) {
-    try {
-        // Update selected device in settings
-        const currentSettings = await fetch('/api/settings').then(r => r.json());
-        if (currentSettings.status === 'success') {
-            const settings = currentSettings.settings;
-            settings.selected_device_id = newDeviceId;
-
-            // Get the new device's interface
-            const device = currentDevices.find(d => d.id === newDeviceId);
-            if (device) {
-                settings.monitored_interface = device.monitored_interface || 'ethernet1/12';
-            }
-
-            await fetch('/api/settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(settings)
-            });
-
-            console.log('New device set as selected in settings');
-
-            // Update the selector if it exists
-            await updateDeviceSelector();
-        }
-    } catch (error) {
-        console.error('Error selecting new device:', error);
     }
 }
 

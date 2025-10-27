@@ -593,11 +593,13 @@ function updateStatus(isOnline, message = '', deviceName = '') {
     } else {
         statusDot.classList.remove('online');
         statusDot.classList.add('offline');
-        // Same logic for disconnected state
-        if (deviceName) {
+        // Special message for no devices configured
+        if (message === 'no_device') {
+            statusText.textContent = 'No device connected';
+        } else if (deviceName) {
             statusText.textContent = `Disconnected: ${deviceName}`;
         } else if (!statusText.textContent.includes(':')) {
-            statusText.textContent = 'Disconnected';
+            statusText.textContent = message || 'Disconnected';
         }
         // else: preserve existing "Disconnected: DeviceName" text
     }

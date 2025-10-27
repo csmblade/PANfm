@@ -437,14 +437,17 @@ def register_routes(app, csrf, limiter):
 
             # Auto-select this device if no device is currently selected
             settings = load_settings()
+            auto_selected = False
             if not settings.get('selected_device_id'):
                 settings['selected_device_id'] = new_device['id']
                 save_settings(settings)
+                auto_selected = True
                 info(f"Auto-selected device {new_device['name']} ({new_device['id']}) as no device was previously selected")
 
             return jsonify({
                 'status': 'success',
                 'device': new_device,
+                'auto_selected': auto_selected,
                 'message': 'Device added successfully'
             })
         except Exception as e:
