@@ -374,6 +374,13 @@ async function saveDevice(event) {
             if (autoSelected && newDeviceId && !deviceId) {
                 console.log('Backend auto-selected new device, triggering data refresh...');
 
+                // Force set the selected device ID locally to ensure it's set
+                selectedDeviceId = newDeviceId;
+                console.log('Forced selectedDeviceId to:', selectedDeviceId);
+
+                // Update the device selector dropdown immediately
+                await updateDeviceSelector();
+
                 // Trigger a full data refresh immediately
                 if (typeof refreshAllDataForDevice === 'function') {
                     console.log('Calling refreshAllDataForDevice to load data for newly added device');
