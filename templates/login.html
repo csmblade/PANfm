@@ -235,8 +235,14 @@
                     // Mark as not first visit
                     localStorage.setItem('panfm_first_visit', 'false');
 
-                    // Redirect to dashboard
-                    window.location.href = '/';
+                    // Check if password must be changed
+                    if (data.must_change_password) {
+                        // Redirect to dashboard with password change flag
+                        window.location.href = '/?must_change_password=true';
+                    } else {
+                        // Redirect to dashboard
+                        window.location.href = '/';
+                    }
                 } else {
                     // Show error
                     errorMessage.textContent = data.message || 'Login failed';

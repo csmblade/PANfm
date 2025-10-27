@@ -4,6 +4,8 @@
  * Handles Connected Devices page functionality including:
  * - Loading and displaying ARP table data
  * - Filtering by VLAN, status, and search
+ * - Sorting by multiple columns (hostname, IP, MAC, VLAN, zone, interface, age)
+ * - Default sort: age (lowest to highest)
  * - Exporting to CSV and XML formats
  * - MAC vendor lookup integration
  */
@@ -11,6 +13,8 @@
 // Connected Devices functionality
 let allConnectedDevices = [];
 let connectedDevicesMetadata = {};
+let connectedDevicesSortBy = 'age'; // Default sort by age
+let connectedDevicesSortDesc = false; // Default ascending (lowest to highest)
 
 async function loadConnectedDevices() {
     console.log('Loading connected devices...');
@@ -104,6 +108,22 @@ function setupConnectedDevicesEventListeners() {
     populateZoneFilter();
 }
 
+function sortConnectedDevices(field) {
+    // Toggle sort direction if clicking the same field
+    if (connectedDevicesSortBy === field) {
+        connectedDevicesSortDesc = !connectedDevicesSortDesc;
+    } else {
+        connectedDevicesSortBy = field;
+        // Default direction based on field type
+        if (field === 'age') {
+            connectedDevicesSortDesc = false; // Ascending for age (lowest first)
+        } else {
+            connectedDevicesSortDesc = true; // Descending for others
+        }
+    }
+    renderConnectedDevicesTable();
+}
+
 function populateVLANFilter() {
     const vlanFilter = document.getElementById('connectedDevicesVlanFilter');
     if (!vlanFilter) return;
@@ -193,8 +213,36 @@ function renderConnectedDevicesTable() {
         return true;
     });
 
+    // Apply sorting
+    filteredDevices.sort((a, b) => {
+        let aVal = a[connectedDevicesSortBy];
+        let bVal = b[connectedDevicesSortBy];
+
+        // Handle missing values
+        if (aVal === undefined || aVal === null) aVal = '';
+        if (bVal === undefined || bVal === null) bVal = '';
+
+        // For string fields, use locale compare
+        if (typeof aVal === 'string') {
+            return connectedDevicesSortDesc ?
+                bVal.localeCompare(aVal) :
+                aVal.localeCompare(bVal);
+        }
+
+        // For numeric fields (age, vlan)
+        return connectedDevicesSortDesc ? bVal - aVal : aVal - bVal;
+    });
+
     // Apply limit (unless "All" is selected)
     const displayDevices = limit === -1 ? filteredDevices : filteredDevices.slice(0, limit);
+
+    // Helper function for sort indicators
+    const getSortIndicator = (field) => {
+        if (connectedDevicesSortBy === field) {
+            return connectedDevicesSortDesc ? ' ▼' : ' ▲';
+        }
+        return '';
+    };
 
     // Create table HTML
     let html = `
@@ -212,13 +260,13 @@ function renderConnectedDevicesTable() {
                 <table style="width: 100%; border-collapse: collapse; font-family: var(--font-secondary); font-size: 0.85em;">
                     <thead>
                         <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Hostname</th>
-                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">IP Address</th>
-                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">MAC Address</th>
-                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">VLAN</th>
-                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Security Zone</th>
-                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Interface</th>
-                            <th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary);">Age (minutes)</th>
+                            <th onclick="sortConnectedDevices('hostname')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Hostname${getSortIndicator('hostname')}</th>
+                            <th onclick="sortConnectedDevices('ip')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">IP Address${getSortIndicator('ip')}</th>
+                            <th onclick="sortConnectedDevices('mac')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">MAC Address${getSortIndicator('mac')}</th>
+                            <th onclick="sortConnectedDevices('vlan')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">VLAN${getSortIndicator('vlan')}</th>
+                            <th onclick="sortConnectedDevices('zone')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Security Zone${getSortIndicator('zone')}</th>
+                            <th onclick="sortConnectedDevices('interface')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Interface${getSortIndicator('interface')}</th>
+                            <th onclick="sortConnectedDevices('age')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #FA582D; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Age (minutes)${getSortIndicator('age')}</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -233,10 +281,10 @@ function renderConnectedDevicesTable() {
         if (device.is_virtual) {
             // Different badge for privacy/randomized MACs (iPhone, Android, Windows)
             if (device.is_randomized) {
-                macCell += `<div style="margin-top: 4px;"><span style="background: #9c27b0; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600;" title="${device.virtual_type || 'Randomized MAC for Privacy'}">🔒 PRIVATE</span></div>`;
+                macCell += `<div style="margin-top: 4px;"><span style="background: #FA582D; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600;" title="${device.virtual_type || 'Randomized MAC for Privacy'}">PRIVATE</span></div>`;
             } else {
                 // Regular virtual MAC (VMs, containers)
-                macCell += `<div style="margin-top: 4px;"><span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600;" title="${device.virtual_type || 'Virtual/Locally Administered MAC'}">VIRTUAL</span></div>`;
+                macCell += `<div style="margin-top: 4px;"><span style="background: #FA582D; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600;" title="${device.virtual_type || 'Virtual/Locally Administered MAC'}">VIRTUAL</span></div>`;
             }
         }
 
@@ -247,7 +295,7 @@ function renderConnectedDevicesTable() {
 
         // Add virtual type detail if available
         if (device.is_virtual && device.virtual_type) {
-            const detailColor = device.is_randomized ? '#9c27b0' : '#ff9800';
+            const detailColor = device.is_randomized ? '#C44520' : '#C44520';
             macCell += `<div style="font-size: 0.75em; color: ${detailColor}; margin-top: 2px;">${device.virtual_type}</div>`;
         }
 

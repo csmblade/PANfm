@@ -620,6 +620,28 @@ function showError(message) {
 async function fetchThroughputData() {
     try {
         const response = await fetch('/api/throughput');
+
+        // Handle authentication errors
+        if (response.status === 401) {
+            console.log('Session expired, redirecting to login...');
+            window.location.href = '/login';
+            return;
+        }
+
+        // Handle rate limiting
+        if (response.status === 429) {
+            console.warn('Rate limit exceeded');
+            updateStatus(false);
+            showError('Rate limit exceeded. Please wait before trying again.');
+            return;
+        }
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Expected JSON response but got ' + contentType);
+        }
+
         const data = await response.json();
 
         if (data.status === 'success') {
@@ -690,6 +712,12 @@ async function init() {
         updateInterfaceBtn.addEventListener('click', updateMonitoredInterface);
     }
 
+    // Set up logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+
     // Initial fetch
     fetchThroughputData();
 
@@ -699,6 +727,37 @@ async function init() {
 
 // Start the app when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
+
+// ============================================================================
+// Logout Functionality
+// ============================================================================
+
+/**
+ * Handle logout - clears session and redirects to login page
+ */
+async function handleLogout() {
+    try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        // Call logout API
+        const response = await fetch('/api/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        // Redirect to login page regardless of response
+        // This ensures user is logged out even if API call fails
+        window.location.href = '/login';
+    } catch (error) {
+        console.error('Logout error:', error);
+        // Still redirect to login page on error
+        window.location.href = '/login';
+    }
+}
 
 // updateMonitoredInterface function moved to devices.js where selectedDeviceId and currentDevices are defined
 

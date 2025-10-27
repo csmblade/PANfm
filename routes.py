@@ -5,7 +5,7 @@ from flask import render_template, jsonify, request, send_from_directory, sessio
 from datetime import datetime
 import os
 import json
-from config import load_settings, save_settings, save_vendor_database, get_vendor_db_info
+from config import load_settings, save_settings, save_vendor_database, get_vendor_db_info, save_service_port_database, get_service_port_db_info, load_service_port_database
 from device_manager import device_manager
 from auth import login_required, verify_password, create_session, destroy_session, change_password, must_change_password
 from firewall_api import (
@@ -737,6 +737,153 @@ def register_routes(app, csrf, limiter):
             return jsonify({
                 'status': 'error',
                 'message': str(e)
+            }), 500
+
+    @app.route('/api/service-port-db/info', methods=['GET'])
+    @login_required
+    def service_port_db_info():
+        """API endpoint to get service port database information"""
+        debug("=== Service port DB info endpoint called ===")
+        try:
+            db_info = get_service_port_db_info()
+            return jsonify({
+                'status': 'success',
+                'info': db_info
+            })
+        except Exception as e:
+            error(f"Error getting service port DB info: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @app.route('/api/service-port-db/upload', methods=['POST'])
+    @login_required
+    @limiter.limit("5 per hour")
+    def service_port_db_upload():
+        """API endpoint to upload service port database (IANA XML)"""
+        debug("=== Service port DB upload endpoint called ===")
+        try:
+            if 'file' not in request.files:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No file provided'
+                }), 400
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No file selected'
+                }), 400
+            if not file.filename.endswith('.xml'):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'File must be an XML file'
+                }), 400
+
+            # Read XML content
+            content = file.read().decode('utf-8')
+
+            # Parse XML and convert to JSON structure
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(content)
+
+            # Build service port dictionary
+            # Format: {port: {'tcp': {'name': 'http', 'description': '...'}, 'udp': {...}}}
+            service_dict = {}
+
+            for record in root.findall('.//{http://www.iana.org/assignments}record'):
+                name_elem = record.find('{http://www.iana.org/assignments}name')
+                protocol_elem = record.find('{http://www.iana.org/assignments}protocol')
+                number_elem = record.find('{http://www.iana.org/assignments}number')
+                desc_elem = record.find('{http://www.iana.org/assignments}description')
+
+                # Skip if missing required fields
+                if protocol_elem is None or number_elem is None:
+                    continue
+
+                protocol = protocol_elem.text
+                port_str = number_elem.text
+
+                # Skip if protocol or port is None
+                if protocol is None or port_str is None:
+                    continue
+
+                # Handle port ranges (e.g., "8000-8100")
+                if '-' in port_str:
+                    continue  # Skip ranges for now
+
+                try:
+                    port = int(port_str)
+                except ValueError:
+                    continue  # Skip invalid port numbers
+
+                # Get service name and description
+                service_name = name_elem.text if name_elem is not None and name_elem.text else ''
+                description = desc_elem.text if desc_elem is not None and desc_elem.text else ''
+
+                # Initialize port entry if it doesn't exist
+                port_key = str(port)
+                if port_key not in service_dict:
+                    service_dict[port_key] = {}
+
+                # Add protocol-specific info
+                service_dict[port_key][protocol.lower()] = {
+                    'name': service_name,
+                    'description': description
+                }
+
+            if len(service_dict) == 0:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No valid service port entries found in XML'
+                }), 400
+
+            # Save to file
+            if save_service_port_database(service_dict):
+                db_info = get_service_port_db_info()
+                info(f"Service port database uploaded successfully: {db_info['entries']} port entries, {db_info['size_mb']} MB")
+                return jsonify({
+                    'status': 'success',
+                    'message': f'Service port database uploaded successfully ({db_info["entries"]} ports)',
+                    'info': db_info
+                })
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Failed to save service port database'
+                }), 500
+
+        except ET.ParseError as e:
+            error(f"Invalid XML in service port DB upload: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid XML format'
+            }), 400
+        except Exception as e:
+            error(f"Error uploading service port DB: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @app.route('/api/service-port-db/data', methods=['GET'])
+    @login_required
+    def service_port_db_data():
+        """API endpoint to get service port database data"""
+        debug("=== Service port DB data endpoint called ===")
+        try:
+            service_data = load_service_port_database()
+            return jsonify({
+                'status': 'success',
+                'data': service_data
+            })
+        except Exception as e:
+            error(f"Error loading service port DB data: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e),
+                'data': {}
             }), 500
 
     @app.route('/api/reverse-dns', methods=['POST'])

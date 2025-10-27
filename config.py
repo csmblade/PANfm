@@ -16,6 +16,7 @@ DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), 'debug.log')
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
 DEVICES_FILE = os.path.join(os.path.dirname(__file__), 'devices.json')
 VENDOR_DB_FILE = os.path.join(os.path.dirname(__file__), 'mac_vendor_db.json')
+SERVICE_PORT_DB_FILE = os.path.join(os.path.dirname(__file__), 'service_port_db.json')
 AUTH_FILE = os.path.join(os.path.dirname(__file__), 'auth.json')
 SECURITY_LOG_FILE = os.path.join(os.path.dirname(__file__), 'security.log')
 
@@ -157,6 +158,88 @@ def get_vendor_db_info():
             with open(VENDOR_DB_FILE, 'r') as f:
                 vendor_list = json.load(f)
                 entry_count = len(vendor_list)
+        except:
+            entry_count = 0
+
+        return {
+            'exists': True,
+            'size': file_size,
+            'size_mb': round(file_size / (1024 * 1024), 2),
+            'modified': modified_date,
+            'entries': entry_count
+        }
+    else:
+        return {
+            'exists': False,
+            'size': 0,
+            'size_mb': 0,
+            'modified': 'N/A',
+            'entries': 0
+        }
+
+
+def load_service_port_database():
+    """
+    Load service port database from file.
+    Returns dictionary mapping port numbers to service information.
+    Format: {port: {'tcp': {'name': 'http', 'description': '...'}, 'udp': {...}}}
+    """
+    debug, error, _ = _get_logger()
+    debug("Loading service port database")
+
+    if not os.path.exists(SERVICE_PORT_DB_FILE):
+        debug("Service port database file does not exist")
+        return {}
+
+    try:
+        with open(SERVICE_PORT_DB_FILE, 'r') as f:
+            service_data = json.load(f)
+
+        debug(f"Loaded service port database with {len(service_data)} port entries")
+        return service_data
+
+    except Exception as e:
+        error(f"Failed to load service port database: {e}")
+        return {}
+
+
+def save_service_port_database(service_data):
+    """
+    Save service port database to file.
+    service_data should be a dictionary mapping ports to service info.
+    """
+    debug, error, _ = _get_logger()
+    debug("Saving service port database")
+
+    try:
+        with open(SERVICE_PORT_DB_FILE, 'w') as f:
+            json.dump(service_data, f)
+            f.flush()
+            os.fsync(f.fileno())
+
+        debug(f"Service port database saved successfully ({len(service_data)} port entries)")
+        return True
+
+    except Exception as e:
+        error(f"Failed to save service port database: {e}")
+        return False
+
+
+def get_service_port_db_info():
+    """
+    Get information about the service port database file.
+    """
+    if os.path.exists(SERVICE_PORT_DB_FILE):
+        file_size = os.path.getsize(SERVICE_PORT_DB_FILE)
+        file_mtime = os.path.getmtime(SERVICE_PORT_DB_FILE)
+        from datetime import datetime
+        modified_date = datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Count entries
+        try:
+            with open(SERVICE_PORT_DB_FILE, 'r') as f:
+                service_data = json.load(f)
+                entry_count = len(service_data)
         except:
             entry_count = 0
 

@@ -18,6 +18,7 @@ let allApplications = [];
 let applicationsSortBy = 'bytes'; // Default sort by volume
 let applicationsSortDesc = true;
 let categoryChart = null;
+let servicePortDb = {}; // Service port database for port-to-service name lookups
 
 async function loadApplications() {
     console.log('=== loadApplications called ===');
@@ -52,6 +53,79 @@ async function loadApplications() {
         console.error('Error loading applications:', error);
         showApplicationsError('Connection error: ' + error.message);
     }
+
+    // Load service port database
+    await loadServicePortDatabase();
+}
+
+async function loadServicePortDatabase() {
+    console.log('Loading service port database...');
+    try {
+        const response = await fetch('/api/service-port-db/info');
+        const data = await response.json();
+
+        if (data.status === 'success' && data.info.exists) {
+            // Database exists, load it
+            const dbResponse = await fetch('/api/service-port-db/data');
+            const dbData = await dbResponse.json();
+
+            if (dbData.status === 'success') {
+                servicePortDb = dbData.data || {};
+                console.log(`Service port database loaded: ${Object.keys(servicePortDb).length} ports`);
+            } else {
+                console.log('Service port database not available');
+                servicePortDb = {};
+            }
+        } else {
+            console.log('Service port database not uploaded yet');
+            servicePortDb = {};
+        }
+    } catch (error) {
+        console.error('Error loading service port database:', error);
+        servicePortDb = {};
+    }
+}
+
+function getServiceName(port, protocol = 'tcp') {
+    /**
+     * Lookup service name and description for a given port and protocol
+     * Returns object with {name, description} or null if not found
+     */
+    if (!servicePortDb || !port) return null;
+
+    const portKey = String(port);
+    if (servicePortDb[portKey] && servicePortDb[portKey][protocol.toLowerCase()]) {
+        return servicePortDb[portKey][protocol.toLowerCase()];
+    }
+    return null;
+}
+
+function formatPortDisplay(port) {
+    /**
+     * Format port number with service name if available
+     * Returns HTML string with port and service name
+     */
+    if (!port || port === 'N/A') return 'Port: N/A';
+
+    // Try to get service name for TCP first (most common)
+    let serviceInfo = getServiceName(port, 'tcp');
+    let protocol = 'tcp';
+
+    // If not found for TCP, try UDP
+    if (!serviceInfo) {
+        serviceInfo = getServiceName(port, 'udp');
+        protocol = 'udp';
+    }
+
+    if (serviceInfo && serviceInfo.name) {
+        // Format: "Port: 443 (https)"  with description as title
+        const serviceName = serviceInfo.name;
+        const description = serviceInfo.description || '';
+        return `Port: ${port} <span style="color: #FA582D; font-weight: 600;" title="${description}">(${serviceName})</span>`;
+    }
+
+    // No service name found - just show port
+    return `Port: ${port}`;
 }
 
 function populateApplicationFilters() {
@@ -575,6 +649,11 @@ async function showAppDestinations(appIndex) {
     document.getElementById('appDestVolume').textContent = formatBytesHuman(app.bytes);
     document.getElementById('appDestModalSubtitle').textContent = `Category: ${app.category}`;
 
+    // Sort destinations by bytes (descending) - ensure they're sorted even if backend already sorted them
+    if (app.destinations && app.destinations.length > 0) {
+        app.destinations.sort((a, b) => (b.bytes || 0) - (a.bytes || 0));
+    }
+
     // Populate destinations list
     const destinationsList = document.getElementById('appDestinationsList');
     if (app.destinations && app.destinations.length > 0) {
@@ -616,16 +695,18 @@ async function showAppDestinations(appIndex) {
                     // Render destinations with hostnames
                     let destHtml = '';
                     app.destinations.forEach(dest => {
-                        const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
                         const hostname = data.results[dest.ip];
                         const showHostname = hostname && hostname !== dest.ip;
+                        const portDisplay = formatPortDisplay(dest.port);
+                        const bytesDisplay = formatBytesHuman(dest.bytes || 0);
                         console.log(`IP: ${dest.ip}, Hostname: ${hostname}, Show: ${showHostname}`);
 
                         destHtml += `
-                            <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
+                            <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #FA582D; border-radius: 4px; padding: 10px;">
                                 ${showHostname ? `<div style="color: #333; font-weight: 600; margin-bottom: 3px;">${hostname}</div>` : ''}
-                                <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
-                                <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
+                                <div style="font-family: monospace; color: #FA582D; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
+                                <div style="font-size: 0.85em; color: #666; margin-bottom: 2px;">${portDisplay}</div>
+                                <div style="font-size: 0.8em; color: #FA582D; font-weight: 600;">${bytesDisplay}</div>
                             </div>
                         `;
                     });
@@ -638,12 +719,14 @@ async function showAppDestinations(appIndex) {
                 // Fall back to showing IPs without hostnames
                 let destHtml = '';
                 app.destinations.forEach(dest => {
-                    const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
+                    const portDisplay = formatPortDisplay(dest.port);
+                    const bytesDisplay = formatBytesHuman(dest.bytes || 0);
                     destHtml += `
-                        <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
-                            <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
-                            <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
-                            <div style="font-size: 0.8em; color: #d9534f; margin-top: 3px;">DNS lookup failed</div>
+                        <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #FA582D; border-radius: 4px; padding: 10px;">
+                            <div style="font-family: monospace; color: #FA582D; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
+                            <div style="font-size: 0.85em; color: #666; margin-bottom: 2px;">${portDisplay}</div>
+                            <div style="font-size: 0.8em; color: #FA582D; font-weight: 600; margin-bottom: 2px;">${bytesDisplay}</div>
+                            <div style="font-size: 0.8em; color: #d9534f;">DNS lookup failed</div>
                         </div>
                     `;
                 });
@@ -653,11 +736,13 @@ async function showAppDestinations(appIndex) {
             // Render destinations without hostnames (original behavior)
             let destHtml = '';
             app.destinations.forEach(dest => {
-                const protocol = dest.port === '443' ? 'https' : (dest.port === '80' ? 'http' : '');
+                const portDisplay = formatPortDisplay(dest.port);
+                const bytesDisplay = formatBytesHuman(dest.bytes || 0);
                 destHtml += `
-                    <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #4a9eff; border-radius: 4px; padding: 10px;">
-                        <div style="font-family: monospace; color: #4a9eff; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
-                        <div style="font-size: 0.85em; color: #666;">Port: ${dest.port || 'N/A'} ${protocol ? `(${protocol})` : ''}</div>
+                    <div style="background: white; border: 1px solid #ddd; border-left: 3px solid #FA582D; border-radius: 4px; padding: 10px;">
+                        <div style="font-family: monospace; color: #FA582D; font-weight: 600; margin-bottom: 3px;">${dest.ip}</div>
+                        <div style="font-size: 0.85em; color: #666; margin-bottom: 2px;">${portDisplay}</div>
+                        <div style="font-size: 0.8em; color: #FA582D; font-weight: 600;">${bytesDisplay}</div>
                     </div>
                 `;
             });

@@ -6,6 +6,7 @@
  * - Settings tab switching
  * - Monitored interface updates
  * - Vendor database management
+ * - Password change functionality
  * - Tile heading updates
  */
 
@@ -24,6 +25,9 @@ async function loadSettings() {
 
         // Initialize vendor DB controls
         initVendorDbControls();
+
+        // Initialize service port DB controls
+        initServicePortDbControls();
     } catch (error) {
         console.error('Error loading settings:', error);
     }
@@ -131,8 +135,14 @@ async function initSettings() {
     document.getElementById('saveSettings').addEventListener('click', saveSettingsData);
     document.getElementById('resetSettings').addEventListener('click', resetSettingsData);
 
+    // Setup password change listener
+    initPasswordChange();
+
     // Setup settings tab switching
     initSettingsTabs();
+
+    // Check if password change is required (from URL parameter)
+    checkPasswordChangeRequired();
 }
 
 // Settings tab switching functionality
@@ -290,6 +300,280 @@ function initVendorDbControls() {
 
     // Load initial info
     loadVendorDbInfo();
+}
+
+// ============================================================================
+// Service Port Database Functions
+// ============================================================================
+
+async function loadServicePortDbInfo() {
+    console.log('Loading service port database info...');
+    try {
+        const response = await fetch('/api/service-port-db/info');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const info = data.info;
+
+            document.getElementById('servicePortDbStatus').textContent = info.exists ? '✓ Loaded' : '✗ Not loaded';
+            document.getElementById('servicePortDbStatus').style.color = info.exists ? '#28a745' : '#dc3545';
+            document.getElementById('servicePortDbEntries').textContent = info.entries.toLocaleString();
+            document.getElementById('servicePortDbSize').textContent = `${info.size_mb} MB`;
+            document.getElementById('servicePortDbModified').textContent = info.modified;
+        }
+    } catch (error) {
+        console.error('Error loading service port DB info:', error);
+        document.getElementById('servicePortDbStatus').textContent = 'Error';
+        document.getElementById('servicePortDbStatus').style.color = '#dc3545';
+    }
+}
+
+async function uploadServicePortDb() {
+    const fileInput = document.getElementById('servicePortDbFileInput');
+    const messageDiv = document.getElementById('servicePortDbUploadMessage');
+    const uploadBtn = document.getElementById('uploadServicePortDbBtn');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        messageDiv.textContent = 'Please select a file first';
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#fff3cd';
+        messageDiv.style.color = '#856404';
+        messageDiv.style.border = '1px solid #ffeaa7';
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (!file.name.endsWith('.xml')) {
+        messageDiv.textContent = 'File must be an XML file';
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.border = '1px solid #f5c6cb';
+        return;
+    }
+
+    // Disable button during upload
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        const response = await fetch('/api/service-port-db/upload', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            messageDiv.textContent = data.message;
+            messageDiv.style.display = 'block';
+            messageDiv.style.background = '#d4edda';
+            messageDiv.style.color = '#155724';
+            messageDiv.style.border = '1px solid #c3e6cb';
+
+            // Refresh info display
+            await loadServicePortDbInfo();
+
+            // Clear file input
+            fileInput.value = '';
+        } else {
+            messageDiv.textContent = 'Error: ' + data.message;
+            messageDiv.style.display = 'block';
+            messageDiv.style.background = '#f8d7da';
+            messageDiv.style.color = '#721c24';
+            messageDiv.style.border = '1px solid #f5c6cb';
+        }
+    } catch (error) {
+        console.error('Error uploading service port DB:', error);
+        messageDiv.textContent = 'Upload failed: ' + error.message;
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.border = '1px solid #f5c6cb';
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload Database';
+    }
+}
+
+function initServicePortDbControls() {
+    // Upload button
+    const uploadBtn = document.getElementById('uploadServicePortDbBtn');
+    if (uploadBtn && !uploadBtn.hasAttribute('data-listener')) {
+        uploadBtn.addEventListener('click', uploadServicePortDb);
+        uploadBtn.setAttribute('data-listener', 'true');
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshServicePortDbInfoBtn');
+    if (refreshBtn && !refreshBtn.hasAttribute('data-listener')) {
+        refreshBtn.addEventListener('click', loadServicePortDbInfo);
+        refreshBtn.setAttribute('data-listener', 'true');
+    }
+
+    // Load initial info
+    loadServicePortDbInfo();
+}
+
+// ============================================================================
+// Password Change Functions
+// ============================================================================
+
+/**
+ * Check if password change is required (from URL parameter)
+ * If yes, automatically open Settings page and Security tab with warning
+ */
+function checkPasswordChangeRequired() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mustChangePassword = urlParams.get('must_change_password');
+
+    if (mustChangePassword === 'true') {
+        // Show password change warning
+        const warningDiv = document.getElementById('passwordChangeWarning');
+        if (warningDiv) {
+            warningDiv.style.display = 'block';
+        }
+
+        // Switch to Settings page
+        showPage('settings');
+
+        // Switch to Security tab
+        const securityTab = document.querySelector('.settings-tab[data-tab="security"]');
+        if (securityTab) {
+            securityTab.click();
+        }
+
+        // Clear URL parameter
+        window.history.replaceState({}, document.title, '/');
+    }
+}
+
+/**
+ * Initialize password change functionality
+ */
+function initPasswordChange() {
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    if (changePasswordBtn && !changePasswordBtn.hasAttribute('data-listener')) {
+        changePasswordBtn.addEventListener('click', handlePasswordChange);
+        changePasswordBtn.setAttribute('data-listener', 'true');
+    }
+}
+
+/**
+ * Handle password change form submission
+ */
+async function handlePasswordChange() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const messageDiv = document.getElementById('passwordChangeMessage');
+    const changeBtn = document.getElementById('changePasswordBtn');
+
+    // Clear previous message
+    messageDiv.style.display = 'none';
+    messageDiv.textContent = '';
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showPasswordMessage('All fields are required', 'error');
+        return;
+    }
+
+    if (newPassword.length < 8) {
+        showPasswordMessage('New password must be at least 8 characters', 'error');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showPasswordMessage('New passwords do not match', 'error');
+        return;
+    }
+
+    // Disable button during request
+    changeBtn.disabled = true;
+    changeBtn.textContent = 'Changing Password...';
+
+    try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        const response = await fetch('/api/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                old_password: currentPassword,
+                new_password: newPassword
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            showPasswordMessage(data.message || 'Password changed successfully!', 'success');
+
+            // Clear form fields
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+
+            // Hide warning if shown
+            const warningDiv = document.getElementById('passwordChangeWarning');
+            if (warningDiv) {
+                warningDiv.style.display = 'none';
+            }
+        } else {
+            showPasswordMessage(data.message || 'Failed to change password', 'error');
+        }
+    } catch (error) {
+        console.error('Error changing password:', error);
+        showPasswordMessage('Error changing password: ' + error.message, 'error');
+    } finally {
+        // Re-enable button
+        changeBtn.disabled = false;
+        changeBtn.textContent = 'Change Password';
+    }
+}
+
+/**
+ * Show password change message
+ * @param {string} message - Message to display
+ * @param {string} type - 'success' or 'error'
+ */
+function showPasswordMessage(message, type) {
+    const messageDiv = document.getElementById('passwordChangeMessage');
+
+    messageDiv.textContent = message;
+    messageDiv.style.display = 'block';
+
+    if (type === 'success') {
+        messageDiv.style.background = '#d4edda';
+        messageDiv.style.color = '#155724';
+        messageDiv.style.border = '1px solid #c3e6cb';
+    } else {
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.border = '1px solid #f5c6cb';
+    }
+
+    // Auto-hide success messages after 5 seconds
+    if (type === 'success') {
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
+    }
 }
 
 // Start when DOM is ready
