@@ -18,6 +18,7 @@ def generate_key():
     """
     Generate a new encryption key and save it to file.
     This should only be called once during initial setup.
+    Sets file permissions to 600 (owner read/write only) for security.
 
     Returns:
         bytes: The generated encryption key
@@ -27,22 +28,55 @@ def generate_key():
     try:
         with open(KEY_FILE, 'wb') as key_file:
             key_file.write(key)
+
+        # Set file permissions to 600 (owner read/write only)
+        os.chmod(KEY_FILE, 0o600)
     except Exception as e:
         raise Exception(f"Failed to save encryption key: {e}")
 
     return key
 
 
+def check_key_permissions():
+    """
+    Check and fix encryption key file permissions.
+    Ensures the key file has 600 permissions (owner read/write only).
+
+    Returns:
+        bool: True if permissions are correct or were fixed, False on error
+    """
+    if not os.path.exists(KEY_FILE):
+        return True  # File doesn't exist yet, will be created with correct permissions
+
+    try:
+        # Get current permissions
+        current_permissions = os.stat(KEY_FILE).st_mode & 0o777
+
+        # Check if permissions are too permissive (not 600)
+        if current_permissions != 0o600:
+            # Fix permissions
+            os.chmod(KEY_FILE, 0o600)
+            return True
+
+        return True
+    except Exception:
+        return False
+
+
 def load_key():
     """
     Load the encryption key from file.
     If the key file doesn't exist, generate a new one.
+    Verifies/fixes file permissions on load.
 
     Returns:
         bytes: The encryption key
     """
     if not os.path.exists(KEY_FILE):
         return generate_key()
+
+    # Check and fix permissions if needed
+    check_key_permissions()
 
     try:
         with open(KEY_FILE, 'rb') as key_file:
@@ -71,7 +105,10 @@ def encrypt_string(plaintext):
         plaintext (str): The string to encrypt
 
     Returns:
-        str: Base64-encoded encrypted string, or empty string on error
+        str: Base64-encoded encrypted string
+
+    Raises:
+        Exception: If encryption fails
     """
     if not plaintext:
         return ""
@@ -81,20 +118,29 @@ def encrypt_string(plaintext):
         encrypted_bytes = cipher.encrypt(plaintext.encode('utf-8'))
         encrypted_string = base64.b64encode(encrypted_bytes).decode('utf-8')
         return encrypted_string
-    except Exception:
-        return ""
+    except Exception as e:
+        # Log the error (import logger only when needed to avoid circular deps)
+        try:
+            from logger import error
+            error(f"Failed to encrypt string: {str(e)}")
+        except:
+            pass
+        raise Exception(f"Encryption failed: {str(e)}")
 
 
 def decrypt_string(encrypted_text):
     """
     Decrypt an encrypted string value.
-    If decryption fails or the value isn't encrypted, returns the original value.
+    If decryption fails, logs the error and raises an exception.
 
     Args:
         encrypted_text (str): Base64-encoded encrypted string
 
     Returns:
-        str: Decrypted plaintext string, or original value if not encrypted
+        str: Decrypted plaintext string
+
+    Raises:
+        Exception: If decryption fails
     """
     if not encrypted_text:
         return ""
@@ -105,9 +151,14 @@ def decrypt_string(encrypted_text):
         decrypted_bytes = cipher.decrypt(encrypted_bytes)
         decrypted_string = decrypted_bytes.decode('utf-8')
         return decrypted_string
-    except Exception:
-        # If decryption fails, return the original value (might be plaintext)
-        return encrypted_text
+    except Exception as e:
+        # Log the error (import logger only when needed to avoid circular deps)
+        try:
+            from logger import error
+            error(f"Failed to decrypt string: {str(e)}")
+        except:
+            pass
+        raise Exception(f"Decryption failed: {str(e)}")
 
 
 def encrypt_dict(data_dict):

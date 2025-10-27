@@ -1,12 +1,13 @@
 """
 Flask route handlers for the Palo Alto Firewall Dashboard
 """
-from flask import render_template, jsonify, request, send_from_directory
+from flask import render_template, jsonify, request, send_from_directory, session
 from datetime import datetime
 import os
 import json
 from config import load_settings, save_settings, save_vendor_database, get_vendor_db_info
 from device_manager import device_manager
+from auth import login_required, verify_password, create_session, destroy_session, change_password, must_change_password
 from firewall_api import (
     get_throughput_data,
     get_system_logs,
@@ -23,20 +24,133 @@ from firewall_api import (
 from logger import debug, info, error
 from utils import reverse_dns_lookup
 
-def register_routes(app):
-    """Register all Flask routes"""
+def register_routes(app, csrf, limiter):
+    """Register all Flask routes with authentication, CSRF protection, and rate limiting"""
+
+    # ============================================================================
+    # Authentication Routes (no @login_required)
+    # ============================================================================
+
+    @app.route('/login')
+    @csrf.exempt  # Exempt login page from CSRF (form has its own token)
+    def login_page():
+        """Serve the login page"""
+        return render_template('login.html')
+
+    @app.route('/api/login', methods=['POST'])
+    @csrf.exempt  # Exempt login API from CSRF (not yet authenticated)
+    @limiter.limit("5 per minute")  # Strict rate limit on login attempts
+    def login():
+        """Handle login authentication"""
+        try:
+            data = request.get_json()
+            username = data.get('username', '').strip()
+            password = data.get('password', '')
+
+            if not username or not password:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Username and password are required'
+                }), 400
+
+            if verify_password(username, password):
+                create_session(username)
+
+                # Check if password must be changed
+                if must_change_password():
+                    return jsonify({
+                        'status': 'success',
+                        'message': 'Login successful - password change required',
+                        'must_change_password': True
+                    })
+
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Login successful'
+                })
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid username or password'
+                }), 401
+        except Exception as e:
+            error(f"Login error: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Login failed'
+            }), 500
+
+    @app.route('/api/logout', methods=['POST'])
+    @login_required
+    def logout():
+        """Handle logout"""
+        destroy_session()
+        return jsonify({
+            'status': 'success',
+            'message': 'Logged out successfully'
+        })
+
+    @app.route('/api/change-password', methods=['POST'])
+    @login_required
+    @limiter.limit("3 per hour")
+    def change_password_route():
+        """Handle password change"""
+        try:
+            data = request.get_json()
+            old_password = data.get('old_password', '')
+            new_password = data.get('new_password', '')
+
+            if not old_password or not new_password:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Old and new passwords are required'
+                }), 400
+
+            if len(new_password) < 8:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'New password must be at least 8 characters'
+                }), 400
+
+            username = session.get('username')
+            success, message = change_password(username, old_password, new_password)
+
+            if success:
+                return jsonify({
+                    'status': 'success',
+                    'message': message
+                })
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': message
+                }), 400
+        except Exception as e:
+            error(f"Password change error: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to change password'
+            }), 500
+
+    # ============================================================================
+    # Protected Routes (require authentication)
+    # ============================================================================
+
     @app.route('/')
+    @login_required
     def index():
         """Serve the main dashboard"""
         return render_template('index.html')
 
     @app.route('/images/<path:filename>')
+    @login_required
     def serve_images(filename):
         """Serve image files"""
         images_dir = os.path.join(os.path.dirname(__file__), 'images')
         return send_from_directory(images_dir, filename)
 
     @app.route('/api/throughput')
+    @login_required
     def throughput():
         """API endpoint for real-time throughput data"""
         debug("=== Throughput API endpoint called ===")
@@ -46,11 +160,13 @@ def register_routes(app):
         return jsonify(data)
 
     @app.route('/api/health')
+    @login_required
     def health():
         """Health check endpoint"""
         return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
     @app.route('/api/system-logs')
+    @login_required
     def system_logs_api():
         """API endpoint for system logs"""
         debug("=== System Logs API endpoint called ===")
@@ -73,6 +189,7 @@ def register_routes(app):
             })
 
     @app.route('/api/traffic-logs')
+    @login_required
     def traffic_logs_api():
         """API endpoint for traffic logs"""
         debug("=== Traffic Logs API endpoint called ===")
@@ -96,6 +213,7 @@ def register_routes(app):
             })
 
     @app.route('/api/policies')
+    @login_required
     def policies():
         """API endpoint for policy hit counts"""
         debug("=== Policies API endpoint called ===")
@@ -106,6 +224,7 @@ def register_routes(app):
         return jsonify(data)
 
     @app.route('/api/software-updates')
+    @login_required
     def software_updates():
         """API endpoint for software update information"""
         debug("=== Software Updates API endpoint called ===")
@@ -116,6 +235,7 @@ def register_routes(app):
         return jsonify(data)
 
     @app.route('/api/license')
+    @login_required
     def license_info():
         """API endpoint for license information"""
         firewall_config = get_firewall_config()
@@ -123,6 +243,7 @@ def register_routes(app):
         return jsonify(data)
 
     @app.route('/api/connected-devices')
+    @login_required
     def connected_devices_api():
         """API endpoint for connected devices (ARP entries)"""
         debug("=== Connected Devices API endpoint called ===")
@@ -146,6 +267,7 @@ def register_routes(app):
             })
 
     @app.route('/api/applications')
+    @login_required
     def applications_api():
         """API endpoint for application statistics"""
         debug("=== Applications API endpoint called ===")
@@ -180,6 +302,7 @@ def register_routes(app):
             })
 
     @app.route('/api/settings', methods=['GET', 'POST'])
+    @login_required
     def settings():
         """API endpoint for settings"""
         if request.method == 'GET':
@@ -249,6 +372,7 @@ def register_routes(app):
     # ============================================================================
 
     @app.route('/api/devices', methods=['GET'])
+    @login_required
     def get_devices():
         """Get all devices with encrypted API keys"""
         try:
@@ -288,6 +412,8 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/devices', methods=['POST'])
+    @login_required
+    @limiter.limit("20 per hour")
     def create_device():
         """Add a new device"""
         try:
@@ -319,6 +445,7 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/devices/<device_id>', methods=['GET'])
+    @login_required
     def get_device(device_id):
         """Get a specific device with encrypted API key"""
         try:
@@ -342,6 +469,8 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/devices/<device_id>', methods=['PUT'])
+    @login_required
+    @limiter.limit("20 per hour")
     def update_device(device_id):
         """Update a device"""
         try:
@@ -371,6 +500,8 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/devices/<device_id>', methods=['DELETE'])
+    @login_required
+    @limiter.limit("20 per hour")
     def delete_device(device_id):
         """Delete a device"""
         try:
@@ -392,6 +523,7 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/devices/<device_id>/test', methods=['POST'])
+    @login_required
     def test_device_connection(device_id):
         """Test connection to a device"""
         try:
@@ -414,6 +546,7 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/devices/test-connection', methods=['POST'])
+    @login_required
     def test_new_device_connection():
         """Test connection to a device (before saving)"""
         try:
@@ -439,6 +572,7 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/vendor-db/info', methods=['GET'])
+    @login_required
     def vendor_db_info():
         """API endpoint to get vendor database information"""
         debug("=== Vendor DB info endpoint called ===")
@@ -456,6 +590,8 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/vendor-db/upload', methods=['POST'])
+    @login_required
+    @limiter.limit("5 per hour")
     def vendor_db_upload():
         """API endpoint to upload vendor database"""
         debug("=== Vendor DB upload endpoint called ===")
@@ -531,6 +667,7 @@ def register_routes(app):
             }), 500
 
     @app.route('/api/reverse-dns', methods=['POST'])
+    @login_required
     def reverse_dns_api():
         """
         Perform reverse DNS lookups on a list of IP addresses.

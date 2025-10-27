@@ -7,15 +7,17 @@ import json
 # Only API keys in devices.json are encrypted
 
 # Palo Alto Firewall Configuration (moved to settings)
-# These are fallback defaults only
-DEFAULT_FIREWALL_IP = "192.168.10.253"
-DEFAULT_API_KEY = "LUFRPT1pZm4vZXZ6M21zTjUzSjZrR1NLNmFXVWI1QkE9SytjaEZHa2NEM0pCRDNSSTVyNHlMVFFFTmRrakFrL1dFamE5SGU1Z2EvRE8wbVBlWHM4SmxIQnl0TnltMTFHNQ=="
+# These are fallback defaults only - users must configure devices via UI
+DEFAULT_FIREWALL_IP = ""
+DEFAULT_API_KEY = ""
 
 # File paths
 DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), 'debug.log')
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
 DEVICES_FILE = os.path.join(os.path.dirname(__file__), 'devices.json')
 VENDOR_DB_FILE = os.path.join(os.path.dirname(__file__), 'mac_vendor_db.json')
+AUTH_FILE = os.path.join(os.path.dirname(__file__), 'auth.json')
+SECURITY_LOG_FILE = os.path.join(os.path.dirname(__file__), 'security.log')
 
 # Default settings
 DEFAULT_SETTINGS = {

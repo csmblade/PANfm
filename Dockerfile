@@ -27,6 +27,7 @@ EXPOSE 3000
 # Set environment variables
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
+ENV FLASK_DEBUG=False
 
 # Run the application
 CMD ["python", "app.py"]

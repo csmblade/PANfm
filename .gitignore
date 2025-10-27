@@ -46,8 +46,11 @@ Thumbs.db
 # Application-specific - sensitive data
 devices.json
 settings.json
+auth.json
 debug.log
 debug.log.*
+security.log
+security.log.*
 *.xml
 encryption.key
 

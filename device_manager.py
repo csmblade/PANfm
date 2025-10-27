@@ -54,9 +54,10 @@ class DeviceManager:
                                 device_copy['api_key'] = decrypted_key
                                 debug(f"Successfully decrypted API key for device {device_copy.get('name', 'unknown')}")
                             except Exception as decrypt_err:
-                                # Decryption failed - log the error
-                                warning(f"Failed to decrypt API key for device {device_copy.get('name', 'unknown')}: {str(decrypt_err)}")
-                                # Leave encrypted key as-is (will fail API calls)
+                                # Decryption failed - log the error and set empty key
+                                error(f"Failed to decrypt API key for device {device_copy.get('name', 'unknown')}: {str(decrypt_err)}")
+                                device_copy['api_key'] = ""  # Set to empty to prevent using corrupted key
+                                warning(f"Device {device_copy.get('name', 'unknown')} API key could not be decrypted - authentication will fail")
                         decrypted_devices.append(device_copy)
                     debug("Decrypted api_key for %d device records", len(decrypted_devices))
                     return decrypted_devices
@@ -84,9 +85,11 @@ class DeviceManager:
                 if 'api_key' in device_copy and device_copy['api_key']:
                     try:
                         device_copy['api_key'] = encrypt_string(device_copy['api_key'])
-                    except:
-                        # Already encrypted or invalid, leave as-is
-                        pass
+                        debug(f"Successfully encrypted API key for device {device_copy.get('name', 'unknown')}")
+                    except Exception as encrypt_err:
+                        # Encryption failed - log the error
+                        error(f"Failed to encrypt API key for device {device_copy.get('name', 'unknown')}: {str(encrypt_err)}")
+                        raise Exception(f"Cannot save device {device_copy.get('name', 'unknown')}: encryption failed")
                 encrypted_devices.append(device_copy)
 
             data['devices'] = encrypted_devices

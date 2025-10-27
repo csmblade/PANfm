@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANfm - Login</title>
+    <!-- Google Fonts: Roboto and Open Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-primary: 'Roboto', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            --font-secondary: 'Open Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-secondary);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: #2d2d2d;
+            border: 2px solid #FA582D;
+            border-radius: 10px;
+            padding: 40px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-family: var(--font-primary);
+            font-size: 48px;
+            font-weight: 900;
+            margin: 0;
+        }
+
+        .logo .pan {
+            color: #FA582D;
+        }
+
+        .logo .fm {
+            color: #000;
+            text-shadow:
+                -1px -1px 0 #FA582D,
+                1px -1px 0 #FA582D,
+                -1px 1px 0 #FA582D,
+                1px 1px 0 #FA582D;
+        }
+
+        .logo .tagline {
+            font-family: var(--font-secondary);
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-family: var(--font-primary);
+            display: block;
+            color: #ddd;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            font-family: var(--font-secondary);
+            width: 100%;
+            padding: 12px 15px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #FA582D;
+        }
+
+        .btn {
+            font-family: var(--font-primary);
+            width: 100%;
+            padding: 12px 15px;
+            background: #FA582D;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #e64a1f;
+        }
+
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            font-family: var(--font-secondary);
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff0000;
+            color: #ff6666;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .info-message {
+            font-family: var(--font-secondary);
+            background: rgba(250, 88, 45, 0.2);
+            border: 1px solid #FA582D;
+            color: #ffaa88;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .footer {
+            font-family: var(--font-secondary);
+            text-align: center;
+            margin-top: 30px;
+            color: #888;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1><span class="pan">PAN</span><span class="fm">fm</span></h1>
+            <div class="tagline">Palo Alto Network Firewall Monitor</div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="info-message" id="defaultInfo" style="display: none;">
+            <strong>Default Login:</strong><br>
+            Username: admin<br>
+            Password: admin<br>
+            <em>You will be required to change the password after first login.</em>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn" id="loginBtn">Login</button>
+        </form>
+
+        <div class="footer">
+            PANfm v2.2 &copy; 2025
+        </div>
+    </div>
+
+    <script>
+        // Show default credentials info if first time
+        const showDefaultInfo = localStorage.getItem('panfm_first_visit') !== 'false';
+        if (showDefaultInfo) {
+            document.getElementById('defaultInfo').style.display = 'block';
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const loginBtn = document.getElementById('loginBtn');
+
+            // Clear error
+            errorMessage.classList.remove('show');
+            errorMessage.textContent = '';
+
+            // Disable button
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // Mark as not first visit
+                    localStorage.setItem('panfm_first_visit', 'false');
+
+                    // Redirect to dashboard
+                    window.location.href = '/';
+                } else {
+                    // Show error
+                    errorMessage.textContent = data.message || 'Login failed';
+                    errorMessage.classList.add('show');
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Connection error. Please try again.';
+                errorMessage.classList.add('show');
+            } finally {
+                // Re-enable button
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        }
+    </script>
+</body>
+</html>

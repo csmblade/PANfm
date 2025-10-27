@@ -17,7 +17,7 @@ services:
       - ./encryption.key:/app/encryption.key
     environment:
       - FLASK_ENV=development
-      - FLASK_DEBUG=1
+      - FLASK_DEBUG=True
     restart: unless-stopped
     # Override CMD for development with auto-reload
     command: python app.py
