@@ -681,6 +681,37 @@ def get_connected_devices(firewall_config):
 
             debug(f"Total devices found: {len(devices)}")
             debug(f"Sample device entries (first 3): {devices[:3]}")
+
+            # Perform reverse DNS lookups for ALL devices without hostnames
+            # This includes both:
+            # 1. Routed devices (no MAC address) - typically 1+ hops away
+            # 2. Local devices with static IPs (have MAC but no DHCP hostname)
+            devices_without_hostname = [d for d in devices if d['hostname'] == '-' and d['ip'] != '-']
+
+            if devices_without_hostname:
+                debug(f"Found {len(devices_without_hostname)} devices without hostnames, performing reverse DNS lookup")
+                from utils import reverse_dns_lookup
+
+                # Extract IPs for lookup
+                ips_to_lookup = [d['ip'] for d in devices_without_hostname]
+                debug(f"Looking up hostnames for IPs: {ips_to_lookup[:5]}{'...' if len(ips_to_lookup) > 5 else ''}")
+
+                # Perform DNS lookups
+                dns_results = reverse_dns_lookup(ips_to_lookup, timeout=3)
+
+                # Update devices with DNS results (only if different from IP)
+                updated_count = 0
+                for device in devices_without_hostname:
+                    ip = device['ip']
+                    if ip in dns_results and dns_results[ip] != ip:
+                        device['hostname'] = dns_results[ip]
+                        updated_count += 1
+                        mac_info = f" (MAC: {device['mac'][:17]})" if device['mac'] != '-' else " (routed)"
+                        debug(f"✓ DNS resolved: {ip} → {dns_results[ip]}{mac_info}")
+                    else:
+                        debug(f"✗ No PTR record: {ip}")
+
+                info(f"Reverse DNS lookup completed: {updated_count}/{len(devices_without_hostname)} hostnames resolved")
         else:
             error(f"Failed to fetch ARP entries. Status code: {response.status_code}")
             debug(f"Error response: {response.text[:500]}")
