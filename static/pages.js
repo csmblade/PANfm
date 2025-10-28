@@ -167,6 +167,11 @@ async function loadSoftwareUpdates() {
         errorDiv.textContent = 'Failed to load software updates: ' + error.message;
         errorDiv.style.display = 'block';
     }
+
+    // Initialize content updates UI when Components tab is loaded
+    if (typeof initContentUpdates === 'function') {
+        initContentUpdates();
+    }
 }
 
 /**

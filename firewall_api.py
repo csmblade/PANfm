@@ -43,6 +43,11 @@ from firewall_api_upgrades import (
     check_job_status,
     reboot_firewall
 )
+from firewall_api_content import (
+    check_content_updates,
+    download_content_update,
+    install_content_update
+)
 
 # Store previous values for throughput calculation
 # Store per-device statistics for rate calculation

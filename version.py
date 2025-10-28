@@ -9,17 +9,17 @@ PATCH: Bug fixes, small improvements, documentation updates
 
 # Current version
 VERSION_MAJOR = 1
-VERSION_MINOR = 4
+VERSION_MINOR = 5
 VERSION_PATCH = 0
 
 # Build metadata (optional)
-VERSION_BUILD = "20251028"  # YYYYMMDD format
+VERSION_BUILD = "20251029"  # YYYYMMDD format
 
 # Pre-release identifier (optional, e.g., 'alpha', 'beta', 'rc1')
 VERSION_PRERELEASE = None
 
 # Codename for this version (optional)
-VERSION_CODENAME = "Performance Optimized"
+VERSION_CODENAME = "Content Management"
 
 
 def get_version():
@@ -75,6 +75,27 @@ def get_short_version():
 
 # Version history and changelog
 VERSION_HISTORY = [
+    {
+        'version': '1.5.0',
+        'codename': 'Content Management',
+        'date': '2025-10-29',
+        'type': 'minor',
+        'changes': [
+            'NEW: Content update system for App & Threat, Antivirus, WildFire',
+            'Combined download & install workflow with job polling',
+            'Check for Updates button in Components tab (Device Info)',
+            'Same modal design as PAN-OS upgrades for consistency',
+            'No reboot required for content updates',
+            'New backend module: firewall_api_content.py (211 lines)',
+            'New frontend module: pages-content-updates.js (374 lines)',
+            '3 new API endpoints: /api/content-updates/check, download, install',
+            'Reuses existing job polling infrastructure (/api/panos-upgrade/job-status)',
+            'Per .clinerules: New modules maintain file size limits',
+            'All functions include debug logging',
+            'CSRF tokens on all POST requests',
+            'Rate limiting: check 20/hr, download/install 50/hr'
+        ]
+    },
     {
         'version': '1.4.0',
         'codename': 'Performance Optimized',

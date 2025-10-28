@@ -1261,7 +1261,23 @@
 
                     <!-- Components Sub-tab Content -->
                     <div id="components-sub-tab" class="software-sub-tab-content" style="display: none;">
-                        <div id="componentsTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                        <!-- Content Update Management Section -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h3 style="color: #333; font-family: var(--font-primary); margin: 0 0 10px 0;">Content Updates</h3>
+                            <p style="color: #666; font-family: var(--font-secondary); margin: 0 0 15px 0; font-size: 0.95em;">
+                                Manage content updates for Applications & Threats, Antivirus, and WildFire. No reboot required.
+                            </p>
+                            <button id="checkContentUpdatesBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-primary); box-shadow: 0 2px 4px rgba(250, 88, 45, 0.3); transition: all 0.3s;">
+                                Check for Updates
+                            </button>
+                            <div id="contentUpdateInfo" style="display: none;"></div>
+                        </div>
+
+                        <!-- Current Components Table -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h3 style="color: #333; font-family: var(--font-primary); margin: 0 0 15px 0;">Current Software Components</h3>
+                            <div id="componentsTable"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -1946,6 +1962,7 @@
     <script src="/static/pages-connected-devices.js"></script>
     <script src="/static/pages-applications.js"></script>
     <script src="/static/pages-panos-upgrade.js"></script>
+    <script src="/static/pages-content-updates.js"></script>
     <script src="/static/settings.js"></script>
     <script src="/static/devices.js"></script>
     <script src="/static/app.js"></script>

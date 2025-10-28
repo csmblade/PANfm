@@ -29,7 +29,10 @@ from firewall_api import (
     install_panos_version,
     check_job_status,
     reboot_firewall,
-    check_firewall_health
+    check_firewall_health,
+    check_content_updates,
+    download_content_update,
+    install_content_update
 )
 from logger import debug, info, error
 from utils import reverse_dns_lookup
@@ -1138,4 +1141,67 @@ def register_routes(app, csrf, limiter):
 
         except Exception as e:
             error(f"Error rebooting firewall: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    # ============================================================================
+    # Content Update API Routes (App & Threat, Antivirus, WildFire)
+    # ============================================================================
+
+    @app.route('/api/content-updates/check', methods=['GET'])
+    @limiter.limit("20 per hour")
+    @login_required
+    def check_content_updates_api():
+        """Check for available content updates (App & Threat, AV, WildFire)"""
+        debug("=== Content Updates Check API endpoint called ===")
+        try:
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            result = check_content_updates(firewall_ip, api_key)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error in content updates check: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+    @app.route('/api/content-updates/download', methods=['POST'])
+    @limiter.limit("50 per hour")
+    @login_required
+    def download_content_api():
+        """Download latest content update"""
+        debug("=== Content Update Download API endpoint called ===")
+        try:
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            result = download_content_update(firewall_ip, api_key)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error in content download: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+    @app.route('/api/content-updates/install', methods=['POST'])
+    @limiter.limit("50 per hour")
+    @login_required
+    def install_content_api():
+        """Install downloaded content update"""
+        debug("=== Content Update Install API endpoint called ===")
+        try:
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            data = request.get_json() or {}
+            version = data.get('version', 'latest')
+
+            result = install_content_update(firewall_ip, api_key, version)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error in content install: {str(e)}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
