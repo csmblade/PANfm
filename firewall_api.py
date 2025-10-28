@@ -31,7 +31,9 @@ from firewall_api_devices import (
     get_connected_devices,
     generate_tech_support_file,
     check_tech_support_job_status,
-    get_tech_support_file_url
+    get_tech_support_file_url,
+    get_interface_info,
+    format_interface_speed
 )
 
 # Store previous values for throughput calculation
@@ -338,11 +340,11 @@ def get_wan_interface_ip(wan_interface):
                     ip_address = ip_elem.text.split('/')[0] if '/' in ip_elem.text else ip_elem.text
                     debug(f"Found WAN interface {wan_interface} static IP: {ip_address}")
 
-            # Extract interface speed
+            # Extract interface speed and format it
             speed_elem = root.find('.//speed')
-            if speed_elem is not None and speed_elem.text:
-                speed = speed_elem.text
-                debug(f"Found WAN interface {wan_interface} speed: {speed}")
+            speed_raw = speed_elem.text if speed_elem is not None and speed_elem.text else None
+            speed = format_interface_speed(speed_raw)
+            debug(f"Found WAN interface {wan_interface} speed: {speed}")
 
             if ip_address:
                 return {'ip': ip_address, 'speed': speed}
@@ -430,6 +432,84 @@ def get_interface_stats():
     except Exception as e:
         debug(f"Interface stats error: {str(e)}")
         return {'interfaces': [], 'total_errors': 0, 'total_drops': 0}
+
+
+def get_interface_traffic_counters():
+    """
+    Fetch per-interface traffic counters (bytes in/out) from Palo Alto firewall
+
+    Returns:
+        dict: Interface name mapped to traffic stats
+        Example: {'ethernet1/1': {'ibytes': 12345, 'obytes': 67890}, ...}
+    """
+    debug("get_interface_traffic_counters called")
+    try:
+        _, api_key, base_url = get_firewall_config()
+
+        # Check if no device is configured
+        if not api_key or not base_url:
+            debug("No device configured - returning empty traffic counters")
+            return {}
+
+        # Get interface counters
+        cmd = "<show><counter><interface>all</interface></counter></show>"
+        params = {
+            'type': 'op',
+            'cmd': cmd,
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+        debug(f"Interface traffic counters API Status: {response.status_code}")
+
+        interface_counters = {}
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+
+            # Parse hardware entries for byte counters (physical interfaces)
+            for hw_entry in root.findall('.//hw/entry'):
+                name_elem = hw_entry.find('name')
+                ibytes_elem = hw_entry.find('ibytes')
+                obytes_elem = hw_entry.find('obytes')
+
+                if name_elem is not None and name_elem.text:
+                    interface_name = name_elem.text
+                    ibytes = int(ibytes_elem.text) if ibytes_elem is not None and ibytes_elem.text else 0
+                    obytes = int(obytes_elem.text) if obytes_elem is not None and obytes_elem.text else 0
+
+                    interface_counters[interface_name] = {
+                        'ibytes': ibytes,
+                        'obytes': obytes,
+                        'total_bytes': ibytes + obytes
+                    }
+
+            # Parse ifnet entries for subinterfaces (logical interfaces like ethernet1/1.100)
+            for ifnet_entry in root.findall('.//ifnet/entry'):
+                name_elem = ifnet_entry.find('name')
+                ibytes_elem = ifnet_entry.find('ibytes')
+                obytes_elem = ifnet_entry.find('obytes')
+
+                if name_elem is not None and name_elem.text:
+                    interface_name = name_elem.text
+                    # Only process if this is a subinterface (contains a dot) or not already in counters
+                    if '.' in interface_name or interface_name not in interface_counters:
+                        ibytes = int(ibytes_elem.text) if ibytes_elem is not None and ibytes_elem.text else 0
+                        obytes = int(obytes_elem.text) if obytes_elem is not None and obytes_elem.text else 0
+
+                        interface_counters[interface_name] = {
+                            'ibytes': ibytes,
+                            'obytes': obytes,
+                            'total_bytes': ibytes + obytes
+                        }
+
+            debug(f"Found traffic counters for {len(interface_counters)} interfaces (including subinterfaces)")
+
+        return interface_counters
+
+    except Exception as e:
+        debug(f"Interface traffic counters error: {str(e)}")
+        return {}
 
 
 def get_session_count():
@@ -797,5 +877,6 @@ __all__ = [
     'get_connected_devices',
     'generate_tech_support_file',
     'check_tech_support_job_status',
-    'get_tech_support_file_url'
+    'get_tech_support_file_url',
+    'get_interface_info'
 ]

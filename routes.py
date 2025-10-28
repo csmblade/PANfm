@@ -21,7 +21,9 @@ from firewall_api import (
     get_application_statistics,
     generate_tech_support_file,
     check_tech_support_job_status,
-    get_tech_support_file_url
+    get_tech_support_file_url,
+    get_interface_info,
+    get_interface_traffic_counters
 )
 from logger import debug, info, error
 from utils import reverse_dns_lookup
@@ -91,6 +93,17 @@ def register_routes(app, csrf, limiter):
         return jsonify({
             'status': 'success',
             'message': 'Logged out successfully'
+        })
+
+    @app.route('/api/session-keepalive', methods=['GET'])
+    @login_required
+    def session_keepalive():
+        """Session keepalive endpoint for Tony Mode - refreshes session expiry"""
+        # Simply accessing this endpoint with @login_required refreshes the session
+        # Flask automatically updates session.modified when accessed
+        return jsonify({
+            'status': 'success',
+            'message': 'Session refreshed'
         })
 
     @app.route('/api/change-password', methods=['POST'])
@@ -259,6 +272,24 @@ def register_routes(app, csrf, limiter):
         data = get_tech_support_file_url(firewall_config, job_id)
         return jsonify(data)
 
+    @app.route('/api/interfaces')
+    @login_required
+    def interfaces_info():
+        """API endpoint for interface information"""
+        debug("=== Interfaces API endpoint called ===")
+        firewall_config = get_firewall_config()
+        data = get_interface_info(firewall_config)
+        debug(f"Interfaces API returning {len(data.get('interfaces', []))} interfaces")
+        return jsonify(data)
+
+    @app.route('/api/interface-traffic')
+    @login_required
+    def interface_traffic():
+        """API endpoint for per-interface traffic counters"""
+        debug("=== Interface Traffic API endpoint called ===")
+        counters = get_interface_traffic_counters()
+        return jsonify({'status': 'success', 'counters': counters})
+
     @app.route('/api/license')
     @login_required
     def license_info():
@@ -365,13 +396,18 @@ def register_routes(app, csrf, limiter):
                 monitored_interface = new_settings.get('monitored_interface', 'ethernet1/12')
                 debug(f"monitored_interface to save: {monitored_interface}")
 
+                # Get Tony Mode setting (disable session timeout)
+                tony_mode = new_settings.get('tony_mode', False)
+                debug(f"tony_mode to save: {tony_mode}")
+
                 settings_data = {
                     'refresh_interval': refresh_interval,
                     'match_count': match_count,
                     'top_apps_count': top_apps_count,
                     'debug_logging': debug_logging,
                     'selected_device_id': selected_device_id,
-                    'monitored_interface': monitored_interface
+                    'monitored_interface': monitored_interface,
+                    'tony_mode': tony_mode
                 }
 
                 if save_settings(settings_data):

@@ -340,33 +340,33 @@ function renderApplicationsTable() {
 
     let html = `
         <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 3px solid #FA582D; overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; min-width: 1400px;">
+            <table style="width: 100%; border-collapse: collapse; font-family: var(--font-secondary); font-size: 0.9em; min-width: 1400px;">
                 <thead>
                     <tr style="border-bottom: 2px solid #FA582D;">
-                        <th onclick="sortApplications('name')" style="padding: 10px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                        <th onclick="sortApplications('name')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-family: var(--font-primary);">
                             Application${getSortIndicator('name')}
                         </th>
-                        <th onclick="sortApplications('category')" style="padding: 10px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                        <th onclick="sortApplications('category')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-family: var(--font-primary);">
                             Category${getSortIndicator('category')}
                         </th>
-                        <th onclick="sortApplications('bytes_sent')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                        <th onclick="sortApplications('bytes_sent')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-family: var(--font-primary);">
                             Bytes Sent${getSortIndicator('bytes_sent')}
                         </th>
-                        <th onclick="sortApplications('bytes_received')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                        <th onclick="sortApplications('bytes_received')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-family: var(--font-primary);">
                             Bytes Received${getSortIndicator('bytes_received')}
                         </th>
-                        <th onclick="sortApplications('bytes')" style="padding: 10px; text-align: right; color: #FA582D; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                        <th onclick="sortApplications('bytes')" style="padding: 12px; text-align: right; color: #FA582D; font-weight: 600; cursor: pointer; user-select: none; font-family: var(--font-primary);">
                             Total Volume${getSortIndicator('bytes')}
                         </th>
-                        <th onclick="sortApplications('source_count')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                        <th onclick="sortApplications('source_count')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-family: var(--font-primary);">
                             Sources${getSortIndicator('source_count')}
                         </th>
-                        <th onclick="sortApplications('dest_count')" style="padding: 10px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-size: 0.85em;">
+                        <th onclick="sortApplications('dest_count')" style="padding: 12px; text-align: right; color: #333; font-weight: 600; cursor: pointer; user-select: none; font-family: var(--font-primary);">
                             Destinations${getSortIndicator('dest_count')}
                         </th>
-                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600; font-size: 0.85em;">Protocols</th>
-                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600; font-size: 0.85em;">Top Ports</th>
-                        <th style="padding: 10px; text-align: left; color: #333; font-weight: 600; font-size: 0.85em;">VLANs</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600; font-family: var(--font-primary);">Protocols</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600; font-family: var(--font-primary);">Top Ports</th>
+                        <th style="padding: 12px; text-align: left; color: #333; font-weight: 600; font-family: var(--font-primary);">VLANs</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -394,20 +394,20 @@ function renderApplicationsTable() {
 
         html += `
             <tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                <td onclick="showAppDetails(${index})" style="padding: 10px; color: #FA582D; font-weight: 600; font-size: 0.9em; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#C64620'" onmouseout="this.style.color='#FA582D'">${app.name}</td>
-                <td onclick="showAppDestinations(${index})" style="padding: 10px; cursor: pointer;">
+                <td onclick="showAppDetails(${index})" style="padding: 12px; color: #FA582D; font-weight: 600; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#C64620'" onmouseout="this.style.color='#FA582D'">${app.name}</td>
+                <td onclick="showAppDestinations(${index})" style="padding: 12px; cursor: pointer;">
                     <span style="background: ${categoryColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; display: inline-block; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                         ${category}
                     </span>
                 </td>
-                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${bytesSent}</td>
-                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${bytesReceived}</td>
-                <td style="padding: 10px; color: #FA582D; text-align: right; font-weight: 600; font-size: 0.9em;">${totalVolume}</td>
-                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${app.source_count}</td>
-                <td style="padding: 10px; color: #666; text-align: right; font-size: 0.9em;">${app.dest_count}</td>
-                <td style="padding: 10px; color: #666; font-size: 0.85em;">${protocols}</td>
-                <td style="padding: 10px; color: #666; font-size: 0.85em; font-family: monospace;">${ports}</td>
-                <td style="padding: 10px; color: #666; font-size: 0.85em;">${vlans}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${bytesSent}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${bytesReceived}</td>
+                <td style="padding: 12px; color: #FA582D; text-align: right; font-weight: 600;">${totalVolume}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${app.source_count}</td>
+                <td style="padding: 12px; color: #666; text-align: right;">${app.dest_count}</td>
+                <td style="padding: 12px; color: #666;">${protocols}</td>
+                <td style="padding: 12px; color: #666; font-family: monospace;">${ports}</td>
+                <td style="padding: 12px; color: #666;">${vlans}</td>
             </tr>
         `;
     });

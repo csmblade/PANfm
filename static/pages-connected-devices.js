@@ -257,16 +257,16 @@ function renderConnectedDevicesTable() {
                 </div>
             </div>
             <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-family: var(--font-secondary); font-size: 0.85em;">
+                <table style="width: 100%; border-collapse: collapse; font-family: var(--font-secondary); font-size: 0.9em;">
                     <thead>
                         <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                            <th onclick="sortConnectedDevices('hostname')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Hostname${getSortIndicator('hostname')}</th>
-                            <th onclick="sortConnectedDevices('ip')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">IP Address${getSortIndicator('ip')}</th>
-                            <th onclick="sortConnectedDevices('mac')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">MAC Address${getSortIndicator('mac')}</th>
-                            <th onclick="sortConnectedDevices('vlan')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">VLAN${getSortIndicator('vlan')}</th>
-                            <th onclick="sortConnectedDevices('zone')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Security Zone${getSortIndicator('zone')}</th>
-                            <th onclick="sortConnectedDevices('interface')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Interface${getSortIndicator('interface')}</th>
-                            <th onclick="sortConnectedDevices('age')" style="padding: 10px 12px; text-align: left; font-weight: 600; color: #FA582D; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Age (minutes)${getSortIndicator('age')}</th>
+                            <th onclick="sortConnectedDevices('hostname')" style="padding: 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Hostname${getSortIndicator('hostname')}</th>
+                            <th onclick="sortConnectedDevices('ip')" style="padding: 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">IP Address${getSortIndicator('ip')}</th>
+                            <th onclick="sortConnectedDevices('mac')" style="padding: 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">MAC Address${getSortIndicator('mac')}</th>
+                            <th onclick="sortConnectedDevices('vlan')" style="padding: 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">VLAN${getSortIndicator('vlan')}</th>
+                            <th onclick="sortConnectedDevices('zone')" style="padding: 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Security Zone${getSortIndicator('zone')}</th>
+                            <th onclick="sortConnectedDevices('interface')" style="padding: 12px; text-align: left; font-weight: 600; color: #333; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Interface${getSortIndicator('interface')}</th>
+                            <th onclick="sortConnectedDevices('age')" style="padding: 12px; text-align: left; font-weight: 600; color: #FA582D; white-space: nowrap; font-family: var(--font-primary); cursor: pointer; user-select: none;">Age (minutes)${getSortIndicator('age')}</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -301,13 +301,13 @@ function renderConnectedDevicesTable() {
 
         html += `
             <tr style="${rowStyle} border-bottom: 1px solid #dee2e6;">
-                <td style="padding: 8px 12px; color: #333;">${device.hostname}</td>
-                <td style="padding: 8px 12px; color: #333; font-family: monospace;">${device.ip}</td>
-                <td style="padding: 8px 12px;">${macCell}</td>
-                <td style="padding: 8px 12px; color: #333;">${device.vlan}</td>
-                <td style="padding: 8px 12px; color: #333;">${device.zone || '-'}</td>
-                <td style="padding: 8px 12px; color: #333; font-family: monospace;">${device.interface}</td>
-                <td style="padding: 8px 12px; color: #333;">${device.ttl}</td>
+                <td style="padding: 12px; color: #666;">${device.hostname}</td>
+                <td style="padding: 12px; color: #666; font-family: monospace;">${device.ip}</td>
+                <td style="padding: 12px;">${macCell}</td>
+                <td style="padding: 12px; color: #666;">${device.vlan}</td>
+                <td style="padding: 12px; color: #666;">${device.zone || '-'}</td>
+                <td style="padding: 12px; color: #666; font-family: monospace;">${device.interface}</td>
+                <td style="padding: 12px; color: #666;">${device.ttl}</td>
             </tr>`;
     });
 

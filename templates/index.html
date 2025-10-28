@@ -1160,7 +1160,10 @@
 
                 <!-- Tab Navigation -->
                 <div style="display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid rgba(250, 88, 45, 0.3);">
-                    <button class="device-info-tab active" data-tab="software-updates" style="padding: 12px 24px; background: transparent; border: none; color: #FA582D; font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid #FA582D; transition: all 0.3s;">
+                    <button class="device-info-tab active" data-tab="interfaces" style="padding: 12px 24px; background: transparent; border: none; color: #FA582D; font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid #FA582D; transition: all 0.3s;">
+                        Interfaces
+                    </button>
+                    <button class="device-info-tab" data-tab="software-updates" style="padding: 12px 24px; background: transparent; border: none; color: rgba(255, 255, 255, 0.6); font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
                         Software Updates
                     </button>
                     <button class="device-info-tab" data-tab="tech-support" style="padding: 12px 24px; background: transparent; border: none; color: rgba(255, 255, 255, 0.6); font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
@@ -1168,8 +1171,56 @@
                     </button>
                 </div>
 
+                <!-- Interfaces Tab Content -->
+                <div id="interfaces-tab" class="device-info-tab-content" style="display: block;">
+                    <div class="error-message" id="interfacesErrorMessage"></div>
+
+                    <div id="interfacesLoading" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div class="spinner" style="margin: 0 auto 20px auto; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #FA582D; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="color: #666; font-size: 1.1em; font-family: var(--font-secondary);">Loading interface information...</p>
+                    </div>
+
+                    <div id="interfacesContent" style="display: none;">
+                        <!-- Summary Statistics -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                            <div style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(250, 88, 45, 0.3); color: white;">
+                                <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Total Interfaces</div>
+                                <div id="interfacesTotalCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">0</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #C64620 0%, #E85A31 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(198, 70, 32, 0.3); color: white;">
+                                <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Interfaces Up</div>
+                                <div id="interfacesUpCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">0</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #AD3D1A 0%, #D14925 100%); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(173, 61, 26, 0.3); color: white;">
+                                <div style="font-size: 0.8em; opacity: 0.9; margin-bottom: 5px; font-family: var(--font-secondary);">Interfaces Down</div>
+                                <div id="interfacesDownCount" style="font-size: 1.8em; font-weight: 700; font-family: var(--font-primary);">0</div>
+                            </div>
+                        </div>
+
+                        <!-- Interfaces Table -->
+                        <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 3px solid #FA582D;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <h3 style="color: #333; margin: 0; font-size: 1.2em; font-weight: 600; font-family: var(--font-primary);">Interface Details</h3>
+                                    <select id="interfaceStateFilter" onchange="applyInterfaceFilter()" style="padding: 8px 12px; border: 2px solid #FA582D; border-radius: 6px; font-size: 0.9em; font-family: var(--font-primary); color: #333; cursor: pointer; background: white;">
+                                        <option value="all">All Interfaces</option>
+                                        <option value="up" selected>Up Only</option>
+                                        <option value="down">Down Only</option>
+                                    </select>
+                                </div>
+                                <button onclick="loadInterfaces()" style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #C64620 100%); color: white; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; font-family: var(--font-primary); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    Refresh
+                                </button>
+                            </div>
+                            <div id="interfacesTable" style="overflow-x: auto;">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Software Updates Tab Content -->
-                <div id="software-updates-tab" class="device-info-tab-content" style="display: block;">
+                <div id="software-updates-tab" class="device-info-tab-content" style="display: none;">
                     <div class="error-message" id="softwareErrorMessage"></div>
 
                     <div id="softwareLoading" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -1444,6 +1495,14 @@
                                 <input type="number" id="refreshInterval" min="15" max="360" value="15"
                                        style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: border-color 0.3s;">
                                 <p style="color: #666; font-size: 0.9em; margin-top: 5px;">How often to update the dashboard data (15-360 seconds)</p>
+                            </div>
+
+                            <div style="margin-bottom: 30px;">
+                                <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="tonyMode" style="width: 20px; height: 20px; cursor: pointer; margin-right: 10px; accent-color: #FA582D;">
+                                    <span style="color: #333; font-weight: 600; font-size: 1.1em;">Tony Mode</span>
+                                </label>
+                                <p style="color: #666; font-size: 0.9em; margin-top: 5px; margin-left: 30px;">Disable session timeout (stay logged in indefinitely)</p>
                             </div>
 
                         </div>

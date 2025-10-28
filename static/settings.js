@@ -19,6 +19,10 @@ async function loadSettings() {
         if (data.status === 'success') {
             document.getElementById('refreshInterval').value = data.settings.refresh_interval;
             document.getElementById('debugLogging').checked = data.settings.debug_logging || false;
+            document.getElementById('tonyMode').checked = data.settings.tony_mode || false;
+
+            // Initialize Tony Mode session keepalive
+            initializeTonyMode(data.settings.tony_mode || false);
 
             // Monitored interface will be loaded from the selected device in updateDeviceSelector
         }
@@ -37,12 +41,14 @@ async function saveSettingsData() {
     try {
         const refreshInterval = parseInt(document.getElementById('refreshInterval').value);
         const debugLogging = document.getElementById('debugLogging').checked;
+        const tonyMode = document.getElementById('tonyMode').checked;
 
         // Get current settings to preserve selected_device_id and monitored_interface
         const currentSettings = await fetch('/api/settings').then(r => r.json());
         const settingsToSave = {
             refresh_interval: refreshInterval,
-            debug_logging: debugLogging
+            debug_logging: debugLogging,
+            tony_mode: tonyMode
         };
 
         // Preserve selected_device_id and monitored_interface from current settings
@@ -93,6 +99,9 @@ async function saveSettingsData() {
             } else {
                 debugAlert.style.display = 'none';
             }
+
+            // Update Tony Mode session keepalive
+            initializeTonyMode(tonyMode);
         } else {
             alert('Failed to save settings: ' + data.message);
         }
@@ -105,6 +114,7 @@ async function saveSettingsData() {
 function resetSettingsData() {
     document.getElementById('refreshInterval').value = 15;
     document.getElementById('debugLogging').checked = false;
+    document.getElementById('tonyMode').checked = false;
 }
 
 // Update monitored interface from dashboard
@@ -589,5 +599,36 @@ if (document.readyState === 'loading') {
     initSidebarResize();
     initPageNavigation();
     initDeviceSelector();
+}
+
+/**
+ * Initialize or update Tony Mode session keepalive
+ * @param {boolean} enabled - Whether Tony Mode is enabled
+ */
+function initializeTonyMode(enabled) {
+    // Clear any existing keepalive interval
+    if (window.sessionKeepaliveIntervalId) {
+        clearInterval(window.sessionKeepaliveIntervalId);
+        window.sessionKeepaliveIntervalId = null;
+        console.log('Tony Mode: Stopped session keepalive');
+    }
+
+    // If Tony Mode is enabled, start session keepalive
+    if (enabled) {
+        // Ping the server every 10 minutes to keep session alive
+        // Session lifetime is 24 hours, so this ensures it never expires
+        const KEEPALIVE_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+        window.sessionKeepaliveIntervalId = setInterval(async () => {
+            try {
+                await fetch('/api/session-keepalive');
+                console.log('Tony Mode: Session keepalive ping sent');
+            } catch (error) {
+                console.error('Tony Mode: Session keepalive failed:', error);
+            }
+        }, KEEPALIVE_INTERVAL);
+
+        console.log('Tony Mode: Started session keepalive (every 10 minutes)');
+    }
 }
 

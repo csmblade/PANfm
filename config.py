@@ -25,7 +25,8 @@ DEFAULT_SETTINGS = {
     'refresh_interval': 15,
     'debug_logging': False,
     'selected_device_id': '',
-    'monitored_interface': 'ethernet1/12'
+    'monitored_interface': 'ethernet1/12',
+    'tony_mode': False
 }
 
 # Lazy import to avoid circular dependency

@@ -9,17 +9,17 @@ PATCH: Bug fixes, small improvements, documentation updates
 
 # Current version
 VERSION_MAJOR = 1
-VERSION_MINOR = 0
-VERSION_PATCH = 3
+VERSION_MINOR = 1
+VERSION_PATCH = 1
 
 # Build metadata (optional)
-VERSION_BUILD = "20251027"  # YYYYMMDD format
+VERSION_BUILD = "20251028"  # YYYYMMDD format
 
 # Pre-release identifier (optional, e.g., 'alpha', 'beta', 'rc1')
 VERSION_PRERELEASE = None
 
 # Codename for this version (optional)
-VERSION_CODENAME = "Tech Support"
+VERSION_CODENAME = "Traffic Insights"
 
 
 def get_version():
@@ -75,6 +75,37 @@ def get_short_version():
 
 # Version history and changelog
 VERSION_HISTORY = [
+    {
+        'version': '1.1.1',
+        'codename': 'Traffic Insights',
+        'date': '2025-10-28',
+        'type': 'patch',
+        'changes': [
+            'Fixed interface IP address display - properly merge hw and ifnet XML data',
+            'Fixed VLAN display - replace "0" with "-" for untagged interfaces',
+            'Standardized table styling across all pages (Connected Devices, Applications, Interfaces)',
+            'Unified font sizing (0.9em) and padding (12px) for consistent readability',
+            'Applied brand typography (Roboto headers, Open Sans content) consistently',
+            'Improved text fitting in table columns with proper spacing'
+        ]
+    },
+    {
+        'version': '1.1.0',
+        'codename': 'Traffic Insights',
+        'date': '2025-10-28',
+        'type': 'minor',
+        'changes': [
+            'Added Tony Mode - disable session timeout with keepalive',
+            'Added real-time interface traffic graphs (updates every 15 seconds)',
+            'Added per-interface traffic rate display (Kbps/Mbps/Gbps)',
+            'Replaced transceiver column with live traffic visualization',
+            'Added support for subinterface traffic monitoring',
+            'Implemented DHCP IP address detection for interfaces',
+            'Added speed formatting for WAN and interface speeds (Mbps/Gbps)',
+            'New API endpoint: /api/interface-traffic',
+            'New API endpoint: /api/session-keepalive'
+        ]
+    },
     {
         'version': '1.0.3',
         'codename': 'Tech Support',

@@ -4,6 +4,7 @@ const MAX_DATA_POINTS = 30; // Show last 30 data points
 const MAX_MINI_POINTS = 20; // Mini charts show last 20 points
 
 let updateIntervalId = null; // Store interval ID for updates
+let sessionKeepaliveIntervalId = null; // Store interval ID for session keepalive (Tony Mode)
 
 // Data storage
 // Make chartData globally accessible
@@ -326,7 +327,8 @@ function updateStats(data) {
     if (data.wan_speed !== undefined) {
         const wanSpeedElement = document.getElementById('sidebarWanSpeed');
         if (wanSpeedElement) {
-            wanSpeedElement.textContent = data.wan_speed ? `${data.wan_speed} Mbps` : '-';
+            // Speed is already formatted with Mbps/Gbps suffix from backend
+            wanSpeedElement.textContent = data.wan_speed || '-';
         }
     }
 
@@ -823,8 +825,8 @@ function initPageNavigation() {
                 if (pageKey === targetPage) {
                     pages[pageKey].style.display = 'block';
                     if (pageKey === 'device-info') {
-                        // Load software updates by default (first tab)
-                        loadSoftwareUpdates();
+                        // Load interfaces by default (first tab)
+                        loadInterfaces();
                     } else if (pageKey === 'connected-devices') {
                         loadConnectedDevices();
                     } else if (pageKey === 'applications') {
@@ -924,14 +926,22 @@ function initPageNavigation() {
 
                 // Show target tab content, hide others
                 const softwareUpdatesTab = document.getElementById('software-updates-tab');
+                const interfacesTab = document.getElementById('interfaces-tab');
                 const techSupportTab = document.getElementById('tech-support-tab');
 
                 if (targetTab === 'software-updates') {
                     softwareUpdatesTab.style.display = 'block';
+                    interfacesTab.style.display = 'none';
                     techSupportTab.style.display = 'none';
                     loadSoftwareUpdates();
+                } else if (targetTab === 'interfaces') {
+                    softwareUpdatesTab.style.display = 'none';
+                    interfacesTab.style.display = 'block';
+                    techSupportTab.style.display = 'none';
+                    loadInterfaces();
                 } else if (targetTab === 'tech-support') {
                     softwareUpdatesTab.style.display = 'none';
+                    interfacesTab.style.display = 'none';
                     techSupportTab.style.display = 'block';
                 }
             });
@@ -1190,6 +1200,9 @@ function refreshAllDataForDevice() {
     }
     if (typeof loadSoftwareUpdates === 'function') {
         loadSoftwareUpdates();
+    }
+    if (typeof loadInterfaces === 'function') {
+        loadInterfaces();
     }
     if (typeof loadApplications === 'function') {
         loadApplications();

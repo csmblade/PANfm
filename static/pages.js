@@ -636,3 +636,462 @@ async function getTechSupportDownloadUrl() {
     }
 }
 
+/**
+ * Load and display firewall interface information
+ */
+// Global variables for interface sorting and filtering
+let interfacesData = [];
+let interfacesSortColumn = 'state'; // Default sort column
+let interfacesSortDirection = 'asc'; // Default sort direction
+let interfacesStateFilter = 'up'; // Default filter: show only up interfaces
+
+// Global variables for interface traffic monitoring
+let interfaceTrafficData = {}; // Stores historical traffic data for each interface
+let interfaceTrafficCharts = {}; // Stores Chart.js instances for each interface
+let interfaceTrafficInterval = null; // Interval ID for traffic updates
+const MAX_INTERFACE_TRAFFIC_POINTS = 20; // Number of data points to show in traffic graphs
+
+async function loadInterfaces() {
+    const loadingDiv = document.getElementById('interfacesLoading');
+    const contentDiv = document.getElementById('interfacesContent');
+    const errorDiv = document.getElementById('interfacesErrorMessage');
+    const tableDiv = document.getElementById('interfacesTable');
+
+    // Show loading animation
+    loadingDiv.style.display = 'block';
+    contentDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/interfaces');
+        const data = await response.json();
+
+        // Hide loading animation
+        loadingDiv.style.display = 'none';
+
+        if (data.status === 'success' && data.interfaces && data.interfaces.length > 0) {
+            errorDiv.style.display = 'none';
+            contentDiv.style.display = 'block';
+
+            // Store interfaces data globally for sorting
+            interfacesData = data.interfaces;
+
+            // Reset filter to "up" (default) on fresh load
+            interfacesStateFilter = 'up';
+            const filterSelect = document.getElementById('interfaceStateFilter');
+            if (filterSelect) {
+                filterSelect.value = 'up';
+            }
+
+            // Render the table with default sort and filter (state, then interface number)
+            // renderInterfacesTable will update statistics
+            renderInterfacesTable();
+
+            // Start traffic monitoring
+            startInterfaceTrafficMonitoring();
+
+        } else if (data.status === 'error') {
+            errorDiv.textContent = `Error: ${data.message || 'Failed to fetch interface information'}`;
+            errorDiv.style.display = 'block';
+        } else {
+            errorDiv.textContent = 'No interfaces found';
+            errorDiv.style.display = 'block';
+        }
+
+    } catch (error) {
+        console.error('Error loading interfaces:', error);
+        loadingDiv.style.display = 'none';
+        errorDiv.textContent = `Error: ${error.message}`;
+        errorDiv.style.display = 'block';
+    }
+}
+
+/**
+ * Render the interfaces table with current sort and filter settings
+ */
+function renderInterfacesTable() {
+    const tableDiv = document.getElementById('interfacesTable');
+
+    // Apply state filter first
+    let filteredInterfaces = interfacesData;
+    if (interfacesStateFilter === 'up') {
+        filteredInterfaces = interfacesData.filter(iface => iface.state && iface.state.toLowerCase() === 'up');
+    } else if (interfacesStateFilter === 'down') {
+        filteredInterfaces = interfacesData.filter(iface => iface.state && iface.state.toLowerCase() === 'down');
+    }
+
+    // Sort the filtered interfaces
+    const sortedInterfaces = sortInterfaces(filteredInterfaces, interfacesSortColumn, interfacesSortDirection);
+
+    // Update statistics based on filtered data
+    updateInterfaceStatistics(sortedInterfaces);
+
+    // Build table HTML with sortable headers
+    let tableHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-family: var(--font-secondary);">
+            <thead>
+                <tr style="background: #f5f5f5; border-bottom: 2px solid #FA582D;">
+                    ${renderSortableHeader('name', 'Interface')}
+                    ${renderSortableHeader('type', 'Type')}
+                    ${renderSortableHeader('state', 'State')}
+                    ${renderSortableHeader('ip', 'IP Address')}
+                    ${renderSortableHeader('vlan', 'VLAN')}
+                    ${renderSortableHeader('speed', 'Speed')}
+                    ${renderSortableHeader('zone', 'Zone')}
+                    <th style="padding: 12px; text-align: left; font-family: var(--font-primary); color: #333;">Traffic</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    sortedInterfaces.forEach((iface, index) => {
+        const rowBg = index % 2 === 0 ? '#fff' : '#f9f9f9';
+        const stateColor = iface.state && iface.state.toLowerCase() === 'up' ? '#28a745' : '#dc3545';
+        const stateIcon = iface.state && iface.state.toLowerCase() === 'up' ? '●' : '●';
+
+        tableHTML += `
+            <tr style="background: ${rowBg}; border-bottom: 1px solid #eee;">
+                <td style="padding: 12px; font-weight: 600; color: #333; font-family: var(--font-primary);">${iface.name}</td>
+                <td style="padding: 12px; color: #666;">${iface.type}</td>
+                <td style="padding: 12px;"><span style="color: ${stateColor}; font-weight: 600;">${stateIcon} ${iface.state}</span></td>
+                <td style="padding: 12px; color: #666;">${iface.ip}</td>
+                <td style="padding: 12px; color: #666;">${iface.vlan}</td>
+                <td style="padding: 12px; color: #666;">${iface.speed}</td>
+                <td style="padding: 12px; color: #666;">${iface.zone}</td>
+                <td style="padding: 12px;">
+                    <div style="text-align: center; margin-bottom: 5px;">
+                        <span id="traffic-rate-${iface.name.replace(/[\/\.]/g, '-')}" style="font-size: 0.85em; color: #FA582D; font-weight: 600; font-family: var(--font-primary);">0 Mbps</span>
+                    </div>
+                    <canvas id="traffic-chart-${iface.name.replace(/[\/\.]/g, '-')}" width="120" height="40" style="display: block;"></canvas>
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+
+    tableDiv.innerHTML = tableHTML;
+
+    // Initialize/update traffic charts for all visible interfaces
+    requestAnimationFrame(() => {
+        sortedInterfaces.forEach(iface => {
+            initializeInterfaceTrafficChart(iface.name);
+        });
+    });
+}
+
+/**
+ * Initialize traffic chart for a specific interface
+ */
+function initializeInterfaceTrafficChart(interfaceName) {
+    const chartId = `traffic-chart-${interfaceName.replace(/[\/\.]/g, '-')}`;
+    const canvas = document.getElementById(chartId);
+
+    if (!canvas) return;
+
+    // Initialize traffic data storage if not exists
+    if (!interfaceTrafficData[interfaceName]) {
+        interfaceTrafficData[interfaceName] = {
+            data: [],
+            previousBytes: null
+        };
+    }
+
+    // Destroy existing chart if it exists
+    if (interfaceTrafficCharts[interfaceName]) {
+        interfaceTrafficCharts[interfaceName].destroy();
+    }
+
+    // Create new mini chart
+    const ctx = canvas.getContext('2d');
+    interfaceTrafficCharts[interfaceName] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(MAX_INTERFACE_TRAFFIC_POINTS).fill(''),
+            datasets: [{
+                data: Array(MAX_INTERFACE_TRAFFIC_POINTS).fill(0),
+                borderColor: '#FA582D',
+                backgroundColor: 'rgba(250, 88, 45, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false },
+                y: {
+                    display: false,
+                    beginAtZero: true
+                }
+            },
+            animation: { duration: 0 }
+        }
+    });
+}
+
+/**
+ * Update interface traffic charts with new data
+ */
+async function updateInterfaceTraffic() {
+    try {
+        const response = await fetch('/api/interface-traffic');
+        const data = await response.json();
+
+        if (data.status === 'success' && data.counters) {
+            const currentTime = Date.now();
+
+            // Update each interface's traffic data
+            for (const [interfaceName, counters] of Object.entries(data.counters)) {
+                if (!interfaceTrafficData[interfaceName]) {
+                    interfaceTrafficData[interfaceName] = {
+                        data: [],
+                        previousBytes: null,
+                        previousTime: null
+                    };
+                }
+
+                const ifaceData = interfaceTrafficData[interfaceName];
+                const totalBytes = counters.total_bytes;
+
+                // Calculate rate (bytes per second)
+                let rate = 0;
+                if (ifaceData.previousBytes !== null && ifaceData.previousTime !== null) {
+                    const byteDiff = totalBytes - ifaceData.previousBytes;
+                    const timeDiff = (currentTime - ifaceData.previousTime) / 1000; // Convert to seconds
+
+                    if (timeDiff > 0 && byteDiff >= 0) {
+                        // Convert to Mbps
+                        rate = (byteDiff * 8) / (timeDiff * 1000000);
+                    }
+                }
+
+                // Store current values for next calculation
+                ifaceData.previousBytes = totalBytes;
+                ifaceData.previousTime = currentTime;
+
+                // Add rate to data array
+                ifaceData.data.push(rate);
+                if (ifaceData.data.length > MAX_INTERFACE_TRAFFIC_POINTS) {
+                    ifaceData.data.shift();
+                }
+
+                // Update chart if it exists
+                const chart = interfaceTrafficCharts[interfaceName];
+                if (chart) {
+                    chart.data.datasets[0].data = [...ifaceData.data];
+                    // Pad with zeros if not enough data points yet
+                    while (chart.data.datasets[0].data.length < MAX_INTERFACE_TRAFFIC_POINTS) {
+                        chart.data.datasets[0].data.unshift(0);
+                    }
+                    chart.update('none');
+                }
+
+                // Update traffic rate text display
+                const rateId = `traffic-rate-${interfaceName.replace(/[\/\.]/g, '-')}`;
+                const rateElement = document.getElementById(rateId);
+                if (rateElement) {
+                    // Format the rate nicely
+                    let rateText;
+                    if (rate >= 1000) {
+                        // Show in Gbps if >= 1000 Mbps
+                        rateText = `${(rate / 1000).toFixed(2)} Gbps`;
+                    } else if (rate >= 1) {
+                        // Show in Mbps with 2 decimal places
+                        rateText = `${rate.toFixed(2)} Mbps`;
+                    } else if (rate > 0) {
+                        // Show in Kbps if less than 1 Mbps
+                        rateText = `${(rate * 1000).toFixed(0)} Kbps`;
+                    } else {
+                        rateText = '0 Mbps';
+                    }
+                    rateElement.textContent = rateText;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error updating interface traffic:', error);
+    }
+}
+
+/**
+ * Start interface traffic monitoring
+ */
+function startInterfaceTrafficMonitoring() {
+    // Clear existing interval if any
+    if (interfaceTrafficInterval) {
+        clearInterval(interfaceTrafficInterval);
+    }
+
+    // Initial update
+    updateInterfaceTraffic();
+
+    // Update every 15 seconds
+    interfaceTrafficInterval = setInterval(updateInterfaceTraffic, 15000);
+}
+
+/**
+ * Stop interface traffic monitoring
+ */
+function stopInterfaceTrafficMonitoring() {
+    if (interfaceTrafficInterval) {
+        clearInterval(interfaceTrafficInterval);
+        interfaceTrafficInterval = null;
+    }
+}
+
+/**
+ * Update interface statistics display
+ */
+function updateInterfaceStatistics(interfaces) {
+    const totalInterfaces = interfaces.length;
+    const upInterfaces = interfaces.filter(iface => iface.state && iface.state.toLowerCase() === 'up').length;
+    const downInterfaces = interfaces.filter(iface => iface.state && iface.state.toLowerCase() === 'down').length;
+
+    document.getElementById('interfacesTotalCount').textContent = totalInterfaces;
+    document.getElementById('interfacesUpCount').textContent = upInterfaces;
+    document.getElementById('interfacesDownCount').textContent = downInterfaces;
+}
+
+/**
+ * Apply interface state filter
+ */
+function applyInterfaceFilter() {
+    const filterSelect = document.getElementById('interfaceStateFilter');
+    interfacesStateFilter = filterSelect.value;
+    renderInterfacesTable();
+}
+
+/**
+ * Render a sortable table header
+ */
+function renderSortableHeader(column, label) {
+    const isCurrentSort = interfacesSortColumn === column;
+    const arrow = isCurrentSort ? (interfacesSortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+    const cursorStyle = 'cursor: pointer;';
+    const hoverEffect = 'onmouseover="this.style.backgroundColor=\'#e8e8e8\'" onmouseout="this.style.backgroundColor=\'#f5f5f5\'"';
+
+    return `<th style="padding: 12px; text-align: left; font-weight: 600; color: #333; font-family: var(--font-primary); ${cursorStyle}"
+                onclick="sortInterfacesBy('${column}')"
+                ${hoverEffect}
+                title="Click to sort by ${label}">
+                ${label}${arrow}
+            </th>`;
+}
+
+/**
+ * Sort interfaces by column
+ */
+function sortInterfacesBy(column) {
+    // Toggle direction if clicking the same column, otherwise default to ascending
+    if (interfacesSortColumn === column) {
+        interfacesSortDirection = interfacesSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        interfacesSortColumn = column;
+        interfacesSortDirection = 'asc';
+    }
+
+    renderInterfacesTable();
+}
+
+/**
+ * Sort interfaces array by column and direction
+ */
+function sortInterfaces(interfaces, column, direction) {
+    const sorted = [...interfaces].sort((a, b) => {
+        let aVal = a[column];
+        let bVal = b[column];
+
+        // Special handling for different columns
+        if (column === 'state') {
+            // State: up comes before down
+            const stateOrder = { 'up': 1, 'down': 2, 'n/a': 3, '-': 3 };
+            aVal = stateOrder[aVal?.toLowerCase()] || 999;
+            bVal = stateOrder[bVal?.toLowerCase()] || 999;
+
+            // Secondary sort by interface number if states are equal
+            if (aVal === bVal) {
+                return extractInterfaceNumber(a.name) - extractInterfaceNumber(b.name);
+            }
+        } else if (column === 'name') {
+            // Interface name: sort by number extracted from name
+            return extractInterfaceNumber(a.name) - extractInterfaceNumber(b.name);
+        } else if (column === 'vlan') {
+            // VLAN: sort numerically if possible
+            const aNum = parseInt(aVal);
+            const bNum = parseInt(bVal);
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                aVal = aNum;
+                bVal = bNum;
+            }
+        }
+
+        // Handle null/undefined values
+        if (aVal === null || aVal === undefined || aVal === '-') aVal = '';
+        if (bVal === null || bVal === undefined || bVal === '-') bVal = '';
+
+        // Numeric comparison
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+            return direction === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+
+        // String comparison
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+
+        if (direction === 'asc') {
+            return aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+        } else {
+            return aStr > bStr ? -1 : aStr < bStr ? 1 : 0;
+        }
+    });
+
+    return sorted;
+}
+
+/**
+ * Extract numeric portion from interface name for natural sorting
+ * Handles subinterfaces to keep them grouped with parent
+ * e.g., "ethernet1/1" -> 1.001000, "ethernet1/1.100" -> 1.001100, "ethernet1/12" -> 1.012000
+ */
+function extractInterfaceNumber(interfaceName) {
+    if (!interfaceName) return 0;
+
+    // Check if this is a subinterface (has a dot)
+    let subinterfaceNum = 0;
+    let baseName = interfaceName;
+
+    if (interfaceName.includes('.')) {
+        const parts = interfaceName.split('.');
+        baseName = parts[0];
+        subinterfaceNum = parseInt(parts[1]) || 0;
+    }
+
+    // Match patterns like ethernet1/1, ae0, etc.
+    const match = baseName.match(/(\d+)\/(\d+)|(\d+)/);
+    if (match) {
+        if (match[1] && match[2]) {
+            // Pattern: ethernet1/1
+            const major = parseInt(match[1]) || 0;
+            const minor = parseInt(match[2]) || 0;
+            // Combine: major.minorSUB (e.g., 1.001000 for ethernet1/1, 1.001100 for ethernet1/1.100)
+            return major + (minor / 1000) + (subinterfaceNum / 1000000);
+        } else if (match[3]) {
+            // Pattern: ae0, vlan100, etc.
+            const num = parseInt(match[3]) || 0;
+            return num + (subinterfaceNum / 1000000);
+        }
+    }
+    return 0;
+}
+
