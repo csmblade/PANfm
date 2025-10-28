@@ -1220,8 +1220,8 @@ function monitorDeviceReboot(button, successDiv, errorDiv) {
         }
 
         try {
-            // Try to fetch software updates as health check
-            const response = await fetch('/api/software-updates', {
+            // Try to fetch firewall health check (lightweight - no update server connections)
+            const response = await fetch('/api/firewall-health', {
                 method: 'GET',
                 headers: {'Cache-Control': 'no-cache'}
             });

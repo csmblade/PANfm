@@ -28,7 +28,8 @@ from firewall_api import (
     download_panos_version,
     install_panos_version,
     check_job_status,
-    reboot_firewall
+    reboot_firewall,
+    check_firewall_health
 )
 from logger import debug, info, error
 from utils import reverse_dns_lookup
@@ -185,6 +186,24 @@ def register_routes(app, csrf, limiter):
     def health():
         """Health check endpoint"""
         return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
+
+    @app.route('/api/firewall-health')
+    @limiter.limit("300 per hour")  # 5/min for 15s polling during reboot monitoring
+    @login_required
+    def firewall_health_check():
+        """Lightweight firewall health check - does NOT trigger update server connections"""
+        debug("=== Firewall Health Check API endpoint called ===")
+        try:
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            result = check_firewall_health(firewall_ip, api_key)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error in firewall health check: {str(e)}")
+            return jsonify({'status': 'offline', 'message': str(e)}), 500
 
     @app.route('/api/version')
     def version():

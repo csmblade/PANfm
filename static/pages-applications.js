@@ -23,7 +23,8 @@ let servicePortDb = {}; // Service port database for port-to-service name lookup
 async function loadApplications() {
     console.log('=== loadApplications called ===');
     try {
-        const response = await fetch('/api/applications?max_logs=5000');
+        // OPTIMIZATION: Reduced from 5000 to 1000 logs for faster loading
+        const response = await fetch('/api/applications?max_logs=1000');
         const data = await response.json();
 
         console.log('Applications API response:', data);

@@ -873,8 +873,8 @@ function pollDeviceStatus() {
         updateElapsedTime();
 
         try {
-            // Try to fetch software updates endpoint as a health check
-            const response = await fetch('/api/software-updates', {
+            // Try to fetch firewall health check (lightweight - no update server connections)
+            const response = await fetch('/api/firewall-health', {
                 method: 'GET',
                 headers: {
                     'Cache-Control': 'no-cache'

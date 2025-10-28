@@ -9,8 +9,8 @@ PATCH: Bug fixes, small improvements, documentation updates
 
 # Current version
 VERSION_MAJOR = 1
-VERSION_MINOR = 3
-VERSION_PATCH = 3
+VERSION_MINOR = 4
+VERSION_PATCH = 0
 
 # Build metadata (optional)
 VERSION_BUILD = "20251028"  # YYYYMMDD format
@@ -19,7 +19,7 @@ VERSION_BUILD = "20251028"  # YYYYMMDD format
 VERSION_PRERELEASE = None
 
 # Codename for this version (optional)
-VERSION_CODENAME = "Resilient Upgrades"
+VERSION_CODENAME = "Performance Optimized"
 
 
 def get_version():
@@ -75,6 +75,26 @@ def get_short_version():
 
 # Version history and changelog
 VERSION_HISTORY = [
+    {
+        'version': '1.4.0',
+        'codename': 'Performance Optimized',
+        'date': '2025-10-28',
+        'type': 'minor',
+        'changes': [
+            'CRITICAL: Fixed firewall forced update server connections every 10-15 seconds',
+            'New lightweight /api/firewall-health endpoint for reboot monitoring',
+            'Removed automatic update checks from software-updates endpoint',
+            'Update server checks now ONLY occur when user clicks "Check for Updates"',
+            'MAJOR: Optimized device switching - reduced from 8+ API calls to 1-2 calls',
+            'refreshAllDataForDevice() now loads only currently visible page',
+            'Removed duplicate page loading that was causing extra API calls',
+            'Reduced Applications default log fetch from 5000 to 1000 (80% less data)',
+            'Added check_firewall_health() function for lightweight health checks',
+            'Updated reboot monitoring in both standalone and upgrade tabs',
+            'Significant reduction in firewall load and network traffic',
+            'Performance improvements: 75-85% reduction in device switch API calls'
+        ]
+    },
     {
         'version': '1.3.3',
         'codename': 'Resilient Upgrades',

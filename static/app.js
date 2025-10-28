@@ -1229,76 +1229,69 @@ function refreshAllDataForDevice() {
     updateIntervalId = setInterval(fetchThroughputData, UPDATE_INTERVAL);
     console.log(`Update interval restarted: ${UPDATE_INTERVAL}ms`);
 
-    // Refresh all page-specific data (safely check if functions exist)
-    if (typeof loadPolicies === 'function') {
-        loadPolicies();
-    }
-    if (typeof loadSystemLogs === 'function') {
-        loadSystemLogs();
-    }
-    if (typeof updateTrafficPage === 'function') {
-        updateTrafficPage();
-    }
-    if (typeof loadSoftwareUpdates === 'function') {
-        loadSoftwareUpdates();
-        // Also clear PAN-OS upgrade UI state and errors
-        const panosVersionInfo = document.getElementById('panosVersionInfo');
-        if (panosVersionInfo) {
-            panosVersionInfo.innerHTML = '';
-        }
-        // Reset the check button if it exists
-        const checkButton = document.getElementById('checkPanosVersionBtn');
-        if (checkButton) {
-            checkButton.disabled = false;
-            checkButton.textContent = 'Check for Updates';
-        }
-
-        // Clear reboot UI state when switching devices
-        const rebootButton = document.getElementById('rebootFirewallBtn');
-        if (rebootButton) {
-            rebootButton.disabled = false;
-            rebootButton.textContent = 'Reboot Firewall';
-            rebootButton.style.background = '';
-        }
-        const rebootSuccess = document.getElementById('rebootSuccess');
-        if (rebootSuccess) {
-            rebootSuccess.style.display = 'none';
-            rebootSuccess.innerHTML = '';
-        }
-        const rebootError = document.getElementById('rebootErrorMessage');
-        if (rebootError) {
-            rebootError.style.display = 'none';
-            rebootError.textContent = '';
-        }
-    }
-    if (typeof loadInterfaces === 'function') {
-        loadInterfaces();
-    }
-    if (typeof loadApplications === 'function') {
-        loadApplications();
-    }
-    if (typeof loadConnectedDevices === 'function') {
-        loadConnectedDevices();
-    }
-
-    console.log('All page data refresh triggered');
-
-    // Force refresh of currently visible page to ensure UI updates
+    // OPTIMIZATION: Only refresh the currently visible page (not all pages)
+    // This reduces device switch from 8+ API calls to 1-2 calls
     console.log('Current visible page:', currentVisiblePage);
-    console.log('Forcing explicit refresh of visible page...');
+    console.log('Loading only visible page data...');
 
-    if (currentVisiblePage === 'connected-devices' && typeof loadConnectedDevices === 'function') {
-        console.log('Force refreshing Connected Devices page');
+    // Clear UI state for Device Info tabs (lightweight - no API calls)
+    const panosVersionInfo = document.getElementById('panosVersionInfo');
+    if (panosVersionInfo) {
+        panosVersionInfo.innerHTML = '';
+    }
+    const checkButton = document.getElementById('checkPanosVersionBtn');
+    if (checkButton) {
+        checkButton.disabled = false;
+        checkButton.textContent = 'Check for Updates';
+    }
+
+    // Clear reboot UI state when switching devices
+    const rebootButton = document.getElementById('rebootFirewallBtn');
+    if (rebootButton) {
+        rebootButton.disabled = false;
+        rebootButton.textContent = 'Reboot Firewall';
+        rebootButton.style.background = '';
+    }
+    const rebootSuccess = document.getElementById('rebootSuccess');
+    if (rebootSuccess) {
+        rebootSuccess.style.display = 'none';
+        rebootSuccess.innerHTML = '';
+    }
+    const rebootError = document.getElementById('rebootErrorMessage');
+    if (rebootError) {
+        rebootError.style.display = 'none';
+        rebootError.textContent = '';
+    }
+
+    // Load only the currently visible page
+    if (currentVisiblePage === 'home') {
+        // Dashboard - throughput already refreshed by interval above
+        console.log('Dashboard active - using interval for updates');
+    } else if (currentVisiblePage === 'connected-devices' && typeof loadConnectedDevices === 'function') {
+        console.log('Loading Connected Devices page');
         loadConnectedDevices();
     } else if (currentVisiblePage === 'applications' && typeof loadApplications === 'function') {
-        console.log('Force refreshing Applications page');
+        console.log('Loading Applications page');
         loadApplications();
-    } else if (currentVisiblePage === 'device-info' && typeof loadPolicies === 'function') {
-        console.log('Force refreshing Device Info page (Policies)');
-        loadPolicies();
+    } else if (currentVisiblePage === 'device-info') {
+        // Check which Device Info tab is visible
+        const softwareTab = document.getElementById('softwareUpdatesTab');
+        const interfacesTab = document.getElementById('interfacesTab');
+
+        if (softwareTab && softwareTab.style.display !== 'none' && typeof loadSoftwareUpdates === 'function') {
+            console.log('Loading Software Updates tab');
+            loadSoftwareUpdates();
+        } else if (interfacesTab && interfacesTab.style.display !== 'none' && typeof loadInterfaces === 'function') {
+            console.log('Loading Interfaces tab');
+            loadInterfaces();
+        }
+        // Tech Support and Reboot tabs don't auto-load data
     } else if (currentVisiblePage === 'logs' && typeof loadSystemLogs === 'function') {
-        console.log('Force refreshing Logs page (System Logs)');
+        console.log('Loading System Logs page');
         loadSystemLogs();
+    } else if (currentVisiblePage === 'traffic' && typeof updateTrafficPage === 'function') {
+        console.log('Loading Traffic page');
+        updateTrafficPage();
     }
 
     console.log('=== refreshAllDataForDevice complete ===');

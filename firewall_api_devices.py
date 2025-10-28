@@ -8,6 +8,50 @@ from utils import api_request_get
 from logger import debug, info, warning, error, exception
 
 
+def check_firewall_health(firewall_ip, api_key):
+    """
+    Lightweight health check for firewall - does NOT trigger update server connections
+    Used for reboot monitoring and connection testing
+    """
+    try:
+        base_url = f"https://{firewall_ip}/api/"
+
+        # Simple system info query - no update checks
+        cmd = "<show><system><info></info></system></show>"
+        params = {
+            'type': 'op',
+            'cmd': cmd,
+            'key': api_key
+        }
+
+        response = api_request_get(base_url, params=params, verify=False, timeout=10)
+
+        if response.status_code == 200:
+            # Parse to verify it's valid XML
+            root = ET.fromstring(response.text)
+            status = root.get('status')
+
+            if status == 'success':
+                # Extract basic info
+                hostname = root.find('.//hostname')
+                sw_version = root.find('.//sw-version')
+
+                return {
+                    'status': 'online',
+                    'ip': firewall_ip,
+                    'hostname': hostname.text if hostname is not None else 'Unknown',
+                    'version': sw_version.text if sw_version is not None else 'Unknown'
+                }
+            else:
+                return {'status': 'error', 'message': 'Firewall returned error status'}
+        else:
+            return {'status': 'error', 'message': f'HTTP {response.status_code}'}
+
+    except Exception as e:
+        debug(f"Health check failed: {str(e)}")
+        return {'status': 'offline', 'message': str(e)}
+
+
 def get_software_updates(firewall_config):
     """Fetch system software version information from Palo Alto firewall"""
     try:
@@ -137,20 +181,17 @@ def get_software_updates(firewall_config):
             gp_version = root.find('.//global-protect-client-package-version')
             add_software_entry('GlobalProtect Client', gp_version)
 
-            # Application and threat signatures
+            # Application and threat signatures - NO auto update check (user clicks "Check for Updates")
             app_version = root.find('.//app-version')
-            app_cmd = '<request><content><upgrade><check></check></upgrade></content></request>'
-            add_software_entry('Application & Threat', app_version, app_cmd)
+            add_software_entry('Application & Threat', app_version)
 
-            # Antivirus signatures
+            # Antivirus signatures - NO auto update check (user clicks "Check for Updates")
             av_version = root.find('.//av-version')
-            av_cmd = '<request><anti-virus><upgrade><check></check></upgrade></anti-virus></request>'
-            add_software_entry('Antivirus', av_version, av_cmd)
+            add_software_entry('Antivirus', av_version)
 
-            # WildFire version
+            # WildFire version - NO auto update check (user clicks "Check for Updates")
             wildfire_version = root.find('.//wildfire-version')
-            wildfire_cmd = '<request><wildfire><upgrade><check></check></upgrade></wildfire></request>'
-            add_software_entry('WildFire', wildfire_version, wildfire_cmd)
+            add_software_entry('WildFire', wildfire_version)
 
             # PAN-OS version - no update check needed
             sw_version = root.find('.//sw-version')
