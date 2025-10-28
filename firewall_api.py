@@ -33,7 +33,8 @@ from firewall_api_devices import (
     check_tech_support_job_status,
     get_tech_support_file_url,
     get_interface_info,
-    format_interface_speed
+    format_interface_speed,
+    check_firewall_health
 )
 from firewall_api_upgrades import (
     check_available_panos_versions,
