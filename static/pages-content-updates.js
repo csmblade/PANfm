@@ -75,7 +75,7 @@ function displayContentUpdateStatus(data) {
         if (isDownloaded) {
             statusHtml = `
                 <div style="padding: 8px; background: #d4edda; border: 1px solid #28a745; border-radius: 4px; margin-bottom: 12px; font-size: 0.9em;">
-                    <span style="color: #155724;">✓ Version ${data.latest_version} already downloaded</span>
+                    <span style="color: #155724;">Version ${data.latest_version} already downloaded</span>
                 </div>
             `;
         }
@@ -146,10 +146,11 @@ async function startContentUpdate() {
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+        let currentProgress = 0;
+
         // Step 1: Download (skip if already downloaded)
         if (!isDownloaded) {
-            contentUpdateState.currentStep = 'download';
-            updateContentModalMessage('📥 Downloading content update...', '#FA582D');
+            updateContentProgress('Downloading', 'Starting content download...', 0, false);
 
             const downloadResponse = await fetch('/api/content-updates/download', {
                 method: 'POST',
@@ -165,36 +166,46 @@ async function startContentUpdate() {
             if (downloadData.status === 'success') {
                 contentUpdateState.downloadJobId = downloadData.jobid;
 
-                // Start polling download job
-                await pollContentJob(downloadData.jobid, 'download');
+                // Poll download job (0% to 50%)
+                const downloadSuccess = await pollContentJob(downloadData.jobid, 'Downloading', 'Content Download', 0, 50);
+
+                if (!downloadSuccess) {
+                    setTimeout(() => hideContentUpdateModal(), 3000);
+                    return;
+                }
+
+                console.log('Content download complete');
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                currentProgress = 50;
 
             } else {
-                throw new Error(downloadData.message || 'Download failed');
+                updateContentProgress('Failed', `Download failed: ${downloadData.message}`, 0, true);
+                setTimeout(() => hideContentUpdateModal(), 3000);
+                return;
             }
         } else {
             console.log('Content already downloaded, skipping download step');
-            // Go directly to install
-            await startContentInstall();
+            currentProgress = 50;
         }
+
+        // Step 2: Install
+        await startContentInstall(currentProgress);
 
     } catch (error) {
         console.error('Content update error:', error);
-        updateContentModalMessage(`❌ Error: ${error.message}`, '#dc3545');
-
-        setTimeout(() => {
-            hideContentUpdateModal();
-        }, 3000);
+        updateContentProgress('Failed', `Error: ${error.message}`, 0, true);
+        setTimeout(() => hideContentUpdateModal(), 3000);
     }
 }
 
 /**
- * Poll job status
- * Reuses existing /api/panos-upgrade/job-status endpoint
+ * Poll job status with progress updates
+ * Matches PAN-OS upgrade polling exactly
  */
-async function pollContentJob(jobId, stepName) {
-    return new Promise((resolve, reject) => {
+async function pollContentJob(jobId, stepName, stepDisplayName, progressStart, progressEnd) {
+    return new Promise((resolve) => {
         let pollCount = 0;
-        const maxPolls = 120; // 30 minutes
+        const maxPolls = 120; // 30 minutes with 15-second intervals
 
         console.log(`Starting to poll job ${jobId} for step: ${stepName}`);
 
@@ -207,55 +218,60 @@ async function pollContentJob(jobId, stepName) {
 
                 if (data.status === 'success') {
                     const job = data.job;
-
                     console.log(`Job ${jobId} status:`, job);
 
-                    // Update progress
-                    updateContentModalProgress(stepName, job.progress, job.status);
+                    // Calculate progress within the range
+                    const jobProgress = parseInt(job.progress) || 0;
+                    const currentProgress = progressStart + (jobProgress * (progressEnd - progressStart) / 100);
+
+                    // Update progress display
+                    updateContentProgress(stepName, `${stepDisplayName}: ${job.status}`, currentProgress, false);
 
                     if (job.status === 'FIN') {
                         clearInterval(pollInterval);
 
-                        if (job.result === 'OK') {
-                            console.log(`${stepName} completed successfully`);
+                        // Check for failures
+                        const isFailed = job.result === 'FAIL' ||
+                                       (job.details && job.details.toLowerCase().includes('fail'));
 
-                            if (stepName === 'download') {
-                                // Download complete, start install
-                                resolve();
-                                await startContentInstall();
-                            } else if (stepName === 'install') {
-                                // Install complete, no reboot needed
-                                resolve();
-                                handleContentUpdateComplete();
-                            }
+                        if (isFailed) {
+                            updateContentProgress('Failed', `${stepDisplayName} failed: ${job.details || job.result}`, currentProgress, true);
+                            resolve(false);
                         } else {
-                            const error = job.details || 'Job failed';
-                            clearInterval(pollInterval);
-                            reject(new Error(error));
+                            updateContentProgress(stepName, `${stepDisplayName} complete!`, progressEnd, false);
+                            resolve(true);
                         }
                     }
+                } else {
+                    clearInterval(pollInterval);
+                    updateContentProgress('Failed', `Failed to check job status: ${data.message}`, 0, true);
+                    resolve(false);
                 }
+
             } catch (error) {
-                console.error('Polling error:', error);
-                // Continue polling despite errors
+                clearInterval(pollInterval);
+                updateContentProgress('Failed', `Error checking job status: ${error.message}`, 0, true);
+                resolve(false);
             }
 
+            // Timeout after max polls
             if (pollCount >= maxPolls) {
                 clearInterval(pollInterval);
-                reject(new Error('Timeout waiting for job completion'));
+                updateContentProgress('Failed', `${stepDisplayName} timed out after 30 minutes`, 0, true);
+                resolve(false);
             }
-        }, 15000);
+
+        }, 15000); // Poll every 15 seconds
     });
 }
 
 /**
  * Start install step after download completes
  */
-async function startContentInstall() {
+async function startContentInstall(currentProgress) {
     console.log('Starting content install...');
 
-    contentUpdateState.currentStep = 'install';
-    updateContentModalMessage('📦 Installing content update...', '#FA582D');
+    updateContentProgress('Installing', 'Starting content installation...', currentProgress, false);
 
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -275,20 +291,24 @@ async function startContentInstall() {
         if (installData.status === 'success') {
             contentUpdateState.installJobId = installData.jobid;
 
-            // Start polling install job
-            await pollContentJob(installData.jobid, 'install');
+            // Poll install job (from current progress to 100%)
+            const installSuccess = await pollContentJob(installData.jobid, 'Installing', 'Content Install', currentProgress, 100);
+
+            if (installSuccess) {
+                handleContentUpdateComplete();
+            } else {
+                setTimeout(() => hideContentUpdateModal(), 3000);
+            }
 
         } else {
-            throw new Error(installData.message || 'Install failed');
+            updateContentProgress('Failed', `Install failed: ${installData.message}`, currentProgress, true);
+            setTimeout(() => hideContentUpdateModal(), 3000);
         }
 
     } catch (error) {
         console.error('Install error:', error);
-        updateContentModalMessage(`❌ Install Error: ${error.message}`, '#dc3545');
-
-        setTimeout(() => {
-            hideContentUpdateModal();
-        }, 3000);
+        updateContentProgress('Failed', `Install error: ${error.message}`, currentProgress, true);
+        setTimeout(() => hideContentUpdateModal(), 3000);
     }
 }
 
@@ -299,8 +319,7 @@ async function startContentInstall() {
 function handleContentUpdateComplete() {
     console.log('Content update completed successfully');
 
-    contentUpdateState.currentStep = 'complete';
-    updateContentModalMessage('✅ Content Update Complete!', '#28a745');
+    updateContentProgress('Complete', 'Content update completed successfully!', 100, false);
 
     // Update the display
     setTimeout(() => {
@@ -314,70 +333,17 @@ function handleContentUpdateComplete() {
         // Refresh content update status
         checkContentUpdates();
 
-        alert('✓ Content update completed successfully!\n\nThe firewall now has the latest content version (App & Threat, Antivirus, WildFire).');
+        alert('Content update completed successfully!\n\nThe firewall now has the latest Application & Threat content version.');
     }, 2000);
 }
 
 /**
- * Show update progress modal (same design as PAN-OS)
+ * Show update progress modal (matches PAN-OS exactly)
  */
 function showContentUpdateModal() {
-    let modal = document.getElementById('contentUpdateModal');
-
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'contentUpdateModal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        `;
-
-        modal.innerHTML = `
-            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-                <h2 style="margin: 0 0 20px 0; color: #333; font-family: var(--font-primary);">Content Update Progress</h2>
-                <div id="contentUpdateModalMessage" style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; font-family: var(--font-secondary);">
-                    Starting update...
-                </div>
-                <div id="contentUpdateModalProgress" style="font-family: var(--font-secondary); color: #666;"></div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-    }
-
-    modal.style.display = 'flex';
-}
-
-/**
- * Update modal message
- */
-function updateContentModalMessage(message, color) {
-    const msgDiv = document.getElementById('contentUpdateModalMessage');
-    if (msgDiv) {
-        msgDiv.textContent = message;
-        msgDiv.style.color = color || '#333';
-    }
-}
-
-/**
- * Update modal progress
- */
-function updateContentModalProgress(step, progress, status) {
-    const progressDiv = document.getElementById('contentUpdateModalProgress');
-    if (progressDiv) {
-        progressDiv.innerHTML = `
-            <p style="margin: 0 0 5px 0;"><strong>Step:</strong> ${step}</p>
-            <p style="margin: 0 0 5px 0;"><strong>Progress:</strong> ${progress}%</p>
-            <p style="margin: 0;"><strong>Status:</strong> ${status}</p>
-        `;
+    const modal = document.getElementById('contentUpdateModal');
+    if (modal) {
+        modal.style.display = 'flex';
     }
 }
 
@@ -388,6 +354,53 @@ function hideContentUpdateModal() {
     const modal = document.getElementById('contentUpdateModal');
     if (modal) {
         modal.style.display = 'none';
+    }
+}
+
+/**
+ * Update content progress display (matches PAN-OS exactly)
+ */
+function updateContentProgress(step, message, progress, isError = false) {
+    const stepElement = document.getElementById('contentUpdateStep');
+    const messageElement = document.getElementById('contentUpdateMessage');
+    const progressBar = document.getElementById('contentUpdateProgressBar');
+    const progressPercent = document.getElementById('contentUpdateProgress');
+    const cancelBtn = document.getElementById('cancelContentUpdateBtn');
+
+    if (stepElement) {
+        stepElement.textContent = step;
+        stepElement.style.color = isError ? '#dc3545' : '#FA582D';
+    }
+
+    if (messageElement) {
+        messageElement.textContent = message;
+        messageElement.style.color = isError ? '#dc3545' : '#666';
+    }
+
+    if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+        progressBar.style.background = isError ? '#dc3545' : 'linear-gradient(135deg, #FA582D 0%, #FF7A55 100%)';
+    }
+
+    if (progressPercent) {
+        progressPercent.textContent = `${Math.round(progress)}%`;
+    }
+
+    // Hide cancel button on completion or error
+    if (cancelBtn && (progress === 100 || isError)) {
+        cancelBtn.style.display = 'none';
+    }
+}
+
+/**
+ * Cancel content update (placeholder - content updates cannot be easily cancelled once started)
+ */
+function cancelContentUpdate() {
+    if (confirm('Are you sure you want to close this window? The content update may still be running on the firewall.')) {
+        hideContentUpdateModal();
+        contentUpdateState.currentStep = null;
+        contentUpdateState.downloadJobId = null;
+        contentUpdateState.installJobId = null;
     }
 }
 
@@ -411,4 +424,5 @@ if (typeof window !== 'undefined') {
     window.initContentUpdates = initContentUpdates;
     window.checkContentUpdates = checkContentUpdates;
     window.startContentUpdate = startContentUpdate;
+    window.cancelContentUpdate = cancelContentUpdate;
 }

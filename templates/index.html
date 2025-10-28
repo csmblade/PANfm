@@ -1956,6 +1956,39 @@
         </div>
     </div>
 
+    <!-- Content Update Progress Modal -->
+    <div id="contentUpdateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);">
+            <h2 style="color: #333; font-family: var(--font-primary); margin: 0 0 20px 0;">Content Update in Progress</h2>
+
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 600; color: #FA582D; font-family: var(--font-primary); font-size: 1.1em;" id="contentUpdateStep">Initializing...</span>
+                    <span style="color: #666; font-family: var(--font-secondary); font-size: 0.9em;" id="contentUpdateProgress">0%</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div style="width: 100%; height: 30px; background: #f0f0f0; border-radius: 15px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);">
+                    <div id="contentUpdateProgressBar" style="height: 100%; width: 0%; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9em;"></div>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: #f9f9f9; border-radius: 8px; margin-bottom: 20px;">
+                <p id="contentUpdateMessage" style="margin: 0; color: #666; font-family: var(--font-secondary); font-size: 0.95em;">Starting content update process...</p>
+            </div>
+
+            <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #856404; font-family: var(--font-secondary); font-size: 0.9em;">
+                    <strong>Warning:</strong> Do not close this window or navigate away during the update process.
+                </p>
+            </div>
+
+            <button id="cancelContentUpdateBtn" onclick="cancelContentUpdate()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-primary);">
+                Cancel
+            </button>
+        </div>
+    </div>
+
     <!-- Load JavaScript modules in order -->
     <script src="/static/logs.js"></script>
     <script src="/static/pages.js"></script>
