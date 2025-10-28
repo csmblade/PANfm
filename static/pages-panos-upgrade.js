@@ -901,19 +901,26 @@ function pollDeviceStatus() {
                     clearInterval(timeInterval);
                     handleDeviceBackOnline();
                     return;
+                } else if (pollCount >= 3) {
+                    // After 3+ checks (40s initial + 45s of polling) and device keeps responding
+                    // Assume the reboot happened within the 40s window and we missed it
+                    console.log(`Poll ${pollCount}: Device consistently responding. Assuming reboot completed during initial delay.`);
+                    clearInterval(upgradeState.pollInterval);
+                    clearInterval(timeInterval);
+                    handleDeviceBackOnline();
+                    return;
                 } else if (pollCount === 1) {
-                    // First check and device responded - this might be before it actually rebooted
-                    // Treat this as suspicious and require at least one more offline check
-                    console.log('First check: device responding, but may not have rebooted yet');
+                    // First check and device responded - give it more time
+                    console.log('First check: device responding, verifying reboot occurred...');
                     if (messageElement) {
                         messageElement.innerHTML = 'Device online - verifying reboot...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
                     }
                     updateElapsedTime();
                 } else {
-                    // Multiple checks and never seen offline - something may be wrong
-                    console.log(`Poll ${pollCount}: Device still responding without going offline`);
+                    // Second check - still waiting
+                    console.log(`Poll ${pollCount}: Device responding, verifying reboot completion...`);
                     if (messageElement) {
-                        messageElement.innerHTML = 'Device responding - waiting for reboot cycle...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
+                        messageElement.innerHTML = 'Verifying reboot completion...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
                     }
                     updateElapsedTime();
                 }
