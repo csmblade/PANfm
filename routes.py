@@ -1033,6 +1033,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/download', methods=['POST'])
+    @limiter.limit("50 per hour")  # Limit for download initiation calls
     @login_required
     def download_panos():
         """Download a specific PAN-OS version"""
@@ -1056,6 +1057,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/install', methods=['POST'])
+    @limiter.limit("50 per hour")  # Limit for install initiation calls
     @login_required
     def install_panos():
         """Install a downloaded PAN-OS version"""
@@ -1079,7 +1081,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/job-status/<job_id>', methods=['GET'])
-    @limiter.limit("900 per hour")  # 15s intervals × 3 sequential jobs (base, target, install) = 720/hr + 25% buffer
+    @limiter.limit("2000 per hour")  # Very high limit for continuous job polling (4/min sustained = 240/hr, set 8x buffer)
     @login_required
     def get_panos_job_status(job_id):
         """Check the status of a PAN-OS upgrade job"""
@@ -1102,6 +1104,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/reboot', methods=['POST'])
+    @limiter.limit("20 per hour")  # Limit for reboot initiation
     @login_required
     def reboot_panos():
         """Reboot the firewall after upgrade"""
