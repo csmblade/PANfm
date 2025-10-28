@@ -1015,6 +1015,7 @@ def register_routes(app, csrf, limiter):
 
     # PAN-OS Upgrade API Routes
     @app.route('/api/panos-versions', methods=['GET'])
+    @limiter.limit("20 per hour")  # Limit for Check for Updates button (should not be clicked frequently)
     @login_required
     def get_panos_versions():
         """Get available PAN-OS versions"""
@@ -1078,7 +1079,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/job-status/<job_id>', methods=['GET'])
-    @limiter.limit("300 per hour")  # Higher limit for job polling (15s intervals = 240/hr, +25% buffer)
+    @limiter.limit("900 per hour")  # 15s intervals × 3 sequential jobs (base, target, install) = 720/hr + 25% buffer
     @login_required
     def get_panos_job_status(job_id):
         """Check the status of a PAN-OS upgrade job"""
