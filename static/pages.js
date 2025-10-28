@@ -1209,8 +1209,9 @@ function monitorDeviceReboot(button, successDiv, errorDiv) {
         }
     }, 1000);
 
-    // Poll device status
-    const pollInterval = setInterval(async () => {
+    // Poll function
+    let pollInterval;
+    const checkDeviceStatus = async () => {
         pollCount++;
         const statusMsg = document.getElementById('rebootStatusMessage');
 
@@ -1274,15 +1275,12 @@ function monitorDeviceReboot(button, successDiv, errorDiv) {
             button.textContent = 'Reboot Firewall';
             button.style.background = '';
         }
-    }, 15000);
+    };
 
-    // Do first check immediately
-    setTimeout(async () => {
-        const statusMsg = document.getElementById('rebootStatusMessage');
-        if (statusMsg) {
-            statusMsg.textContent = '🟡 Checking device status...';
-        }
-        // First poll happens via the interval
-    }, 100);
+    // Start polling interval
+    pollInterval = setInterval(checkDeviceStatus, 15000);
+
+    // Wait 30 seconds before first check (device needs time to actually start rebooting)
+    setTimeout(checkDeviceStatus, 30000);
 }
 
