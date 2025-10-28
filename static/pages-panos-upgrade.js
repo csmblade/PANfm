@@ -338,49 +338,48 @@ async function checkPanosVersions() {
  * @returns {object|null} - Base image info {version, isDownloaded} or null if not needed
  */
 function getRequiredBaseImage(currentVersion, targetVersion, allVersions) {
-    if (!currentVersion || !targetVersion || !allVersions) {
-        return null;
-    }
+    if (!currentVersion || !targetVersion || !allVersions) return null;
+
+    // Handle hotfix versions (e.g., "12.1.3-h1") - extract base version without hotfix suffix
+    const targetBase = targetVersion.split('-')[0]; // "12.1.3-h1" -> "12.1.3"
+    const currentBase = currentVersion.split('-')[0]; // "12.1.2-h3" -> "12.1.2"
 
     // Parse version numbers (format: major.minor.patch)
-    const currentParts = currentVersion.split('.').map(Number);
-    const targetParts = targetVersion.split('.').map(Number);
-
-    // Handle invalid version formats
-    if (currentParts.length < 3 || targetParts.length < 3) {
-        return null;
-    }
+    const currentParts = currentBase.split('.').map(Number);
+    const targetParts = targetBase.split('.').map(Number);
+    if (currentParts.length < 3 || targetParts.length < 3) return null;
 
     const currentMajorMinor = `${currentParts[0]}.${currentParts[1]}`;
     const targetMajorMinor = `${targetParts[0]}.${targetParts[1]}`;
+    const isHotfix = targetVersion.includes('-h');
+    if (currentMajorMinor === targetMajorMinor) return null; // Same major.minor, no base needed
 
-    // If upgrading within same major.minor (e.g., 10.1.2 -> 10.1.5), no base needed
-    if (currentMajorMinor === targetMajorMinor) {
-        return null;
+    // For hotfix versions (e.g., 12.1.3-h1), need the non-hotfix version (12.1.3)
+    if (isHotfix) {
+        const baseImage = allVersions.find(v => v.version === targetBase);
+        if (baseImage) {
+            const isDownloaded = baseImage.downloaded && baseImage.downloaded.toLowerCase() === 'yes';
+            console.log(`Hotfix ${targetVersion} needs ${targetBase}, DL=${isDownloaded}`);
+            return {version: targetBase, isDownloaded, size: baseImage.size || 'Unknown', filename: baseImage.filename || ''};
+        }
     }
 
-    // If target IS the base image (patch == 0), no additional base needed
-    if (targetParts[2] === 0) {
-        return null;
+    // Find the first (lowest) version in the target major.minor series - that's the base
+    const targetMajMinVersions = allVersions.filter(v => {
+        const vParts = v.version.split('-')[0].split('.').map(Number);
+        return vParts.length >= 3 && `${vParts[0]}.${vParts[1]}` === targetMajorMinor;
+    }).sort((a, b) => {
+        const aParts = a.version.split('-')[0].split('.').map(Number);
+        const bParts = b.version.split('-')[0].split('.').map(Number);
+        return aParts[2] - bParts[2];
+    });
+
+    if (targetMajMinVersions.length > 0) {
+        const baseImage = targetMajMinVersions[0];
+        const isDownloaded = baseImage.downloaded && baseImage.downloaded.toLowerCase() === 'yes';
+        console.log(`Target ${targetVersion} needs base ${baseImage.version} (first in ${targetMajorMinor}.x), DL=${isDownloaded}`);
+        return {version: baseImage.version, isDownloaded, size: baseImage.size || 'Unknown', filename: baseImage.filename || ''};
     }
-
-    // Target is a maintenance release (patch > 0) of a new major.minor
-    // We need the base image (x.y.0)
-    const baseVersion = `${targetParts[0]}.${targetParts[1]}.0`;
-
-    // Check if base image exists in available versions
-    const baseImage = allVersions.find(v => v.version === baseVersion);
-
-    if (baseImage) {
-        return {
-            version: baseVersion,
-            isDownloaded: baseImage.downloaded === 'yes',
-            size: baseImage.size || 'Unknown',
-            filename: baseImage.filename || ''
-        };
-    }
-
-    // Base image not found in available versions (shouldn't happen, but handle gracefully)
     return null;
 }
 
@@ -463,6 +462,7 @@ async function startUpgradeWorkflow() {
         upgradeState.allVersions
     );
     const needsBaseDownload = baseImageInfo && !baseImageInfo.isDownloaded;
+    console.log(`Workflow: target=${upgradeState.selectedVersion}, targetDL=${isTargetDownloaded}, needsBaseDL=${needsBaseDownload}`);
 
     // Build confirmation message with actual steps
     const steps = [];

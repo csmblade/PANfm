@@ -10,7 +10,7 @@ PATCH: Bug fixes, small improvements, documentation updates
 # Current version
 VERSION_MAJOR = 1
 VERSION_MINOR = 3
-VERSION_PATCH = 1
+VERSION_PATCH = 2
 
 # Build metadata (optional)
 VERSION_BUILD = "20251028"  # YYYYMMDD format
@@ -75,6 +75,21 @@ def get_short_version():
 
 # Version history and changelog
 VERSION_HISTORY = [
+    {
+        'version': '1.3.2',
+        'codename': 'Resilient Upgrades',
+        'date': '2025-10-28',
+        'type': 'patch',
+        'changes': [
+            'Fixed base image detection for hotfix versions (e.g., 12.1.3-h1)',
+            'Base image is now determined as the first (lowest) version in target major.minor series',
+            'Handles non-x.y.0 base images correctly (e.g., 12.1.2 as base for 12.1.3)',
+            'Hotfix versions now correctly identify their base version',
+            'Added comprehensive console logging for base image detection',
+            'Case-insensitive check for downloaded status',
+            'File size: 999 lines (within 1,000-line JavaScript limit)'
+        ]
+    },
     {
         'version': '1.3.1',
         'codename': 'Resilient Upgrades',
