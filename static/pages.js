@@ -1125,8 +1125,8 @@ async function initiateReboot() {
         return;
     }
 
-    // Show the PAN-OS upgrade modal (same modal for consistency)
-    showUpgradeModal();
+    // Show the PAN-OS upgrade modal with custom title for standalone reboot
+    showUpgradeModal('Firewall Reboot in Progress');
 
     // Update modal to show reboot progress
     updateUpgradeProgress('Rebooting', 'Initiating firewall reboot...', 0, false);

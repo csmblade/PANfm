@@ -737,11 +737,21 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
 
 /**
  * Show upgrade progress modal
+ * @param {string} title - Optional custom title (defaults to "PAN-OS Upgrade in Progress")
  */
-function showUpgradeModal() {
+function showUpgradeModal(title) {
     const modal = document.getElementById('upgradeModal');
+    const modalTitle = document.getElementById('upgradeModalTitle');
+
     if (modal) {
         modal.style.display = 'flex';
+    }
+
+    if (modalTitle && title) {
+        modalTitle.textContent = title;
+    } else if (modalTitle) {
+        // Reset to default
+        modalTitle.textContent = 'PAN-OS Upgrade in Progress';
     }
 }
 
