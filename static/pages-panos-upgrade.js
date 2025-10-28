@@ -901,26 +901,21 @@ function pollDeviceStatus() {
                     clearInterval(timeInterval);
                     handleDeviceBackOnline();
                     return;
-                } else if (pollCount >= 3) {
-                    // After 3+ checks (40s initial + 45s of polling) and device keeps responding
-                    // Assume the reboot happened within the 40s window and we missed it
-                    console.log(`Poll ${pollCount}: Device consistently responding. Assuming reboot completed during initial delay.`);
+                } else if (pollCount >= 30) {
+                    // After 30+ checks (40s initial + 450s of polling = ~8 minutes) and device keeps responding
+                    // Either reboot happened very fast, or reboot command failed
+                    // At this point, assume device is operational and mark as complete
+                    console.log(`Poll ${pollCount}: Device responding for 8+ minutes. Assuming reboot completed or failed - marking as complete.`);
                     clearInterval(upgradeState.pollInterval);
                     clearInterval(timeInterval);
                     handleDeviceBackOnline();
                     return;
-                } else if (pollCount === 1) {
-                    // First check and device responded - give it more time
-                    console.log('First check: device responding, verifying reboot occurred...');
-                    if (messageElement) {
-                        messageElement.innerHTML = 'Device online - verifying reboot...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
-                    }
-                    updateElapsedTime();
                 } else {
-                    // Second check - still waiting
-                    console.log(`Poll ${pollCount}: Device responding, verifying reboot completion...`);
+                    // Device keeps responding but hasn't gone offline yet
+                    // This likely means reboot command hasn't taken effect yet, or device is slow to shutdown
+                    console.log(`Poll ${pollCount}: Device still online, waiting for reboot to begin...`);
                     if (messageElement) {
-                        messageElement.innerHTML = 'Verifying reboot completion...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
+                        messageElement.innerHTML = 'Waiting for device to reboot...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
                     }
                     updateElapsedTime();
                 }
