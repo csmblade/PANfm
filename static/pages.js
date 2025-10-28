@@ -1285,7 +1285,7 @@ function monitorDeviceReboot(button, successDiv, errorDiv) {
     // Start polling interval
     pollInterval = setInterval(checkDeviceStatus, 15000);
 
-    // Wait 30 seconds before first check (device needs time to actually start rebooting)
-    setTimeout(checkDeviceStatus, 30000);
+    // Wait 40 seconds before first check (device needs time to actually start rebooting)
+    setTimeout(checkDeviceStatus, 40000);
 }
 
