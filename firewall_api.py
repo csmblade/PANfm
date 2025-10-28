@@ -35,6 +35,13 @@ from firewall_api_devices import (
     get_interface_info,
     format_interface_speed
 )
+from firewall_api_upgrades import (
+    check_available_panos_versions,
+    download_panos_version,
+    install_panos_version,
+    check_job_status,
+    reboot_firewall
+)
 
 # Store previous values for throughput calculation
 # Store per-device statistics for rate calculation

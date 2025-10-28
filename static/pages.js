@@ -126,75 +126,90 @@ function sortSystemLogs(logs, sortBy) {
 // Load software updates data
 async function loadSoftwareUpdates() {
     const loadingDiv = document.getElementById('softwareLoading');
-    const tableDiv = document.getElementById('softwareTable');
+    const panosTableDiv = document.getElementById('panosTable');
+    const componentsTableDiv = document.getElementById('componentsTable');
     const errorDiv = document.getElementById('softwareErrorMessage');
 
-    // Show loading animation
-    loadingDiv.style.display = 'block';
-    tableDiv.style.display = 'none';
+    // Hide loading - PAN-OS has its own upgrade UI, we only load components
+    loadingDiv.style.display = 'none';
+    panosTableDiv.style.display = 'none';
+    componentsTableDiv.style.display = 'none';
     errorDiv.style.display = 'none';
 
     try {
         const response = await fetch('/api/software-updates');
         const data = await response.json();
 
-        // Hide loading animation
-        loadingDiv.style.display = 'none';
-        tableDiv.style.display = 'block';
+        // Show components table
+        componentsTableDiv.style.display = 'block';
 
         if (data.status === 'success' && data.software.length > 0) {
             errorDiv.style.display = 'none';
 
-            // Create table HTML
-            let tableHtml = `
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white;">
-                            <th style="padding: 15px; text-align: left; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Component</th>
-                            <th style="padding: 15px; text-align: left; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Version</th>
-                            <th style="padding: 15px; text-align: center; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Downloaded</th>
-                            <th style="padding: 15px; text-align: center; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Current</th>
-                            <th style="padding: 15px; text-align: center; font-size: 1.1em; font-family: 'Roboto', sans-serif;">Latest</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            // Filter out PAN-OS (it has dedicated upgrade UI)
+            const componentItems = data.software.filter(item => !item.name.toLowerCase().includes('panos'));
 
-            // Add rows for each software component
-            data.software.forEach((item, index) => {
-                const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
-                tableHtml += `
-                    <tr style="background: ${bgColor}; border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 15px; font-weight: 600; color: #333; font-family: 'Roboto', sans-serif;">${item.name}</td>
-                        <td style="padding: 15px; color: #666; font-family: monospace;">${item.version}</td>
-                        <td style="padding: 15px; text-align: center; color: ${item.downloaded === 'yes' ? '#28a745' : '#999'}; font-weight: 600; font-family: 'Roboto', sans-serif;">${item.downloaded}</td>
-                        <td style="padding: 15px; text-align: center; color: ${item.current === 'yes' ? '#28a745' : '#999'}; font-weight: 600; font-family: 'Roboto', sans-serif;">${item.current}</td>
-                        <td style="padding: 15px; text-align: center; color: ${item.latest === 'yes' ? '#28a745' : '#999'}; font-weight: 600; font-family: 'Roboto', sans-serif;">${item.latest}</td>
-                    </tr>
-                `;
-            });
-
-            tableHtml += `
-                    </tbody>
-                </table>
-                <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em; font-family: 'Open Sans', sans-serif;">
-                    Last updated: ${new Date(data.timestamp).toLocaleString()}
-                </div>
-            `;
-
-            tableDiv.innerHTML = tableHtml;
+            // Render Components table
+            if (componentItems.length > 0) {
+                let componentsHtml = renderSoftwareTable(componentItems, data.timestamp);
+                componentsTableDiv.innerHTML = componentsHtml;
+            } else {
+                componentsTableDiv.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No component information available</p>';
+            }
         } else {
             errorDiv.textContent = data.message || 'No software version information available';
             errorDiv.style.display = 'block';
-            tableDiv.innerHTML = '';
+            componentsTableDiv.innerHTML = '';
         }
     } catch (error) {
         console.error('Error loading software updates:', error);
-        loadingDiv.style.display = 'none';
-        tableDiv.style.display = 'none';
+        componentsTableDiv.style.display = 'none';
         errorDiv.textContent = 'Failed to load software updates: ' + error.message;
         errorDiv.style.display = 'block';
     }
+}
+
+/**
+ * Render software table HTML for given items
+ */
+function renderSoftwareTable(items, timestamp) {
+    let tableHtml = `
+        <table style="width: 100%; border-collapse: collapse; font-family: var(--font-secondary); font-size: 0.9em;">
+            <thead>
+                <tr style="background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white;">
+                    <th style="padding: 12px; text-align: left; font-family: var(--font-primary);">Component</th>
+                    <th style="padding: 12px; text-align: left; font-family: var(--font-primary);">Version</th>
+                    <th style="padding: 12px; text-align: center; font-family: var(--font-primary);">Downloaded</th>
+                    <th style="padding: 12px; text-align: center; font-family: var(--font-primary);">Current</th>
+                    <th style="padding: 12px; text-align: center; font-family: var(--font-primary);">Latest</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Add rows for each software component
+    items.forEach((item, index) => {
+        const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+        tableHtml += `
+            <tr style="background: ${bgColor}; border-bottom: 1px solid #e0e0e0;">
+                <td style="padding: 12px; font-weight: 600; color: #333; font-family: var(--font-primary);">${item.name}</td>
+                <td style="padding: 12px; color: #666; font-family: monospace;">${item.version}</td>
+                <td style="padding: 12px; text-align: center; color: ${item.downloaded === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.downloaded}</td>
+                <td style="padding: 12px; text-align: center; color: ${item.current === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.current}</td>
+                <td style="padding: 12px; text-align: center; color: ${item.latest === 'yes' ? '#28a745' : '#999'}; font-weight: 600;">${item.latest}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+            </tbody>
+        </table>
+        <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em; font-family: var(--font-secondary);">
+            Last updated: ${new Date(timestamp).toLocaleString()}
+        </div>
+    `;
+
+    return tableHtml;
 }
 
 // ============================================================================
@@ -1093,5 +1108,77 @@ function extractInterfaceNumber(interfaceName) {
         }
     }
     return 0;
+}
+
+/**
+ * Initiate firewall reboot
+ */
+async function initiateReboot() {
+    // Show confirmation dialog
+    if (!confirm('⚠️ WARNING: This will reboot the firewall!\n\nAll network traffic will be interrupted and the firewall will be unavailable for 5-10 minutes.\n\nAre you sure you want to continue?')) {
+        return;
+    }
+
+    const button = document.getElementById('rebootFirewallBtn');
+    const statusDiv = document.getElementById('rebootStatus');
+    const successDiv = document.getElementById('rebootSuccess');
+    const errorDiv = document.getElementById('rebootErrorMessage');
+
+    try {
+        // Disable button and show loading
+        button.disabled = true;
+        button.textContent = 'Rebooting...';
+        statusDiv.style.display = 'block';
+        successDiv.style.display = 'none';
+        errorDiv.style.display = 'none';
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        // Send reboot request
+        const response = await fetch('/api/panos-upgrade/reboot', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            // Hide loading, show success
+            statusDiv.style.display = 'none';
+            successDiv.style.display = 'block';
+
+            // Alert user
+            setTimeout(() => {
+                alert('The firewall is now rebooting.\n\nThis dashboard will be unavailable until the firewall completes its reboot (typically 5-10 minutes).\n\nYou may need to refresh the page after the reboot completes.');
+            }, 1000);
+
+            // Keep button disabled
+            button.textContent = 'Firewall Rebooting...';
+
+        } else {
+            // Show error
+            statusDiv.style.display = 'none';
+            errorDiv.textContent = `Reboot failed: ${data.message}`;
+            errorDiv.style.display = 'block';
+
+            // Re-enable button
+            button.disabled = false;
+            button.textContent = 'Reboot Firewall';
+        }
+
+    } catch (error) {
+        // Show error
+        statusDiv.style.display = 'none';
+        errorDiv.textContent = `Error initiating reboot: ${error.message}`;
+        errorDiv.style.display = 'block';
+
+        // Re-enable button
+        button.disabled = false;
+        button.textContent = 'Reboot Firewall';
+    }
 }
 

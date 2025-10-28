@@ -3,9 +3,13 @@ Utility functions for API statistics tracking
 Note: Debug logging has been moved to logger.py module
 """
 import requests
+import urllib3
 import time
 import socket
 from logger import debug, exception
+
+# Disable SSL warnings for self-signed certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # API call counter
 api_call_count = 0
@@ -39,6 +43,44 @@ def api_request_get(url, **kwargs):
     """Wrapper for requests.get that tracks API calls"""
     increment_api_call()
     return requests.get(url, **kwargs)
+
+def api_request_post(firewall_ip, api_key, cmd, cmd_type='op'):
+    """
+    Wrapper for Palo Alto API POST requests that tracks API calls
+
+    Args:
+        firewall_ip: Firewall IP address
+        api_key: API key for authentication
+        cmd: XML command to execute
+        cmd_type: Type of command ('op' for operational, 'config' for configuration)
+
+    Returns:
+        XML response string or None on error
+    """
+    increment_api_call()
+
+    url = f'https://{firewall_ip}/api/'
+    params = {
+        'type': cmd_type,
+        'cmd': cmd,
+        'key': api_key
+    }
+
+    try:
+        debug(f"Making POST request to {url}")
+        response = requests.post(url, data=params, verify=False, timeout=30)
+        debug(f"Response status code: {response.status_code}")
+        response.raise_for_status()
+        return response.text
+    except requests.exceptions.Timeout as e:
+        exception(f"API POST request timeout to {firewall_ip}: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        exception(f"API POST connection error to {firewall_ip}: {e}")
+        return None
+    except Exception as e:
+        exception(f"API POST request failed to {firewall_ip}: {e}")
+        return None
 
 def reverse_dns_lookup(ip_addresses, timeout=5):
     """

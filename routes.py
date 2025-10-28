@@ -23,7 +23,12 @@ from firewall_api import (
     check_tech_support_job_status,
     get_tech_support_file_url,
     get_interface_info,
-    get_interface_traffic_counters
+    get_interface_traffic_counters,
+    check_available_panos_versions,
+    download_panos_version,
+    install_panos_version,
+    check_job_status,
+    reboot_firewall
 )
 from logger import debug, info, error
 from utils import reverse_dns_lookup
@@ -235,6 +240,7 @@ def register_routes(app, csrf, limiter):
 
 
     @app.route('/api/software-updates')
+    @limiter.limit("120 per minute")  # Higher limit for reboot monitoring (15s intervals = 4/min, +buffer)
     @login_required
     def software_updates():
         """API endpoint for software update information"""
@@ -1006,3 +1012,107 @@ def register_routes(app, csrf, limiter):
                 'status': 'error',
                 'message': str(e)
             }), 500
+
+    # PAN-OS Upgrade API Routes
+    @app.route('/api/panos-versions', methods=['GET'])
+    @login_required
+    def get_panos_versions():
+        """Get available PAN-OS versions"""
+        debug("=== PAN-OS Versions API endpoint called ===")
+        try:
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            result = check_available_panos_versions(firewall_ip, api_key)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error checking PAN-OS versions: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/api/panos-upgrade/download', methods=['POST'])
+    @login_required
+    def download_panos():
+        """Download a specific PAN-OS version"""
+        debug("=== PAN-OS Download API endpoint called ===")
+        try:
+            data = request.get_json()
+            version = data.get('version')
+
+            if not version:
+                return jsonify({'status': 'error', 'message': 'Version parameter required'}), 400
+
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            result = download_panos_version(firewall_ip, api_key, version)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error downloading PAN-OS: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/api/panos-upgrade/install', methods=['POST'])
+    @login_required
+    def install_panos():
+        """Install a downloaded PAN-OS version"""
+        debug("=== PAN-OS Install API endpoint called ===")
+        try:
+            data = request.get_json()
+            version = data.get('version')
+
+            if not version:
+                return jsonify({'status': 'error', 'message': 'Version parameter required'}), 400
+
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            result = install_panos_version(firewall_ip, api_key, version)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error installing PAN-OS: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/api/panos-upgrade/job-status/<job_id>', methods=['GET'])
+    @limiter.limit("300 per hour")  # Higher limit for job polling (15s intervals = 240/hr, +25% buffer)
+    @login_required
+    def get_panos_job_status(job_id):
+        """Check the status of a PAN-OS upgrade job"""
+        debug(f"=== PAN-OS Job Status API endpoint called for job {job_id} ===")
+        try:
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                error("No firewall configured for job status check")
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            debug(f"Checking job status for job_id={job_id} on {firewall_ip}")
+            result = check_job_status(firewall_ip, api_key, job_id)
+            debug(f"Job status result: {result}")
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error checking job status for job {job_id}: {str(e)}")
+            import traceback
+            error(f"Traceback: {traceback.format_exc()}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/api/panos-upgrade/reboot', methods=['POST'])
+    @login_required
+    def reboot_panos():
+        """Reboot the firewall after upgrade"""
+        debug("=== PAN-OS Reboot API endpoint called ===")
+        try:
+            firewall_ip, api_key, _ = get_firewall_config()
+            if not firewall_ip or not api_key:
+                return jsonify({'status': 'error', 'message': 'No device configured'}), 400
+
+            result = reboot_firewall(firewall_ip, api_key)
+            return jsonify(result)
+
+        except Exception as e:
+            error(f"Error rebooting firewall: {str(e)}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500

@@ -1169,6 +1169,9 @@
                     <button class="device-info-tab" data-tab="tech-support" style="padding: 12px 24px; background: transparent; border: none; color: rgba(255, 255, 255, 0.6); font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
                         Tech Support
                     </button>
+                    <button class="device-info-tab" data-tab="reboot" style="padding: 12px 24px; background: transparent; border: none; color: rgba(255, 255, 255, 0.6); font-size: 1em; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
+                        Reboot
+                    </button>
                 </div>
 
                 <!-- Interfaces Tab Content -->
@@ -1223,12 +1226,43 @@
                 <div id="software-updates-tab" class="device-info-tab-content" style="display: none;">
                     <div class="error-message" id="softwareErrorMessage"></div>
 
+                    <!-- Sub-tabs for PAN-OS and Components -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid rgba(250, 88, 45, 0.2);">
+                        <button class="software-sub-tab active" data-tab="panos" style="padding: 10px 20px; background: transparent; border: none; color: #FA582D; font-size: 0.95em; font-weight: 600; cursor: pointer; border-bottom: 3px solid #FA582D; transition: all 0.3s; font-family: var(--font-primary);">
+                            PAN-OS
+                        </button>
+                        <button class="software-sub-tab" data-tab="components" style="padding: 10px 20px; background: transparent; border: none; color: rgba(255, 255, 255, 0.6); font-size: 0.95em; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; font-family: var(--font-primary);">
+                            Components
+                        </button>
+                    </div>
+
                     <div id="softwareLoading" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div class="spinner" style="margin: 0 auto 20px auto; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #FA582D; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                         <p style="color: #666; font-size: 1.1em;">Loading software updates...</p>
                     </div>
 
-                    <div id="softwareTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                    <!-- PAN-OS Sub-tab Content -->
+                    <div id="panos-sub-tab" class="software-sub-tab-content" style="display: block;">
+                        <!-- Version Check Section -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h3 style="color: #333; font-family: var(--font-primary); margin: 0 0 15px 0;">PAN-OS Upgrade</h3>
+                            <p style="color: #666; font-family: var(--font-secondary); margin: 0 0 15px 0; font-size: 0.95em;">
+                                Check for available PAN-OS updates and upgrade your firewall to the latest version.
+                            </p>
+                            <button id="checkPanosVersionBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-primary); box-shadow: 0 2px 4px rgba(250, 88, 45, 0.3); transition: all 0.3s;">
+                                Check for Updates
+                            </button>
+                            <div id="panosVersionInfo"></div>
+                        </div>
+
+                        <!-- Current Version Table -->
+                        <div id="panosTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                    </div>
+
+                    <!-- Components Sub-tab Content -->
+                    <div id="components-sub-tab" class="software-sub-tab-content" style="display: none;">
+                        <div id="componentsTable" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                    </div>
                 </div>
 
                 <!-- Tech Support Tab Content -->
@@ -1268,6 +1302,61 @@
                                     Download File
                                 </a>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reboot Tab Content -->
+                <div id="reboot-tab" class="device-info-tab-content" style="display: none;">
+                    <div class="error-message" id="rebootErrorMessage"></div>
+
+                    <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="color: #333; font-family: var(--font-primary); margin: 0 0 10px 0;">Reboot Firewall</h3>
+                            <p style="color: #666; font-family: var(--font-secondary); margin: 0 0 20px 0;">
+                                Restart the Palo Alto firewall to apply configuration changes or resolve issues. The firewall will be unavailable for several minutes during the reboot process.
+                            </p>
+
+                            <!-- Warning Box -->
+                            <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 20px;">
+                                <div style="display: flex; align-items: start; gap: 10px;">
+                                    <span style="font-size: 1.5em; color: #856404;">⚠️</span>
+                                    <div>
+                                        <strong style="color: #856404; font-family: var(--font-primary);">Warning:</strong>
+                                        <p style="margin: 5px 0 0 0; color: #856404; font-family: var(--font-secondary); font-size: 0.95em;">
+                                            Rebooting the firewall will:
+                                        </p>
+                                        <ul style="margin: 8px 0 0 20px; color: #856404; font-family: var(--font-secondary); font-size: 0.95em;">
+                                            <li>Disconnect all active network traffic</li>
+                                            <li>Interrupt all VPN connections</li>
+                                            <li>Make the firewall management interface unavailable</li>
+                                            <li>Typically take 5-10 minutes to complete</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reboot Button -->
+                            <button id="rebootFirewallBtn" onclick="initiateReboot()" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none; padding: 12px 30px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; font-family: var(--font-primary); box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3); transition: all 0.3s;">
+                                Reboot Firewall
+                            </button>
+                        </div>
+
+                        <!-- Status Area -->
+                        <div id="rebootStatus" style="display: none; margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #FA582D;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div class="spinner" id="rebootSpinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #FA582D; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <div style="flex: 1;">
+                                    <p id="rebootStatusText" style="color: #333; font-weight: 600; margin: 0 0 5px 0; font-family: var(--font-primary);">Rebooting firewall...</p>
+                                    <p id="rebootProgressText" style="color: #666; margin: 0; font-size: 0.9em; font-family: var(--font-secondary);">The firewall is restarting. This page will be unavailable for several minutes.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Success Area -->
+                        <div id="rebootSuccess" style="display: none; margin-top: 30px; padding: 20px; background: #d4edda; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <p style="color: #28a745; font-weight: 600; margin: 0 0 5px 0; font-family: var(--font-primary);">✓ Reboot command sent successfully!</p>
+                            <p style="color: #666; margin: 0; font-size: 0.9em; font-family: var(--font-secondary);">The firewall is now rebooting. You may lose connection shortly.</p>
                         </div>
                     </div>
                 </div>
@@ -1366,12 +1455,24 @@
                         <table id="devicesTable" style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="background: #f5f5f5; border-bottom: 2px solid #FA582D;">
-                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Name</th>
-                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
-                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Group</th>
-                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Uptime</th>
-                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">PAN-OS Version</th>
-                                    <th style="padding: 12px; text-align: left; color: #333; font-weight: 600;">Status</th>
+                                    <th onclick="sortDevices('name')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;" title="Click to sort">
+                                        Name <span id="sort-name"></span>
+                                    </th>
+                                    <th onclick="sortDevices('ip')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;" title="Click to sort">
+                                        IP Address <span id="sort-ip"></span>
+                                    </th>
+                                    <th onclick="sortDevices('group')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;" title="Click to sort">
+                                        Group <span id="sort-group"></span>
+                                    </th>
+                                    <th onclick="sortDevices('uptime')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;" title="Click to sort">
+                                        Uptime <span id="sort-uptime"></span>
+                                    </th>
+                                    <th onclick="sortDevices('version')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;" title="Click to sort">
+                                        PAN-OS Version <span id="sort-version"></span>
+                                    </th>
+                                    <th onclick="sortDevices('status')" style="padding: 12px; text-align: left; color: #333; font-weight: 600; cursor: pointer; user-select: none;" title="Click to sort">
+                                        Status <span id="sort-status"></span>
+                                    </th>
                                     <th style="padding: 12px; text-align: center; color: #333; font-weight: 600;">Actions</th>
                                 </tr>
                             </thead>
@@ -1806,11 +1907,45 @@
         </div>
     </div>
 
+    <!-- PAN-OS Upgrade Progress Modal -->
+    <div id="upgradeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);">
+            <h2 style="color: #333; font-family: var(--font-primary); margin: 0 0 20px 0;">PAN-OS Upgrade in Progress</h2>
+
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 600; color: #FA582D; font-family: var(--font-primary); font-size: 1.1em;" id="upgradeStep">Initializing...</span>
+                    <span style="color: #666; font-family: var(--font-secondary); font-size: 0.9em;" id="upgradeProgress">0%</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div style="width: 100%; height: 30px; background: #f0f0f0; border-radius: 15px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);">
+                    <div id="upgradeProgressBar" style="height: 100%; width: 0%; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9em;"></div>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: #f9f9f9; border-radius: 8px; margin-bottom: 20px;">
+                <p id="upgradeMessage" style="margin: 0; color: #666; font-family: var(--font-secondary); font-size: 0.95em;">Starting upgrade process...</p>
+            </div>
+
+            <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #856404; font-family: var(--font-secondary); font-size: 0.9em;">
+                    <strong>Warning:</strong> Do not close this window or navigate away during the upgrade process.
+                </p>
+            </div>
+
+            <button id="cancelUpgradeBtn" onclick="cancelUpgrade()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-primary);">
+                Cancel
+            </button>
+        </div>
+    </div>
+
     <!-- Load JavaScript modules in order -->
     <script src="/static/logs.js"></script>
     <script src="/static/pages.js"></script>
     <script src="/static/pages-connected-devices.js"></script>
     <script src="/static/pages-applications.js"></script>
+    <script src="/static/pages-panos-upgrade.js"></script>
     <script src="/static/settings.js"></script>
     <script src="/static/devices.js"></script>
     <script src="/static/app.js"></script>

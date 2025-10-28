@@ -928,21 +928,62 @@ function initPageNavigation() {
                 const softwareUpdatesTab = document.getElementById('software-updates-tab');
                 const interfacesTab = document.getElementById('interfaces-tab');
                 const techSupportTab = document.getElementById('tech-support-tab');
+                const rebootTab = document.getElementById('reboot-tab');
 
                 if (targetTab === 'software-updates') {
                     softwareUpdatesTab.style.display = 'block';
                     interfacesTab.style.display = 'none';
                     techSupportTab.style.display = 'none';
+                    rebootTab.style.display = 'none';
                     loadSoftwareUpdates();
                 } else if (targetTab === 'interfaces') {
                     softwareUpdatesTab.style.display = 'none';
                     interfacesTab.style.display = 'block';
                     techSupportTab.style.display = 'none';
+                    rebootTab.style.display = 'none';
                     loadInterfaces();
                 } else if (targetTab === 'tech-support') {
                     softwareUpdatesTab.style.display = 'none';
                     interfacesTab.style.display = 'none';
                     techSupportTab.style.display = 'block';
+                    rebootTab.style.display = 'none';
+                } else if (targetTab === 'reboot') {
+                    softwareUpdatesTab.style.display = 'none';
+                    interfacesTab.style.display = 'none';
+                    techSupportTab.style.display = 'none';
+                    rebootTab.style.display = 'block';
+                }
+            });
+        });
+    }
+
+    // Software Updates sub-tab switching (PAN-OS / Components)
+    const softwareSubTabs = document.querySelectorAll('.software-sub-tab');
+    if (softwareSubTabs.length > 0) {
+        softwareSubTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+
+                // Update active sub-tab styling
+                softwareSubTabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.style.color = 'rgba(255, 255, 255, 0.6)';
+                    t.style.borderBottom = '3px solid transparent';
+                });
+                tab.classList.add('active');
+                tab.style.color = '#FA582D';
+                tab.style.borderBottom = '3px solid #FA582D';
+
+                // Show target sub-tab content, hide others
+                const panosSubTab = document.getElementById('panos-sub-tab');
+                const componentsSubTab = document.getElementById('components-sub-tab');
+
+                if (targetTab === 'panos') {
+                    panosSubTab.style.display = 'block';
+                    componentsSubTab.style.display = 'none';
+                } else if (targetTab === 'components') {
+                    panosSubTab.style.display = 'none';
+                    componentsSubTab.style.display = 'block';
                 }
             });
         });
@@ -1200,6 +1241,17 @@ function refreshAllDataForDevice() {
     }
     if (typeof loadSoftwareUpdates === 'function') {
         loadSoftwareUpdates();
+        // Also clear PAN-OS upgrade UI state and errors
+        const panosVersionInfo = document.getElementById('panosVersionInfo');
+        if (panosVersionInfo) {
+            panosVersionInfo.innerHTML = '';
+        }
+        // Reset the check button if it exists
+        const checkButton = document.getElementById('checkPanosVersionBtn');
+        if (checkButton) {
+            checkButton.disabled = false;
+            checkButton.textContent = 'Check for Updates';
+        }
     }
     if (typeof loadInterfaces === 'function') {
         loadInterfaces();

@@ -33,6 +33,8 @@ function initDeviceSelector() {
 let currentDevices = [];
 let currentGroups = [];
 let selectedDeviceId = '';
+let devicesSortBy = 'name';
+let devicesSortDesc = false;
 
 async function loadDevices() {
     try {
@@ -256,6 +258,34 @@ async function onDeviceChange() {
     console.log('=== onDeviceChange complete ===');
 }
 
+function sortDevices(field) {
+    // Toggle sort direction if clicking the same field
+    if (devicesSortBy === field) {
+        devicesSortDesc = !devicesSortDesc;
+    } else {
+        devicesSortBy = field;
+        devicesSortDesc = false; // Default to ascending
+    }
+    renderDevicesTable();
+    updateSortIndicators();
+}
+
+function updateSortIndicators() {
+    // Clear all indicators
+    ['name', 'ip', 'group', 'uptime', 'version', 'status'].forEach(field => {
+        const indicator = document.getElementById(`sort-${field}`);
+        if (indicator) {
+            indicator.textContent = '';
+        }
+    });
+
+    // Set current indicator
+    const currentIndicator = document.getElementById(`sort-${devicesSortBy}`);
+    if (currentIndicator) {
+        currentIndicator.textContent = devicesSortDesc ? ' ▼' : ' ▲';
+    }
+}
+
 function renderDevicesTable() {
     const tbody = document.getElementById('devicesTableBody');
 
@@ -270,28 +300,103 @@ function renderDevicesTable() {
         return;
     }
 
-    tbody.innerHTML = currentDevices.map(device => `
-        <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 12px; color: #333;">${device.name}</td>
-            <td style="padding: 12px; color: #666;">${device.ip}</td>
-            <td style="padding: 12px; color: #666;">${device.group || 'Default'}</td>
-            <td style="padding: 12px; color: #666;">${device.uptime || 'N/A'}</td>
-            <td style="padding: 12px; color: #666;">${device.version || 'N/A'}</td>
-            <td style="padding: 12px;">
-                <span style="display: inline-block; padding: 6px 8px; border-radius: 12px; font-size: 0.85em; font-weight: 600; ${device.enabled ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
-                    ${device.enabled ? '🟢' : '🔴'}
-                </span>
-            </td>
-            <td style="padding: 12px; text-align: center;">
-                <button onclick="editDevice('${device.id}')" style="padding: 6px 12px; background: #ff6600; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">
-                    Edit
-                </button>
-                <button onclick="deleteDevice('${device.id}')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Delete
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    // Sort devices
+    const sortedDevices = [...currentDevices].sort((a, b) => {
+        let aVal, bVal;
+
+        switch (devicesSortBy) {
+            case 'name':
+                aVal = a.name || '';
+                bVal = b.name || '';
+                break;
+            case 'ip':
+                aVal = a.ip || '';
+                bVal = b.ip || '';
+                break;
+            case 'group':
+                aVal = a.group || 'Default';
+                bVal = b.group || 'Default';
+                break;
+            case 'uptime':
+                aVal = a.uptime || 'N/A';
+                bVal = b.uptime || 'N/A';
+                break;
+            case 'version':
+                aVal = a.version || 'N/A';
+                bVal = b.version || 'N/A';
+                break;
+            case 'status':
+                // Sort by status priority: Online > Unavailable > Disabled
+                const getStatusPriority = (device) => {
+                    if (!device.enabled) return 2;
+                    if (device.uptime === 'N/A' || device.uptime === 'Disabled') return 1;
+                    return 0;
+                };
+                aVal = getStatusPriority(a);
+                bVal = getStatusPriority(b);
+                return devicesSortDesc ? bVal - aVal : aVal - bVal;
+            default:
+                aVal = a.name || '';
+                bVal = b.name || '';
+        }
+
+        // String comparison
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+            return devicesSortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+        }
+
+        // Numeric comparison
+        return devicesSortDesc ? bVal - aVal : aVal - bVal;
+    });
+
+    tbody.innerHTML = sortedDevices.map(device => {
+        // Determine device availability
+        const isDisabled = !device.enabled;
+        const isUnavailable = device.uptime === 'N/A' || device.uptime === 'Disabled';
+        const isAvailable = device.enabled && !isUnavailable;
+
+        // Status indicator: Green (available), Red (unavailable/disabled), Orange (disabled)
+        let statusColor, statusBg, statusText;
+        if (isDisabled) {
+            statusColor = '#856404';
+            statusBg = '#fff3cd';
+            statusText = '⚫ Disabled';
+        } else if (isUnavailable) {
+            statusColor = '#721c24';
+            statusBg = '#f8d7da';
+            statusText = '🔴 Unavailable';
+        } else {
+            statusColor = '#155724';
+            statusBg = '#d4edda';
+            statusText = '🟢 Online';
+        }
+
+        return `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 12px; color: #333;">${device.name}</td>
+                <td style="padding: 12px; color: #666;">${device.ip}</td>
+                <td style="padding: 12px; color: #666;">${device.group || 'Default'}</td>
+                <td style="padding: 12px; color: #666;">${device.uptime || 'N/A'}</td>
+                <td style="padding: 12px; color: #666;">${device.version || 'N/A'}</td>
+                <td style="padding: 12px;">
+                    <span style="display: inline-block; padding: 6px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; background: ${statusBg}; color: ${statusColor};">
+                        ${statusText}
+                    </span>
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <button onclick="editDevice('${device.id}')" style="padding: 6px 12px; background: #ff6600; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">
+                        Edit
+                    </button>
+                    <button onclick="deleteDevice('${device.id}')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Update sort indicators
+    updateSortIndicators();
 }
 
 function updateGroupOptions() {
