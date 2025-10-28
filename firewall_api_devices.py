@@ -177,25 +177,9 @@ def get_software_updates(firewall_config):
                     })
 
             # Extract specific version fields
-            # GlobalProtect client package version
-            gp_version = root.find('.//global-protect-client-package-version')
-            add_software_entry('GlobalProtect Client', gp_version)
-
             # Application and threat signatures - NO auto update check (user clicks "Check for Updates")
             app_version = root.find('.//app-version')
             add_software_entry('Application & Threat', app_version)
-
-            # Antivirus signatures - NO auto update check (user clicks "Check for Updates")
-            av_version = root.find('.//av-version')
-            add_software_entry('Antivirus', av_version)
-
-            # WildFire version - NO auto update check (user clicks "Check for Updates")
-            wildfire_version = root.find('.//wildfire-version')
-            add_software_entry('WildFire', wildfire_version)
-
-            # PAN-OS version - no update check needed
-            sw_version = root.find('.//sw-version')
-            add_software_entry('PAN-OS', sw_version)
 
             debug(f"Software versions found: {software_info}")
 

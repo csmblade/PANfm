@@ -56,33 +56,51 @@ def check_content_updates(firewall_ip, api_key):
         # Parse content version info
         current_version = None
         latest_version = None
-        downloaded = 'no'
+        latest_downloaded = 'no'
+        all_versions = []
 
-        # Find content entries (similar to PAN-OS version parsing)
+        # Find content entries and collect all versions
         for entry in root.findall('.//entry'):
             version = entry.findtext('version', '')
             is_current = entry.findtext('current', 'no')
             is_latest = entry.findtext('latest', 'no')
             is_downloaded = entry.findtext('downloaded', 'no')
 
+            version_data = {
+                'version': version,
+                'current': is_current,
+                'latest': is_latest,
+                'downloaded': is_downloaded
+            }
+            all_versions.append(version_data)
+
             if is_current == 'yes':
                 current_version = version
                 debug(f"Found current content version: {current_version}")
             if is_latest == 'yes':
                 latest_version = version
-                downloaded = is_downloaded
-                debug(f"Found latest content version: {latest_version}, downloaded: {downloaded}")
+                latest_downloaded = is_downloaded
+                debug(f"Found latest content version (marked): {latest_version}, downloaded: {latest_downloaded}")
+
+        # If no version is explicitly marked as latest, find the newest version
+        # by comparing all available versions (highest version number)
+        if not latest_version and all_versions:
+            # Sort versions to find the newest
+            sorted_versions = sorted(all_versions, key=lambda x: x['version'], reverse=True)
+            latest_version = sorted_versions[0]['version']
+            latest_downloaded = sorted_versions[0]['downloaded']
+            debug(f"No explicit latest version found, using newest: {latest_version}")
 
         needs_update = (current_version != latest_version) if (current_version and latest_version) else False
 
-        debug(f"Content update status: current={current_version}, latest={latest_version}, needs_update={needs_update}")
+        debug(f"Content update status: current={current_version}, latest={latest_version}, needs_update={needs_update}, all_versions={len(all_versions)}")
 
         return {
             'status': 'success',
             'current_version': current_version or 'Unknown',
             'latest_version': latest_version or 'Unknown',
             'needs_update': needs_update,
-            'downloaded': downloaded,
+            'downloaded': latest_downloaded,
             'message': 'Update available' if needs_update else 'Up to date'
         }
 

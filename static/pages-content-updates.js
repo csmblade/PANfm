@@ -67,31 +67,50 @@ function displayContentUpdateStatus(data) {
     const info = document.getElementById('contentUpdateInfo');
 
     if (data.needs_update) {
+        const isDownloaded = data.downloaded && data.downloaded.toLowerCase() === 'yes';
+        const buttonText = isDownloaded ? 'Install Update' : 'Download & Install Update';
+        const buttonTitle = isDownloaded ? 'Version already downloaded - will skip download step' : 'Will download and install the update';
+
+        let statusHtml = '';
+        if (isDownloaded) {
+            statusHtml = `
+                <div style="padding: 8px; background: #d4edda; border: 1px solid #28a745; border-radius: 4px; margin-bottom: 12px; font-size: 0.9em;">
+                    <span style="color: #155724;">✓ Version ${data.latest_version} already downloaded</span>
+                </div>
+            `;
+        }
+
         info.innerHTML = `
-            <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin-top: 15px;">
-                <p style="margin: 0 0 10px 0; color: #856404; font-weight: 600; font-family: var(--font-primary);">
-                    📥 Content Update Available
-                </p>
-                <p style="margin: 0 0 5px 0; color: #666; font-family: var(--font-secondary); font-size: 0.9em;">
-                    <strong>Current Version:</strong> ${data.current_version}
-                </p>
-                <p style="margin: 0 0 15px 0; color: #666; font-family: var(--font-secondary); font-size: 0.9em;">
-                    <strong>Latest Version:</strong> ${data.latest_version}
-                </p>
-                <button onclick="startContentUpdate()" style="padding: 8px 16px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-primary); box-shadow: 0 2px 4px rgba(250, 88, 45, 0.3);">
-                    Download & Install Update
-                </button>
+            <div style="margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #FA582D;">
+                <div style="margin-bottom: 10px;">
+                    <strong style="color: #333; font-family: var(--font-primary);">Current Version:</strong>
+                    <span style="color: #666; font-family: monospace; font-size: 1.1em;">${data.current_version}</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong style="color: #333; font-family: var(--font-primary);">Latest Version:</strong>
+                    <span style="color: #28a745; font-family: monospace; font-size: 1.1em; font-weight: 600;">${data.latest_version}</span>
+                </div>
+                <div style="padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px;">
+                    <strong style="color: #856404;">Content Update Available</strong>
+                    <p style="margin: 8px 0 0 0; color: #856404;">A new content update is available for Application & Threat signatures.</p>
+                    ${statusHtml}
+                    <button onclick="startContentUpdate()" title="${buttonTitle}" style="padding: 10px 20px; background: linear-gradient(135deg, #FA582D 0%, #FF7A55 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-primary); box-shadow: 0 2px 4px rgba(250, 88, 45, 0.3);">
+                        ${buttonText}
+                    </button>
+                </div>
             </div>
         `;
     } else {
         info.innerHTML = `
-            <div style="background: #d4edda; border: 1px solid #28a745; border-radius: 6px; padding: 15px; margin-top: 15px;">
-                <p style="margin: 0; color: #155724; font-weight: 600; font-family: var(--font-primary);">
-                    ✓ Content is up to date
-                </p>
-                <p style="margin: 5px 0 0 0; color: #155724; font-family: var(--font-secondary); font-size: 0.9em;">
-                    Current Version: ${data.current_version}
-                </p>
+            <div style="margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #FA582D;">
+                <div style="margin-bottom: 10px;">
+                    <strong style="color: #333; font-family: var(--font-primary);">Current Version:</strong>
+                    <span style="color: #666; font-family: monospace; font-size: 1.1em;">${data.current_version}</span>
+                </div>
+                <div style="padding: 12px; background: #d4edda; border: 1px solid #28a745; border-radius: 6px; color: #155724;">
+                    <strong>Content Up to Date</strong>
+                    <p style="margin: 8px 0 0 0;">You are running the latest version of Application & Threat content.</p>
+                </div>
             </div>
         `;
     }
@@ -102,39 +121,60 @@ function displayContentUpdateStatus(data) {
 /**
  * Start content update workflow
  * Combined download + install process
+ * Skips download if already downloaded
  */
 async function startContentUpdate() {
     console.log('Starting content update workflow...');
 
+    // Check if already downloaded
+    const isDownloaded = contentUpdateState.updateInfo?.downloaded &&
+                         contentUpdateState.updateInfo.downloaded.toLowerCase() === 'yes';
+
+    // Build confirmation message
+    const steps = [];
+    let n = 1;
+    if (!isDownloaded) steps.push(`${n++}. Download content update ${contentUpdateState.updateInfo?.latest_version}`);
+    steps.push(`${n++}. Install content update ${contentUpdateState.updateInfo?.latest_version}`);
+
+    const msg = `This will update Application & Threat content from ${contentUpdateState.updateInfo?.current_version} to ${contentUpdateState.updateInfo?.latest_version}.\n\nThe process will:\n${steps.join('\n')}\n\nNo reboot is required. Continue?`;
+
+    if (!confirm(msg)) return;
+
     // Show modal
     showContentUpdateModal();
-
-    // Step 1: Download
-    contentUpdateState.currentStep = 'download';
-    updateContentModalMessage('📥 Downloading content update...', '#FA582D');
 
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        const downloadResponse = await fetch('/api/content-updates/download', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
+        // Step 1: Download (skip if already downloaded)
+        if (!isDownloaded) {
+            contentUpdateState.currentStep = 'download';
+            updateContentModalMessage('📥 Downloading content update...', '#FA582D');
+
+            const downloadResponse = await fetch('/api/content-updates/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            const downloadData = await downloadResponse.json();
+            console.log('Download response:', downloadData);
+
+            if (downloadData.status === 'success') {
+                contentUpdateState.downloadJobId = downloadData.jobid;
+
+                // Start polling download job
+                await pollContentJob(downloadData.jobid, 'download');
+
+            } else {
+                throw new Error(downloadData.message || 'Download failed');
             }
-        });
-
-        const downloadData = await downloadResponse.json();
-        console.log('Download response:', downloadData);
-
-        if (downloadData.status === 'success') {
-            contentUpdateState.downloadJobId = downloadData.jobid;
-
-            // Start polling download job
-            await pollContentJob(downloadData.jobid, 'download');
-
         } else {
-            throw new Error(downloadData.message || 'Download failed');
+            console.log('Content already downloaded, skipping download step');
+            // Go directly to install
+            await startContentInstall();
         }
 
     } catch (error) {
