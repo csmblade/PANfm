@@ -1116,29 +1116,27 @@ function extractInterfaceNumber(interfaceName) {
 }
 
 /**
- * Initiate firewall reboot
+ * Initiate firewall reboot (standalone reboot tab)
+ * Uses same modal and workflow as PAN-OS upgrade reboot
  */
 async function initiateReboot() {
     // Show confirmation dialog
-    if (!confirm('⚠️ WARNING: This will reboot the firewall!\n\nAll network traffic will be interrupted and the firewall will be unavailable for 5-10 minutes.\n\nAre you sure you want to continue?')) {
+    if (!confirm('WARNING: This will reboot the firewall!\n\nAll network traffic will be interrupted and the firewall will be unavailable for 5-10 minutes.\n\nAre you sure you want to continue?')) {
         return;
     }
 
-    const button = document.getElementById('rebootFirewallBtn');
-    const statusDiv = document.getElementById('rebootStatus');
-    const successDiv = document.getElementById('rebootSuccess');
-    const errorDiv = document.getElementById('rebootErrorMessage');
+    // Show the PAN-OS upgrade modal (same modal for consistency)
+    showUpgradeModal();
+
+    // Update modal to show reboot progress
+    updateUpgradeProgress('Rebooting', 'Initiating firewall reboot...', 0, false);
 
     try {
-        // Disable button and show loading
-        button.disabled = true;
-        button.textContent = 'Rebooting...';
-        statusDiv.style.display = 'block';
-        successDiv.style.display = 'none';
-        errorDiv.style.display = 'none';
-
         // Get CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        // Wait a moment before initiating reboot
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         // Send reboot request
         const response = await fetch('/api/panos-upgrade/reboot', {
@@ -1152,140 +1150,32 @@ async function initiateReboot() {
         const data = await response.json();
 
         if (data.status === 'success') {
-            // Hide initial status
-            statusDiv.style.display = 'none';
+            // Wait a moment to show reboot was initiated
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // Start monitoring reboot (poll device until it comes back online)
-            monitorDeviceReboot(button, successDiv, errorDiv);
+            // Start monitoring the reboot process using PAN-OS upgrade monitoring
+            startRebootMonitoring();
 
         } else {
-            // Show error
-            statusDiv.style.display = 'none';
-            errorDiv.textContent = `Reboot failed: ${data.message}`;
-            errorDiv.style.display = 'block';
+            // Show error in modal
+            updateUpgradeProgress('Failed', `Reboot failed: ${data.message}`, 0, true);
 
-            // Re-enable button
-            button.disabled = false;
-            button.textContent = 'Reboot Firewall';
+            // Close modal after 3 seconds
+            setTimeout(() => {
+                hideUpgradeModal();
+            }, 3000);
         }
 
     } catch (error) {
-        // Show error
-        statusDiv.style.display = 'none';
-        errorDiv.textContent = `Error initiating reboot: ${error.message}`;
-        errorDiv.style.display = 'block';
+        // Show error in modal
+        updateUpgradeProgress('Failed', `Error initiating reboot: ${error.message}`, 0, true);
 
-        // Re-enable button
-        button.disabled = false;
-        button.textContent = 'Reboot Firewall';
+        // Close modal after 3 seconds
+        setTimeout(() => {
+            hideUpgradeModal();
+        }, 3000);
     }
 }
 
-/**
- * Monitor device reboot progress - poll device until it comes back online
- */
-function monitorDeviceReboot(button, successDiv, errorDiv) {
-    console.log('Starting device reboot monitoring...');
-
-    // Show monitoring status
-    button.textContent = 'Monitoring Reboot...';
-    successDiv.innerHTML = `
-        <div style="padding: 15px;">
-            <strong style="color: #FA582D;">🔴 Firewall Rebooting - Monitoring Status</strong>
-            <p style="margin: 8px 0; color: #666;">Polling device every 15 seconds...</p>
-            <p id="rebootElapsedTime" style="margin: 8px 0; color: #999; font-size: 0.9em;">Elapsed: 0:00</p>
-            <p id="rebootStatusMessage" style="margin: 8px 0; color: #666;">🔴 Device offline - rebooting...</p>
-        </div>
-    `;
-    successDiv.style.display = 'block';
-
-    const startTime = Date.now();
-    let pollCount = 0;
-    const maxPolls = 60; // 15 minutes
-
-    // Update elapsed time every second
-    const timeInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        const timeDisplay = document.getElementById('rebootElapsedTime');
-        if (timeDisplay) {
-            timeDisplay.textContent = `Elapsed: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-    }, 1000);
-
-    // Poll function
-    let pollInterval;
-    const checkDeviceStatus = async () => {
-        pollCount++;
-        const statusMsg = document.getElementById('rebootStatusMessage');
-
-        if (statusMsg) {
-            statusMsg.textContent = '🟡 Checking device status...';
-            statusMsg.style.color = '#856404';
-        }
-
-        try {
-            // Try to fetch firewall health check (lightweight - no update server connections)
-            const response = await fetch('/api/firewall-health', {
-                method: 'GET',
-                headers: {'Cache-Control': 'no-cache'}
-            });
-
-            if (response.ok) {
-                // Device is back online!
-                console.log('Device is back online!');
-                clearInterval(pollInterval);
-                clearInterval(timeInterval);
-
-                if (statusMsg) {
-                    statusMsg.textContent = '🟢 Device is back online! Reboot complete.';
-                    statusMsg.style.color = '#28a745';
-                }
-
-                button.textContent = 'Reboot Complete';
-                button.style.background = '#28a745';
-
-                // Refresh page data after 3 seconds
-                setTimeout(() => {
-                    alert('✓ Firewall reboot complete! The device is back online.\n\nRefreshing page data...');
-                    location.reload();
-                }, 3000);
-                return;
-            } else {
-                // Device not ready yet
-                if (statusMsg) {
-                    statusMsg.textContent = '🔴 Device still rebooting...';
-                    statusMsg.style.color = '#666';
-                }
-            }
-        } catch (error) {
-            // Connection failed - expected during reboot
-            console.log('Device offline (expected):', error.message);
-            if (statusMsg) {
-                statusMsg.textContent = '🔴 Device offline - rebooting...';
-                statusMsg.style.color = '#666';
-            }
-        }
-
-        // Check timeout
-        if (pollCount >= maxPolls) {
-            clearInterval(pollInterval);
-            clearInterval(timeInterval);
-            if (statusMsg) {
-                statusMsg.textContent = '⚠️ Reboot taking longer than expected (15+ minutes). Please check device manually.';
-                statusMsg.style.color = '#856404';
-            }
-            button.disabled = false;
-            button.textContent = 'Reboot Firewall';
-            button.style.background = '';
-        }
-    };
-
-    // Start polling interval
-    pollInterval = setInterval(checkDeviceStatus, 15000);
-
-    // Wait 40 seconds before first check (device needs time to actually start rebooting)
-    setTimeout(checkDeviceStatus, 40000);
-}
+// Reboot monitoring now handled by PAN-OS upgrade module (startRebootMonitoring)
 

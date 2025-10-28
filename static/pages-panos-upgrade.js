@@ -806,7 +806,7 @@ function startRebootMonitoring() {
     }
 
     if (messageElement) {
-        messageElement.innerHTML = '🔴 Firewall is rebooting... Monitoring status.<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;">Elapsed: 0:00</span>';
+        messageElement.innerHTML = 'Firewall is rebooting... Monitoring status.<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;">Elapsed: 0:00</span>';
         messageElement.style.color = '#666';
     }
 
@@ -868,7 +868,7 @@ function pollDeviceStatus() {
 
         const messageElement = document.getElementById('upgradeMessage');
         if (messageElement) {
-            messageElement.innerHTML = '🟡 Checking device status...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
+            messageElement.innerHTML = 'Checking device status...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
         }
         updateElapsedTime();
 
@@ -899,7 +899,7 @@ function pollDeviceStatus() {
             // Connection failed - expected during reboot
             console.log('Device offline (expected during reboot):', error.message);
             if (messageElement) {
-                messageElement.innerHTML = '🔴 Device offline - Rebooting...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
+                messageElement.innerHTML = 'Device offline - Rebooting...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
             }
             updateElapsedTime();
         }
@@ -909,7 +909,7 @@ function pollDeviceStatus() {
             clearInterval(upgradeState.pollInterval);
             clearInterval(timeInterval);
             if (messageElement) {
-                messageElement.innerHTML = '⚠️ Reboot taking longer than expected (15+ minutes).<br><span style="font-size: 0.9em;">The device may still be rebooting. Please check manually.</span>';
+                messageElement.innerHTML = 'Reboot taking longer than expected (15+ minutes).<br><span style="font-size: 0.9em;">The device may still be rebooting. Please check manually.</span>';
                 messageElement.style.color = '#856404';
             }
             clearRebootMonitoringState();
@@ -943,7 +943,7 @@ function handleDeviceBackOnline() {
     }
 
     if (messageElement) {
-        messageElement.innerHTML = '🟢 Device is back online! Upgrade complete.<br><span style="font-size: 0.9em; color: #28a745;">Refreshing device information...</span>';
+        messageElement.innerHTML = 'Device is back online! Upgrade complete.<br><span style="font-size: 0.9em; color: #28a745;">Refreshing device information...</span>';
         messageElement.style.color = '#28a745';
     }
 
@@ -989,6 +989,14 @@ function cancelUpgrade() {
             pollInterval: null
         };
     }
+}
+
+// Export functions for use by other modules (e.g., standalone reboot tab)
+if (typeof window !== 'undefined') {
+    window.showUpgradeModal = showUpgradeModal;
+    window.hideUpgradeModal = hideUpgradeModal;
+    window.updateUpgradeProgress = updateUpgradeProgress;
+    window.startRebootMonitoring = startRebootMonitoring;
 }
 
 // Initialize when DOM is ready
