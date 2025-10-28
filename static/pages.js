@@ -1147,17 +1147,11 @@ async function initiateReboot() {
         const data = await response.json();
 
         if (data.status === 'success') {
-            // Hide loading, show success
+            // Hide initial status
             statusDiv.style.display = 'none';
-            successDiv.style.display = 'block';
 
-            // Alert user
-            setTimeout(() => {
-                alert('The firewall is now rebooting.\n\nThis dashboard will be unavailable until the firewall completes its reboot (typically 5-10 minutes).\n\nYou may need to refresh the page after the reboot completes.');
-            }, 1000);
-
-            // Keep button disabled
-            button.textContent = 'Firewall Rebooting...';
+            // Start monitoring reboot (poll device until it comes back online)
+            monitorDeviceReboot(button, successDiv, errorDiv);
 
         } else {
             // Show error
@@ -1180,5 +1174,115 @@ async function initiateReboot() {
         button.disabled = false;
         button.textContent = 'Reboot Firewall';
     }
+}
+
+/**
+ * Monitor device reboot progress - poll device until it comes back online
+ */
+function monitorDeviceReboot(button, successDiv, errorDiv) {
+    console.log('Starting device reboot monitoring...');
+
+    // Show monitoring status
+    button.textContent = 'Monitoring Reboot...';
+    successDiv.innerHTML = `
+        <div style="padding: 15px;">
+            <strong style="color: #FA582D;">🔴 Firewall Rebooting - Monitoring Status</strong>
+            <p style="margin: 8px 0; color: #666;">Polling device every 15 seconds...</p>
+            <p id="rebootElapsedTime" style="margin: 8px 0; color: #999; font-size: 0.9em;">Elapsed: 0:00</p>
+            <p id="rebootStatusMessage" style="margin: 8px 0; color: #666;">🔴 Device offline - rebooting...</p>
+        </div>
+    `;
+    successDiv.style.display = 'block';
+
+    const startTime = Date.now();
+    let pollCount = 0;
+    const maxPolls = 60; // 15 minutes
+
+    // Update elapsed time every second
+    const timeInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        const timeDisplay = document.getElementById('rebootElapsedTime');
+        if (timeDisplay) {
+            timeDisplay.textContent = `Elapsed: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }, 1000);
+
+    // Poll device status
+    const pollInterval = setInterval(async () => {
+        pollCount++;
+        const statusMsg = document.getElementById('rebootStatusMessage');
+
+        if (statusMsg) {
+            statusMsg.textContent = '🟡 Checking device status...';
+            statusMsg.style.color = '#856404';
+        }
+
+        try {
+            // Try to fetch software updates as health check
+            const response = await fetch('/api/software-updates', {
+                method: 'GET',
+                headers: {'Cache-Control': 'no-cache'}
+            });
+
+            if (response.ok) {
+                // Device is back online!
+                console.log('Device is back online!');
+                clearInterval(pollInterval);
+                clearInterval(timeInterval);
+
+                if (statusMsg) {
+                    statusMsg.textContent = '🟢 Device is back online! Reboot complete.';
+                    statusMsg.style.color = '#28a745';
+                }
+
+                button.textContent = 'Reboot Complete';
+                button.style.background = '#28a745';
+
+                // Refresh page data after 3 seconds
+                setTimeout(() => {
+                    alert('✓ Firewall reboot complete! The device is back online.\n\nRefreshing page data...');
+                    location.reload();
+                }, 3000);
+                return;
+            } else {
+                // Device not ready yet
+                if (statusMsg) {
+                    statusMsg.textContent = '🔴 Device still rebooting...';
+                    statusMsg.style.color = '#666';
+                }
+            }
+        } catch (error) {
+            // Connection failed - expected during reboot
+            console.log('Device offline (expected):', error.message);
+            if (statusMsg) {
+                statusMsg.textContent = '🔴 Device offline - rebooting...';
+                statusMsg.style.color = '#666';
+            }
+        }
+
+        // Check timeout
+        if (pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            clearInterval(timeInterval);
+            if (statusMsg) {
+                statusMsg.textContent = '⚠️ Reboot taking longer than expected (15+ minutes). Please check device manually.';
+                statusMsg.style.color = '#856404';
+            }
+            button.disabled = false;
+            button.textContent = 'Reboot Firewall';
+            button.style.background = '';
+        }
+    }, 15000);
+
+    // Do first check immediately
+    setTimeout(async () => {
+        const statusMsg = document.getElementById('rebootStatusMessage');
+        if (statusMsg) {
+            statusMsg.textContent = '🟡 Checking device status...';
+        }
+        // First poll happens via the interval
+    }, 100);
 }
 

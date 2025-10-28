@@ -31,15 +31,20 @@ def check_available_panos_versions(firewall_ip, api_key):
     debug("Checking available PAN-OS versions")
 
     try:
+        debug(f"Checking PAN-OS versions for firewall: {firewall_ip}")
+
         # API command to check for software updates
         cmd = '<request><system><software><check></check></software></system></request>'
+        debug(f"Sending command: {cmd}")
 
         response = api_request_post(firewall_ip, api_key, cmd, cmd_type='op')
+        debug(f"Received response: {response[:200] if response else 'None'}")
 
         if not response:
+            error(f"No response from firewall {firewall_ip} for software check command")
             return {
                 'status': 'error',
-                'message': 'Failed to get response from firewall'
+                'message': 'Failed to get response from firewall. Check firewall connectivity and API access.'
             }
 
         # Parse XML response

@@ -1252,6 +1252,24 @@ function refreshAllDataForDevice() {
             checkButton.disabled = false;
             checkButton.textContent = 'Check for Updates';
         }
+
+        // Clear reboot UI state when switching devices
+        const rebootButton = document.getElementById('rebootFirewallBtn');
+        if (rebootButton) {
+            rebootButton.disabled = false;
+            rebootButton.textContent = 'Reboot Firewall';
+            rebootButton.style.background = '';
+        }
+        const rebootSuccess = document.getElementById('rebootSuccess');
+        if (rebootSuccess) {
+            rebootSuccess.style.display = 'none';
+            rebootSuccess.innerHTML = '';
+        }
+        const rebootError = document.getElementById('rebootErrorMessage');
+        if (rebootError) {
+            rebootError.style.display = 'none';
+            rebootError.textContent = '';
+        }
     }
     if (typeof loadInterfaces === 'function') {
         loadInterfaces();

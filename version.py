@@ -10,7 +10,7 @@ PATCH: Bug fixes, small improvements, documentation updates
 # Current version
 VERSION_MAJOR = 1
 VERSION_MINOR = 3
-VERSION_PATCH = 2
+VERSION_PATCH = 3
 
 # Build metadata (optional)
 VERSION_BUILD = "20251028"  # YYYYMMDD format
@@ -75,6 +75,22 @@ def get_short_version():
 
 # Version history and changelog
 VERSION_HISTORY = [
+    {
+        'version': '1.3.3',
+        'codename': 'Resilient Upgrades',
+        'date': '2025-10-28',
+        'type': 'patch',
+        'changes': [
+            'Fixed reboot monitoring in standalone Reboot tab (was freezing)',
+            'Added real-time device polling during reboot (15-second intervals)',
+            'Added live status indicators (🔴 offline, 🟡 checking, 🟢 online)',
+            'Added elapsed time counter during reboot monitoring',
+            'Automatic page refresh when device comes back online after reboot',
+            'Fixed device switch caching - reboot UI state now clears when switching devices',
+            'Improved error logging in check_available_panos_versions() for diagnostics',
+            'Better error messages for connectivity issues'
+        ]
+    },
     {
         'version': '1.3.2',
         'codename': 'Resilient Upgrades',
