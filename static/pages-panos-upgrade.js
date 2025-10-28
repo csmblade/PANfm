@@ -919,8 +919,8 @@ function pollDeviceStatus() {
     // Start polling
     upgradeState.pollInterval = setInterval(checkDevice, pollInterval);
 
-    // Do first check immediately
-    checkDevice();
+    // Wait 15 seconds before first check (device needs time to actually start rebooting)
+    setTimeout(checkDevice, 15000);
 }
 
 /**
