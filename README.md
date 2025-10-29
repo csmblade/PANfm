@@ -14,12 +14,21 @@ A real-time monitoring dashboard for Palo Alto Networks firewalls with automated
 git clone <your-repo-url>
 cd panfm
 
+# First-time setup: Create required files
+./setup.sh
+
 # Start the application
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 ```
+
+**Note:** The `setup.sh` script creates:
+- `settings.json` - Default application settings
+- `devices.json` - Empty device list
+- `encryption.key` - Encryption key for sensitive data
+- `data/` - Data directory
 
 The dashboard will be available at **http://localhost:3000**
 
