@@ -52,7 +52,19 @@ debug.log.*
 security.log
 security.log.*
 *.xml
+*_output.xml
 encryption.key
+
+# Temporary/debug files
+logs.txt
+logs*.txt
+tech_support_logs*.txt
+nul
+service_port_db.json
+
+# Screenshot/image files
+*.png
+*.rtf
 
 # Docker volumes
 data/

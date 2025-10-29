@@ -105,6 +105,7 @@ def register_routes(app, csrf, limiter):
         })
 
     @app.route('/api/session-keepalive', methods=['GET'])
+    @limiter.limit("600 per hour")  # Support frequent keepalive pings
     @login_required
     def session_keepalive():
         """Session keepalive endpoint for Tony Mode - refreshes session expiry"""
@@ -175,6 +176,7 @@ def register_routes(app, csrf, limiter):
         return send_from_directory(images_dir, filename)
 
     @app.route('/api/throughput')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds (12/min = 720/hr)
     @login_required
     def throughput():
         """API endpoint for real-time throughput data"""
@@ -185,6 +187,7 @@ def register_routes(app, csrf, limiter):
         return jsonify(data)
 
     @app.route('/api/health')
+    @limiter.limit("600 per hour")  # Support frequent health checks
     @login_required
     def health():
         """Health check endpoint"""
@@ -214,6 +217,7 @@ def register_routes(app, csrf, limiter):
         return jsonify(get_version_info())
 
     @app.route('/api/system-logs')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds
     @login_required
     def system_logs_api():
         """API endpoint for system logs"""
@@ -237,6 +241,7 @@ def register_routes(app, csrf, limiter):
             })
 
     @app.route('/api/traffic-logs')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds
     @login_required
     def traffic_logs_api():
         """API endpoint for traffic logs"""
@@ -301,6 +306,7 @@ def register_routes(app, csrf, limiter):
         return jsonify(data)
 
     @app.route('/api/interfaces')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds
     @login_required
     def interfaces_info():
         """API endpoint for interface information"""
@@ -311,6 +317,7 @@ def register_routes(app, csrf, limiter):
         return jsonify(data)
 
     @app.route('/api/interface-traffic')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds
     @login_required
     def interface_traffic():
         """API endpoint for per-interface traffic counters"""
@@ -319,6 +326,7 @@ def register_routes(app, csrf, limiter):
         return jsonify({'status': 'success', 'counters': counters})
 
     @app.route('/api/license')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds
     @login_required
     def license_info():
         """API endpoint for license information"""
@@ -327,6 +335,7 @@ def register_routes(app, csrf, limiter):
         return jsonify(data)
 
     @app.route('/api/connected-devices')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds
     @login_required
     def connected_devices_api():
         """API endpoint for connected devices (ARP entries)"""
@@ -351,6 +360,7 @@ def register_routes(app, csrf, limiter):
             })
 
     @app.route('/api/applications')
+    @limiter.limit("600 per hour")  # Support auto-refresh every 5 seconds
     @login_required
     def applications_api():
         """API endpoint for application statistics"""
@@ -386,6 +396,7 @@ def register_routes(app, csrf, limiter):
             })
 
     @app.route('/api/settings', methods=['GET', 'POST'])
+    @limiter.limit("600 per hour")  # Support frequent settings reads
     @login_required
     def settings():
         """API endpoint for settings"""
@@ -461,6 +472,7 @@ def register_routes(app, csrf, limiter):
     # ============================================================================
 
     @app.route('/api/devices', methods=['GET'])
+    @limiter.limit("600 per hour")  # Support frequent device list reads
     @login_required
     def get_devices():
         """Get all devices with encrypted API keys"""
@@ -503,7 +515,7 @@ def register_routes(app, csrf, limiter):
     @app.route('/api/devices', methods=['POST'])
     @csrf.exempt
     @login_required
-    @limiter.limit("20 per hour")
+    @limiter.limit("100 per hour")
     def create_device():
         """Add a new device and manage selected_device_id"""
         debug("Create device request received")
@@ -596,7 +608,7 @@ def register_routes(app, csrf, limiter):
     @app.route('/api/devices/<device_id>', methods=['PUT'])
     @csrf.exempt
     @login_required
-    @limiter.limit("20 per hour")
+    @limiter.limit("100 per hour")
     def update_device(device_id):
         """Update a device"""
         try:
@@ -628,7 +640,7 @@ def register_routes(app, csrf, limiter):
     @app.route('/api/devices/<device_id>', methods=['DELETE'])
     @csrf.exempt
     @login_required
-    @limiter.limit("20 per hour")
+    @limiter.limit("100 per hour")
     def delete_device(device_id):
         """Delete a device and manage selected_device_id"""
         debug(f"Delete device request for device_id: {device_id}")
@@ -753,7 +765,7 @@ def register_routes(app, csrf, limiter):
 
     @app.route('/api/vendor-db/upload', methods=['POST'])
     @login_required
-    @limiter.limit("5 per hour")
+    @limiter.limit("20 per hour")
     def vendor_db_upload():
         """API endpoint to upload vendor database"""
         debug("=== Vendor DB upload endpoint called ===")
@@ -848,7 +860,7 @@ def register_routes(app, csrf, limiter):
 
     @app.route('/api/service-port-db/upload', methods=['POST'])
     @login_required
-    @limiter.limit("5 per hour")
+    @limiter.limit("20 per hour")
     def service_port_db_upload():
         """API endpoint to upload service port database (IANA XML)"""
         debug("=== Service port DB upload endpoint called ===")
@@ -1037,7 +1049,7 @@ def register_routes(app, csrf, limiter):
 
     # PAN-OS Upgrade API Routes
     @app.route('/api/panos-versions', methods=['GET'])
-    @limiter.limit("20 per hour")  # Limit for Check for Updates button (should not be clicked frequently)
+    @limiter.limit("100 per hour")  # Allow reasonable number of version checks
     @login_required
     def get_panos_versions():
         """Get available PAN-OS versions"""
@@ -1055,7 +1067,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/download', methods=['POST'])
-    @limiter.limit("50 per hour")  # Limit for download initiation calls
+    @limiter.limit("100 per hour")  # Allow retries and multiple download operations
     @login_required
     def download_panos():
         """Download a specific PAN-OS version"""
@@ -1079,7 +1091,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/install', methods=['POST'])
-    @limiter.limit("50 per hour")  # Limit for install initiation calls
+    @limiter.limit("100 per hour")  # Allow retries and testing
     @login_required
     def install_panos():
         """Install a downloaded PAN-OS version"""
@@ -1126,7 +1138,7 @@ def register_routes(app, csrf, limiter):
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/panos-upgrade/reboot', methods=['POST'])
-    @limiter.limit("20 per hour")  # Limit for reboot initiation
+    @limiter.limit("100 per hour")  # Allow multiple reboots for testing
     @login_required
     def reboot_panos():
         """Reboot the firewall after upgrade"""
@@ -1148,7 +1160,7 @@ def register_routes(app, csrf, limiter):
     # ============================================================================
 
     @app.route('/api/content-updates/check', methods=['GET'])
-    @limiter.limit("20 per hour")
+    @limiter.limit("100 per hour")
     @login_required
     def check_content_updates_api():
         """Check for available content updates (App & Threat, AV, WildFire)"""
@@ -1167,7 +1179,7 @@ def register_routes(app, csrf, limiter):
 
 
     @app.route('/api/content-updates/download', methods=['POST'])
-    @limiter.limit("50 per hour")
+    @limiter.limit("100 per hour")
     @login_required
     def download_content_api():
         """Download latest content update"""
@@ -1186,7 +1198,7 @@ def register_routes(app, csrf, limiter):
 
 
     @app.route('/api/content-updates/install', methods=['POST'])
-    @limiter.limit("50 per hour")
+    @limiter.limit("100 per hour")
     @login_required
     def install_content_api():
         """Install downloaded content update"""
