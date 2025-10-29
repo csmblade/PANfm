@@ -22,6 +22,7 @@ git clone <your-repo-url>
 cd panfm
 
 # First-time setup: Create required files
+chmod +x setup.sh
 ./setup.sh
 
 # Start the application
