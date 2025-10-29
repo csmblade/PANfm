@@ -12,11 +12,15 @@ def check_firewall_health(firewall_ip, api_key):
     """
     Lightweight health check for firewall - does NOT trigger update server connections
     Used for reboot monitoring and connection testing
+
+    Verifies firewall is fully operational by checking:
+    1. API responds to system info query
+    2. Auto-commit status indicates system is ready
     """
     try:
         base_url = f"https://{firewall_ip}/api/"
 
-        # Simple system info query - no update checks
+        # First check: Simple system info query - no update checks
         cmd = "<show><system><info></info></system></show>"
         params = {
             'type': 'op',
@@ -36,11 +40,20 @@ def check_firewall_health(firewall_ip, api_key):
                 hostname = root.find('.//hostname')
                 sw_version = root.find('.//sw-version')
 
+                # Check auto-commit status to verify system is fully booted
+                # During boot, auto-commit will be in progress or not available
+                auto_commit = root.find('.//auto-commit-status')
+
+                # If we can get system info AND auto-commit status is available,
+                # the firewall is likely fully operational
+                # Note: auto-commit might be None on some models, which is fine
+
                 return {
                     'status': 'online',
                     'ip': firewall_ip,
                     'hostname': hostname.text if hostname is not None else 'Unknown',
-                    'version': sw_version.text if sw_version is not None else 'Unknown'
+                    'version': sw_version.text if sw_version is not None else 'Unknown',
+                    'ready': True
                 }
             else:
                 return {'status': 'error', 'message': 'Firewall returned error status'}

@@ -858,6 +858,7 @@ function pollDeviceStatus() {
     const maxPolls = 60; // 15 minutes with 15-second intervals
     const pollInterval = 15000; // 15 seconds
     let hasSeenOfflineOrError = false; // Track if we've seen at least one offline/error state
+    let consecutiveOnlineCount = 0; // Track consecutive successful responses after seeing offline
 
     // Update elapsed time display
     const updateElapsedTime = () => {
@@ -895,12 +896,24 @@ function pollDeviceStatus() {
             if (response.ok) {
                 // Device responded successfully
                 if (hasSeenOfflineOrError) {
-                    // We previously saw device offline/error, now it's back - reboot complete!
-                    console.log('Device is back online after reboot!');
-                    clearInterval(upgradeState.pollInterval);
-                    clearInterval(timeInterval);
-                    handleDeviceBackOnline();
-                    return;
+                    // We previously saw device offline/error
+                    consecutiveOnlineCount++;
+
+                    if (consecutiveOnlineCount >= 3) {
+                        // Device has responded successfully 3 times in a row after being offline - truly back!
+                        console.log('Device is back online after reboot (3 consecutive successful checks)!');
+                        clearInterval(upgradeState.pollInterval);
+                        clearInterval(timeInterval);
+                        handleDeviceBackOnline();
+                        return;
+                    } else {
+                        // Waiting for more consecutive successful responses
+                        console.log(`Device responded after being offline (${consecutiveOnlineCount}/3 checks)`);
+                        if (messageElement) {
+                            messageElement.innerHTML = `Verifying device is fully operational (${consecutiveOnlineCount}/3)...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>`;
+                        }
+                        updateElapsedTime();
+                    }
                 } else if (pollCount >= 30) {
                     // After 30+ checks (40s initial + 450s of polling = ~8 minutes) and device keeps responding
                     // Either reboot happened very fast, or reboot command failed
@@ -922,6 +935,7 @@ function pollDeviceStatus() {
             } else {
                 // Got a response but not OK
                 hasSeenOfflineOrError = true;
+                consecutiveOnlineCount = 0; // Reset counter
                 if (messageElement) {
                     messageElement.innerHTML = 'Device rebooting...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
                 }
@@ -930,6 +944,7 @@ function pollDeviceStatus() {
         } catch (error) {
             // Connection failed - device is offline
             hasSeenOfflineOrError = true;
+            consecutiveOnlineCount = 0; // Reset counter
             console.log('Device offline (rebooting):', error.message);
             if (messageElement) {
                 messageElement.innerHTML = 'Device offline - Rebooting...<br><span id="rebootElapsedTime" style="font-size: 0.9em; color: #999;"></span>';
