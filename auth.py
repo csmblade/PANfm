@@ -155,12 +155,17 @@ def verify_password(username, password):
         error("Failed to load auth data for verification")
         return False
 
-    stored_username = auth_data.get('username', '')
-    stored_password_hash = auth_data.get('password', '')
-
-    # Check username
-    if username != stored_username:
+    # Check if user exists in the users dict
+    users = auth_data.get('users', {})
+    if username not in users:
         warning(f"Login attempt with invalid username: {username}")
+        return False
+
+    user_data = users[username]
+    stored_password_hash = user_data.get('password_hash', '')
+
+    if not stored_password_hash:
+        error(f"No password hash found for user: {username}")
         return False
 
     # Verify password
@@ -200,8 +205,13 @@ def change_password(username, old_password, new_password):
         hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         auth_data = load_auth_data()
-        auth_data['password'] = hashed_password
-        auth_data['must_change_password'] = False
+        if not auth_data or 'users' not in auth_data or username not in auth_data['users']:
+            error(f"User {username} not found in auth data")
+            return False, "User not found"
+
+        # Update password hash and clear must_change_password flag
+        auth_data['users'][username]['password_hash'] = hashed_password
+        auth_data['users'][username]['must_change_password'] = False
 
         if save_auth_data(auth_data):
             info(f"Password changed successfully for user: {username}")
@@ -225,7 +235,15 @@ def must_change_password():
     if not auth_data:
         return False
 
-    return auth_data.get('must_change_password', False)
+    # Get username from session
+    username = session.get('username', 'admin')
+
+    # Check if user exists and must change password
+    users = auth_data.get('users', {})
+    if username in users:
+        return users[username].get('must_change_password', False)
+
+    return False
 
 
 def login_required(f):
