@@ -25,9 +25,12 @@ def init_auth_file():
         hashed_password = bcrypt.hashpw('admin'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         auth_data = {
-            'username': 'admin',
-            'password': hashed_password,
-            'must_change_password': True
+            'users': {
+                'admin': {
+                    'password_hash': hashed_password,
+                    'must_change_password': True
+                }
+            }
         }
 
         # Encrypt and save
