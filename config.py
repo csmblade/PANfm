@@ -26,7 +26,8 @@ DEFAULT_SETTINGS = {
     'debug_logging': False,
     'selected_device_id': '',
     'monitored_interface': 'ethernet1/12',
-    'tony_mode': False
+    'tony_mode': False,
+    'timezone': 'UTC'  # Default timezone for displaying times
 }
 
 # Lazy import to avoid circular dependency

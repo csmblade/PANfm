@@ -8,7 +8,7 @@
  * - Export functionality (CSV, XML)
  */
 
-// Format timestamp for display (YYYY-MM-DD HH:MM:SS)
+// Format timestamp for display (YYYY-MM-DD HH:MM:SS) with timezone conversion
 function formatTimestamp(timestamp) {
     if (!timestamp || timestamp === 'Never' || timestamp === 'N/A') {
         return 'N/A';
@@ -27,15 +27,30 @@ function formatTimestamp(timestamp) {
             return 'N/A';
         }
 
-        // Format to match firewall: YYYY-MM-DD HH:MM:SS
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
+        // Get user's timezone preference (default to UTC if not set)
+        const userTz = window.userTimezone || 'UTC';
 
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        // Format using user's timezone
+        const formatted = date.toLocaleString('en-US', {
+            timeZone: userTz,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+
+        // Convert from "MM/DD/YYYY, HH:MM:SS" to "YYYY-MM-DD HH:MM:SS"
+        const parts = formatted.split(', ');
+        if (parts.length === 2) {
+            const datePart = parts[0].split('/'); // MM/DD/YYYY
+            const timePart = parts[1]; // HH:MM:SS
+            return `${datePart[2]}-${datePart[0]}-${datePart[1]} ${timePart}`;
+        }
+
+        return formatted;
     } catch (e) {
         return 'N/A';
     }

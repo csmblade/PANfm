@@ -192,7 +192,18 @@ function calculateTrend(dataArray) {
 // Update the chart with new data
 function updateChart(data) {
     const timestamp = new Date(data.timestamp);
-    const timeLabel = timestamp.toLocaleTimeString();
+
+    // Get user's timezone preference (default to UTC if not set)
+    const userTz = window.userTimezone || 'UTC';
+
+    // Format time using user's timezone
+    const timeLabel = timestamp.toLocaleTimeString('en-US', {
+        timeZone: userTz,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
 
     // Add new data (backend already returns Mbps rates)
     chartData.labels.push(timeLabel);
@@ -500,8 +511,26 @@ function updateThreatLogs(elementId, logs, borderColor) {
         const category = log.category || 'N/A';
         const severity = log.severity || 'N/A';
         const datetime = log.time ? new Date(log.time) : null;
-        const time = datetime ? datetime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-        const fullTime = datetime ? datetime.toLocaleString() : 'N/A';
+
+        // Get user's timezone preference (default to UTC if not set)
+        const userTz = window.userTimezone || 'UTC';
+
+        const time = datetime ? datetime.toLocaleTimeString('en-US', {
+            timeZone: userTz,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }) : 'N/A';
+        const fullTime = datetime ? datetime.toLocaleString('en-US', {
+            timeZone: userTz,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }) : 'N/A';
 
         // Build comprehensive tooltip
         let tooltipParts = [

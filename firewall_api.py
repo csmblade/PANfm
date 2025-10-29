@@ -842,7 +842,7 @@ def get_throughput_data():
                     debug(f"WAN IP for interface {wan_interface}: {wan_ip}, Speed: {wan_speed}")
 
             return {
-                'timestamp': datetime.now().isoformat(),
+                'timestamp': datetime.utcnow().isoformat() + 'Z',  # Use UTC and add 'Z' suffix
                 'inbound_mbps': round(max(0, inbound_mbps), 2),
                 'outbound_mbps': round(max(0, outbound_mbps), 2),
                 'total_mbps': round(max(0, total_mbps), 2),

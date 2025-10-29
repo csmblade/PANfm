@@ -439,6 +439,10 @@ def register_routes(app, csrf, limiter):
                 tony_mode = new_settings.get('tony_mode', False)
                 debug(f"tony_mode to save: {tony_mode}")
 
+                # Get timezone setting
+                timezone = new_settings.get('timezone', 'UTC')
+                debug(f"timezone to save: {timezone}")
+
                 settings_data = {
                     'refresh_interval': refresh_interval,
                     'match_count': match_count,
@@ -446,7 +450,8 @@ def register_routes(app, csrf, limiter):
                     'debug_logging': debug_logging,
                     'selected_device_id': selected_device_id,
                     'monitored_interface': monitored_interface,
-                    'tony_mode': tony_mode
+                    'tony_mode': tony_mode,
+                    'timezone': timezone
                 }
 
                 if save_settings(settings_data):

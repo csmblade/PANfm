@@ -20,6 +20,10 @@ async function loadSettings() {
             document.getElementById('refreshInterval').value = data.settings.refresh_interval;
             document.getElementById('debugLogging').checked = data.settings.debug_logging || false;
             document.getElementById('tonyMode').checked = data.settings.tony_mode || false;
+            document.getElementById('timezone').value = data.settings.timezone || 'UTC';
+
+            // Store timezone globally for use in time formatting functions
+            window.userTimezone = data.settings.timezone || 'UTC';
 
             // Initialize Tony Mode session keepalive
             initializeTonyMode(data.settings.tony_mode || false);
@@ -42,13 +46,15 @@ async function saveSettingsData() {
         const refreshInterval = parseInt(document.getElementById('refreshInterval').value);
         const debugLogging = document.getElementById('debugLogging').checked;
         const tonyMode = document.getElementById('tonyMode').checked;
+        const timezone = document.getElementById('timezone').value;
 
         // Get current settings to preserve selected_device_id and monitored_interface
         const currentSettings = await fetch('/api/settings').then(r => r.json());
         const settingsToSave = {
             refresh_interval: refreshInterval,
             debug_logging: debugLogging,
-            tony_mode: tonyMode
+            tony_mode: tonyMode,
+            timezone: timezone
         };
 
         // Preserve selected_device_id and monitored_interface from current settings
@@ -78,6 +84,7 @@ async function saveSettingsData() {
         if (data.status === 'success') {
             // Update local variables
             UPDATE_INTERVAL = refreshInterval * 1000;
+            window.userTimezone = timezone;
 
             // Restart update interval with new timing
             if (updateIntervalId) {
@@ -115,6 +122,7 @@ function resetSettingsData() {
     document.getElementById('refreshInterval').value = 15;
     document.getElementById('debugLogging').checked = false;
     document.getElementById('tonyMode').checked = false;
+    document.getElementById('timezone').value = 'UTC';
 }
 
 // Update monitored interface from dashboard
@@ -128,6 +136,9 @@ async function initSettings() {
 
         if (data.status === 'success') {
             UPDATE_INTERVAL = data.settings.refresh_interval * 1000;
+
+            // Store timezone globally for use in time formatting functions
+            window.userTimezone = data.settings.timezone || 'UTC';
 
             // Show debug alert if debug logging is enabled
             const debugAlert = document.getElementById('debugAlert');

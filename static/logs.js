@@ -79,7 +79,11 @@ function parsePaloAltoTime(timeStr) {
             return timeStr; // Return original if parsing fails
         }
 
+        // Get user's timezone preference (default to UTC if not set)
+        const userTz = window.userTimezone || 'UTC';
+
         return date.toLocaleString('en-US', {
+            timeZone: userTz,
             month: '2-digit',
             day: '2-digit',
             year: 'numeric',
@@ -166,7 +170,7 @@ function renderTrafficLogsTable(logs, timestamp) {
                 </tbody>
             </table>
             <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em;" id="trafficLogsFooter">
-                Showing ${logs.length} of ${allTrafficLogs.length} logs | Last updated: ${new Date(timestamp).toLocaleString()}
+                Showing ${logs.length} of ${allTrafficLogs.length} logs | Last updated: ${new Date(timestamp).toLocaleString('en-US', { timeZone: window.userTimezone || 'UTC' })}
             </div>
         </div>
     `;
@@ -246,7 +250,7 @@ function filterTrafficLogs(searchTerm) {
     }
 
     if (footer) {
-        footer.innerHTML = `Showing ${filteredLogs.length} of ${allTrafficLogs.length} logs | Last updated: ${new Date().toLocaleString()}`;
+        footer.innerHTML = `Showing ${filteredLogs.length} of ${allTrafficLogs.length} logs | Last updated: ${new Date().toLocaleString('en-US', { timeZone: window.userTimezone || 'UTC' })}`;
     }
 }
 
@@ -397,7 +401,7 @@ function renderSystemLogsTable() {
                     </tbody>
                 </table>
                 <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; color: #666; font-size: 0.9em;">
-                    Showing ${sortedLogs.length} of ${systemLogsMetadata.total} logs${searchTerm ? ' (search filtered)' : ''}${filterSeverity !== 'all' ? ` (filtered by ${filterSeverity})` : ''} | Last updated: ${new Date(systemLogsMetadata.timestamp).toLocaleString()}
+                    Showing ${sortedLogs.length} of ${systemLogsMetadata.total} logs${searchTerm ? ' (search filtered)' : ''}${filterSeverity !== 'all' ? ` (filtered by ${filterSeverity})` : ''} | Last updated: ${new Date(systemLogsMetadata.timestamp).toLocaleString('en-US', { timeZone: window.userTimezone || 'UTC' })}
                 </div>
             </div>
     `;
