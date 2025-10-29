@@ -67,13 +67,33 @@ def load_auth_data():
             debug("Auth file is empty, initializing with defaults")
             init_auth_file()
 
-        # Load and decrypt
+        # Load data
         with open(AUTH_FILE, 'r') as f:
-            encrypted_data = json.load(f)
+            data = json.load(f)
 
-        decrypted_data = decrypt_dict(encrypted_data)
-        debug("Successfully loaded auth data")
-        return decrypted_data
+        # Try to decrypt - if it fails, data might be unencrypted
+        try:
+            decrypted_data = decrypt_dict(data)
+            debug("Successfully loaded and decrypted auth data")
+            return decrypted_data
+        except Exception as decrypt_error:
+            # Decryption failed - check if it's unencrypted data
+            debug(f"Decryption failed: {decrypt_error}")
+            debug("Checking if auth file is unencrypted...")
+
+            # If it has the expected structure (users.admin.password_hash), it's unencrypted
+            if isinstance(data, dict) and 'users' in data:
+                debug("Auth file appears to be unencrypted, encrypting and saving...")
+                # Encrypt and save
+                from encryption import encrypt_dict
+                encrypted_data = encrypt_dict(data)
+                with open(AUTH_FILE, 'w') as f:
+                    json.dump(encrypted_data, f, indent=2)
+                debug("Auth file encrypted and saved")
+                return data  # Return the unencrypted data we just read
+            else:
+                # Unknown format
+                raise decrypt_error
     except (json.JSONDecodeError, ValueError) as e:
         # JSON parsing error - file is corrupted or empty
         error(f"Auth file is corrupted: {str(e)}")
