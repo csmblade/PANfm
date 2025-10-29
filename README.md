@@ -61,6 +61,17 @@ docker-compose down
 docker-compose up -d --build
 ```
 
+### Troubleshooting Login Issues After Update
+
+If you get 401 errors after updating from an older version, your auth.json may need to be migrated to the new structure:
+
+```bash
+chmod +x fix-auth.sh
+./fix-auth.sh
+```
+
+This will reset your credentials to the default `admin/admin`.
+
 ### Windows Users
 
 Use the provided batch scripts for convenience:
