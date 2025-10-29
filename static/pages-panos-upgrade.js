@@ -479,6 +479,7 @@ async function startUpgradeWorkflow() {
     // Step 0: Download base image if needed
     if (needsBaseDownload) {
         console.log(`Base image ${baseImageInfo.version} required and not downloaded, downloading now...`);
+        console.log(`IMPORTANT: Target version is ${upgradeState.selectedVersion}, base is ${baseImageInfo.version}`);
         updateUpgradeProgress('Downloading Base', `Downloading base image ${baseImageInfo.version}...`, 0);
 
         const baseDownloadResult = await downloadPanosVersion(baseImageInfo.version);
@@ -490,8 +491,11 @@ async function startUpgradeWorkflow() {
         }
 
         // Poll base image download job
+        // IMPORTANT: Keep selectedVersion as target, NOT base
         upgradeState.jobId = baseDownloadResult.job_id;
         upgradeState.currentStep = 'Downloading Base';
+        // Ensure selectedVersion remains the target (e.g., 12.1.3-h1, not 12.1.3)
+        console.log(`After base download, selectedVersion is still: ${upgradeState.selectedVersion}`);
         saveUpgradeState();
 
         const baseDownloadComplete = await pollJobStatus('Downloading Base', 'Base Image Download', 0, 20);
@@ -544,6 +548,8 @@ async function startUpgradeWorkflow() {
     const installStartProgress = needsBaseDownload ? 40 : 50;
     const installEndProgress = 90;
 
+    console.log(`INSTALL STEP: About to install version: ${upgradeState.selectedVersion}`);
+    console.log(`Full upgradeState:`, JSON.stringify(upgradeState));
     updateUpgradeProgress('Installing', `Installing PAN-OS ${upgradeState.selectedVersion}...`, installStartProgress);
     const installResult = await installPanosVersion(upgradeState.selectedVersion);
 
