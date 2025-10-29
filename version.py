@@ -10,7 +10,7 @@ PATCH: Bug fixes, small improvements, documentation updates
 # Current version
 VERSION_MAJOR = 1
 VERSION_MINOR = 5
-VERSION_PATCH = 0
+VERSION_PATCH = 1
 
 # Build metadata (optional)
 VERSION_BUILD = "20251029"  # YYYYMMDD format
@@ -19,7 +19,7 @@ VERSION_BUILD = "20251029"  # YYYYMMDD format
 VERSION_PRERELEASE = None
 
 # Codename for this version (optional)
-VERSION_CODENAME = "Content Management"
+VERSION_CODENAME = "Hotfix Selector"
 
 
 def get_version():
@@ -75,6 +75,24 @@ def get_short_version():
 
 # Version history and changelog
 VERSION_HISTORY = [
+    {
+        'version': '1.5.1',
+        'codename': 'Hotfix Selector',
+        'date': '2025-10-29',
+        'type': 'patch',
+        'changes': [
+            'CRITICAL BUG FIX: Upgrade confirmation modal now shows correct version',
+            'Fixed: Selecting hotfix version (e.g., 12.1.3-h1) was showing base version (12.1.3) in confirmation',
+            'Added explicit dropdown value re-read before starting upgrade workflow',
+            'Prevents potential race condition in version state management',
+            'Added debug logging for version selection tracking',
+            'Repository cleanup: Removed 32 unnecessary files (~1.8MB)',
+            'Simplified README.md from 314 to 89 lines - Docker deployment focused',
+            'Added project badges (Version, Python, Flask, Docker, License)',
+            'Enhanced .gitignore with cleanup patterns',
+            'Rate limiting improvements for auto-refresh support (600/hour monitoring endpoints)'
+        ]
+    },
     {
         'version': '1.5.0',
         'codename': 'Content Management',
