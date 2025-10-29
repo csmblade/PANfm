@@ -257,7 +257,7 @@ VERSION_HISTORY = [
             'Removed policies page and related code',
             'Fixed CSRF token handling for POST requests',
             'Restored utility functions (formatTimestamp, formatDaysAgo)',
-            'Updated documentation (PROJECT_MANIFEST.md, .clinerules)'
+            'Updated documentation (.claude/PROJECT_MANIFEST.md, .claude/.clinerules)'
         ]
     },
     {
@@ -295,7 +295,7 @@ VERSION_HISTORY = [
         'changes': [
             'Initial modular architecture',
             'Split monolithic app.py into focused modules',
-            'Created PROJECT_MANIFEST.md documentation',
+            'Created .claude/PROJECT_MANIFEST.md documentation',
             'Established development guidelines'
         ]
     }

@@ -272,7 +272,7 @@ docker-compose up -d --build
 
 1. Check logs: `docker-compose logs panfm`
 2. Enable debug logging in application (after logging in)
-3. Review PROJECT_MANIFEST.md Security Architecture section
+3. Review .claude/PROJECT_MANIFEST.md Security Architecture section
 4. Check SECURITY_IMPLEMENTATION_SUMMARY.md
 
 ---

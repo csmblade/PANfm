@@ -71,5 +71,8 @@ TYPOGRAPHY_GUIDE.md
 *_SUMMARY.md
 
 # Claude Code metadata
+# BOTH .claude/ and .claude-templates/ are private (contain project knowledge)
 .claude/
+.claude-templates/
+
 mac_vendor_db.json

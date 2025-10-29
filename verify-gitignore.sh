@@ -20,8 +20,8 @@ sensitive_files=(
     "settings.json"
     "devices.json"
     "debug.log"
-    ".clinerules"
-    "PROJECT_MANIFEST.md"
+    ".claude/.clinerules"
+    ".claude/PROJECT_MANIFEST.md"
     "ENCRYPTION_GUIDE.md"
     "LOGGING_GUIDE.md"
     "TYPOGRAPHY_GUIDE.md"
@@ -30,8 +30,11 @@ sensitive_files=(
 all_ignored=true
 for file in "${sensitive_files[@]}"; do
     if [ -f "$file" ]; then
-        # Check if file is in .gitignore (direct match or pattern match)
-        if grep -qE "^${file}$|^${file}\$|/${file}$|^\*.*$(basename ${file##*.})$" .gitignore 2>/dev/null; then
+        # Use git check-ignore to properly test if file is ignored
+        if command -v git &> /dev/null && git check-ignore "$file" &> /dev/null; then
+            echo "   ✓ $file is ignored"
+        # Fallback to pattern matching if git is not available
+        elif grep -qE "^${file}$|^${file}\$|/${file}$|^\*.*$(basename ${file##*.})$|^\.claude/" .gitignore 2>/dev/null; then
             echo "   ✓ $file is ignored"
         else
             echo "   ✗ $file is NOT ignored (SECURITY RISK!)"
