@@ -7,14 +7,12 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Mount the entire project for live development
-      - .:/app
-      # Mount data directory for persistent storage (includes encryption.key)
-      - ./data:/app/data
-      # Persist settings and devices (encrypted)
+      # Persist data files (create these as files first, not directories)
+      # Run setup.sh or touch these files before starting: settings.json devices.json encryption.key auth.json
       - ./settings.json:/app/settings.json
       - ./devices.json:/app/devices.json
       - ./encryption.key:/app/encryption.key
+      - ./auth.json:/app/auth.json
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=True

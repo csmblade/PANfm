@@ -8,12 +8,12 @@ if [ ! -f "settings.json" ]; then
     echo "Creating settings.json..."
     cat > settings.json << 'EOF'
 {
-  "refresh_interval": 5,
-  "match_count": 5,
-  "top_apps_count": 5,
+  "refresh_interval": 15,
   "debug_logging": false,
   "selected_device_id": "",
-  "monitored_interface": "ethernet1/12"
+  "monitored_interface": "ethernet1/12",
+  "tony_mode": false,
+  "timezone": "UTC"
 }
 EOF
     echo "✓ settings.json created"
@@ -48,6 +48,15 @@ if [ ! -f "encryption.key" ]; then
     echo "✓ encryption.key created"
 else
     echo "✓ encryption.key already exists"
+fi
+
+# Create auth.json if it doesn't exist (app will initialize with default admin/admin)
+if [ ! -f "auth.json" ]; then
+    echo "Creating auth.json..."
+    touch auth.json
+    echo "✓ auth.json created (will be initialized by app)"
+else
+    echo "✓ auth.json already exists"
 fi
 
 # Create data directory if it doesn't exist
