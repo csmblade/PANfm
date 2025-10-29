@@ -57,15 +57,36 @@ def load_auth_data():
         dict: Authentication data or None on error
     """
     try:
+        # Check if file exists
         if not os.path.exists(AUTH_FILE):
+            debug("Auth file does not exist, initializing")
             init_auth_file()
 
+        # Check if file is empty
+        if os.path.getsize(AUTH_FILE) == 0:
+            debug("Auth file is empty, initializing with defaults")
+            init_auth_file()
+
+        # Load and decrypt
         with open(AUTH_FILE, 'r') as f:
             encrypted_data = json.load(f)
 
         decrypted_data = decrypt_dict(encrypted_data)
         debug("Successfully loaded auth data")
         return decrypted_data
+    except (json.JSONDecodeError, ValueError) as e:
+        # JSON parsing error - file is corrupted or empty
+        error(f"Auth file is corrupted: {str(e)}")
+        debug("Reinitializing auth file due to corruption")
+        init_auth_file()
+        # Try loading again
+        try:
+            with open(AUTH_FILE, 'r') as f:
+                encrypted_data = json.load(f)
+            return decrypt_dict(encrypted_data)
+        except Exception as e2:
+            error(f"Failed to load auth data after reinitialization: {str(e2)}")
+            return None
     except Exception as e:
         error(f"Failed to load auth data: {str(e)}")
         return None

@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  panfm:
+    build: .
+    container_name: panfm
+    ports:
+      - "3000:3000"
+    volumes:
+      # Use a named volume instead of bind mounts to avoid file/directory issues
+      - panfm-data:/app/data
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+    restart: unless-stopped
+
+volumes:
+  panfm-data:
+    driver: local
