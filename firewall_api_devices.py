@@ -190,6 +190,10 @@ def get_software_updates(firewall_config):
                     })
 
             # Extract specific version fields
+            # PAN-OS version - always available from system info
+            sw_version = root.find('.//sw-version')
+            add_software_entry('PAN-OS', sw_version)
+
             # Application and threat signatures - NO auto update check (user clicks "Check for Updates")
             app_version = root.find('.//app-version')
             add_software_entry('Application & Threat', app_version)
