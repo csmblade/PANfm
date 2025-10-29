@@ -214,13 +214,18 @@ def decrypt_dict(encrypted_dict):
 
     for key, value in encrypted_dict.items():
         if isinstance(value, str):
-            decrypted_dict[key] = decrypt_string(value)
+            # Only decrypt if the value appears to be encrypted
+            if is_encrypted(value):
+                decrypted_dict[key] = decrypt_string(value)
+            else:
+                # Not encrypted (e.g., bcrypt hash), leave as-is
+                decrypted_dict[key] = value
         elif isinstance(value, dict):
             decrypted_dict[key] = decrypt_dict(value)
         elif isinstance(value, list):
             decrypted_dict[key] = [
                 decrypt_dict(item) if isinstance(item, dict)
-                else decrypt_string(item) if isinstance(item, str)
+                else decrypt_string(item) if (isinstance(item, str) and is_encrypted(item))
                 else item
                 for item in value
             ]
@@ -245,11 +250,15 @@ def is_encrypted(value):
     if not isinstance(value, str) or not value:
         return False
 
+    # Bcrypt hashes start with $2b$ or $2a$ or $2y$ - these are NOT encrypted
+    if value.startswith(('$2b$', '$2a$', '$2y$')):
+        return False
+
     try:
         # Encrypted values should be base64-encoded
         base64.b64decode(value.encode('utf-8'))
-        # Fernet tokens start with 'gAAAAA' after base64 encoding
-        return len(value) > 50  # Encrypted values are typically longer
+        # Fernet tokens start with 'gAAAAA' after base64 encoding and are typically > 100 chars
+        return len(value) > 80  # Encrypted values are typically longer than bcrypt (60 chars)
     except Exception:
         return False
 
