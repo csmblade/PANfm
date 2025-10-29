@@ -1,10 +1,10 @@
 # PANfm - Palo Alto Networks Firewall Monitor
 
-[![GitHub stars](https://img.shields.io/github/stars/csmblade/panfm?style=for-the-badge)](https://github.com/csmblade/panfm/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/csmblade/panfm?style=for-the-badge)](https://github.com/csmblade/panfm/network)
-[![GitHub issues](https://img.shields.io/github/issues/csmblade/panfm?style=for-the-badge)](https://github.com/csmblade/panfm/issues)
-[![GitHub license](https://img.shields.io/github/license/csmblade/panfm?style=for-the-badge)](https://github.com/csmblade/panfm/blob/main/LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+![Version](https://img.shields.io/badge/Version-1.5.0-brightgreen?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.9+-blue?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-Web_Framework-black?style=for-the-badge&logo=flask&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
 A real-time monitoring dashboard for Palo Alto Networks firewalls with automated PAN-OS upgrades, content management, and multi-device support.
 
