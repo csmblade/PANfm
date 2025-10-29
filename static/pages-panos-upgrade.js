@@ -451,6 +451,13 @@ function updateVersionDetails(selectedVersion) {
  * Start the complete upgrade workflow
  */
 async function startUpgradeWorkflow() {
+    // CRITICAL: Re-read selected version from dropdown to ensure we have the user's actual selection
+    const versionSelect = document.getElementById('versionSelect');
+    if (versionSelect) {
+        upgradeState.selectedVersion = versionSelect.value;
+        console.log(`Selected version from dropdown: ${upgradeState.selectedVersion}`);
+    }
+
     // Check if version is already downloaded
     const selectedVersionData = upgradeState.allVersions?.find(v => v.version === upgradeState.selectedVersion);
     const isTargetDownloaded = selectedVersionData?.downloaded === 'yes';
