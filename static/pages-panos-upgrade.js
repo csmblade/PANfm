@@ -671,6 +671,9 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
     return new Promise((resolve) => {
         let pollCount = 0;
         const maxPolls = 120; // 30 minutes with 15-second intervals
+        let consecutiveFailures = 0;
+        const maxConsecutiveFailures = 3; // Fail only after 3 consecutive failures
+        let lastSuccessfulProgress = progressStart;
 
         upgradeState.pollInterval = setInterval(async () => {
             pollCount++;
@@ -681,21 +684,33 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
                 // Check if response is JSON
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
-                    clearInterval(upgradeState.pollInterval);
-                    const text = await response.text();
-                    console.error('Non-JSON response received:', text.substring(0, 200));
-                    updateUpgradeProgress('Failed', `Server returned non-JSON response (status ${response.status}). Check server logs.`, 0, true);
-                    clearUpgradeState(); // Clear state on failure
-                    resolve(false);
+                    consecutiveFailures++;
+                    console.warn(`Non-JSON response (consecutive failures: ${consecutiveFailures}/${maxConsecutiveFailures})`);
+
+                    if (consecutiveFailures >= maxConsecutiveFailures) {
+                        clearInterval(upgradeState.pollInterval);
+                        const text = await response.text();
+                        console.error('Non-JSON response received:', text.substring(0, 200));
+                        updateUpgradeProgress('Failed', `Server returned non-JSON response after ${maxConsecutiveFailures} attempts (status ${response.status}). Check server logs.`, 0, true);
+                        clearUpgradeState();
+                        resolve(false);
+                    } else {
+                        // Show warning but continue polling
+                        updateUpgradeProgress(stepName, `${stepDisplayName}: Connection issue (retrying ${consecutiveFailures}/${maxConsecutiveFailures})...`, lastSuccessfulProgress);
+                    }
                     return;
                 }
 
                 const data = await response.json();
 
                 if (data.status === 'success') {
+                    // Reset consecutive failures on success
+                    consecutiveFailures = 0;
+
                     // Calculate progress within the specified range
                     const progressRange = progressEnd - progressStart;
                     const currentProgress = progressStart + (data.progress / 100 * progressRange);
+                    lastSuccessfulProgress = currentProgress;
                     updateUpgradeProgress(stepName, `${stepDisplayName}: ${data.progress}% - ${data.details || data.job_status}`, currentProgress);
 
                     // Check if job is finished
@@ -703,7 +718,6 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
                         clearInterval(upgradeState.pollInterval);
 
                         // Check if job completed successfully
-                        // Result can be 'OK' or details can contain 'Success' or job can simply finish
                         const isSuccess = data.result === 'OK' ||
                                         (data.details && data.details.toLowerCase().includes('success')) ||
                                         data.result === 'PEND' ||
@@ -715,7 +729,7 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
 
                         if (isFailed) {
                             updateUpgradeProgress('Failed', `${stepDisplayName} failed: ${data.details || data.result}`, currentProgress, true);
-                            clearUpgradeState(); // Clear state on failure
+                            clearUpgradeState();
                             resolve(false);
                         } else {
                             updateUpgradeProgress(stepName, `${stepDisplayName} complete!`, progressEnd);
@@ -723,24 +737,40 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
                         }
                     }
                 } else {
-                    clearInterval(upgradeState.pollInterval);
-                    updateUpgradeProgress('Failed', `Failed to check job status: ${data.message}`, 0, true);
-                    clearUpgradeState(); // Clear state on failure
-                    resolve(false);
+                    consecutiveFailures++;
+                    console.warn(`API error response (consecutive failures: ${consecutiveFailures}/${maxConsecutiveFailures}):`, data.message);
+
+                    if (consecutiveFailures >= maxConsecutiveFailures) {
+                        clearInterval(upgradeState.pollInterval);
+                        updateUpgradeProgress('Failed', `Failed to check job status after ${maxConsecutiveFailures} attempts: ${data.message}`, 0, true);
+                        clearUpgradeState();
+                        resolve(false);
+                    } else {
+                        // Show warning but continue polling
+                        updateUpgradeProgress(stepName, `${stepDisplayName}: Connection issue (retrying ${consecutiveFailures}/${maxConsecutiveFailures})...`, lastSuccessfulProgress);
+                    }
                 }
 
             } catch (error) {
-                clearInterval(upgradeState.pollInterval);
-                updateUpgradeProgress('Failed', `Error checking job status: ${error.message}`, 0, true);
-                clearUpgradeState(); // Clear state on failure
-                resolve(false);
+                consecutiveFailures++;
+                console.warn(`Polling error (consecutive failures: ${consecutiveFailures}/${maxConsecutiveFailures}):`, error.message);
+
+                if (consecutiveFailures >= maxConsecutiveFailures) {
+                    clearInterval(upgradeState.pollInterval);
+                    updateUpgradeProgress('Failed', `Error checking job status after ${maxConsecutiveFailures} attempts: ${error.message}`, 0, true);
+                    clearUpgradeState();
+                    resolve(false);
+                } else {
+                    // Show warning but continue polling
+                    updateUpgradeProgress(stepName, `${stepDisplayName}: Connection issue (retrying ${consecutiveFailures}/${maxConsecutiveFailures})...`, lastSuccessfulProgress);
+                }
             }
 
             // Timeout after max polls
             if (pollCount >= maxPolls) {
                 clearInterval(upgradeState.pollInterval);
                 updateUpgradeProgress('Failed', `${stepDisplayName} timed out after 30 minutes`, 0, true);
-                clearUpgradeState(); // Clear state on failure
+                clearUpgradeState();
                 resolve(false);
             }
 

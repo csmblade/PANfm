@@ -41,10 +41,10 @@ def check_available_panos_versions(firewall_ip, api_key):
         debug(f"Received response: {response[:200] if response else 'None'}")
 
         if not response:
-            error(f"No response from firewall {firewall_ip} for software check command")
+            error(f"No response from firewall {firewall_ip} for software check command after retries")
             return {
                 'status': 'error',
-                'message': 'Failed to get response from firewall. Check firewall connectivity and API access.'
+                'message': 'Failed to get response from firewall after multiple retry attempts. Check firewall connectivity, API access, and ensure firewall is not overloaded.'
             }
 
         # Parse XML response
@@ -135,9 +135,10 @@ def download_panos_version(firewall_ip, api_key, version):
         response = api_request_post(firewall_ip, api_key, cmd, cmd_type='op')
 
         if not response:
+            error(f"No response from firewall {firewall_ip} after retries")
             return {
                 'status': 'error',
-                'message': 'Failed to get response from firewall'
+                'message': 'Failed to get response from firewall after multiple retry attempts. The firewall may be busy or temporarily unavailable. Please wait and try again.'
             }
 
         # Parse XML response
@@ -210,9 +211,10 @@ def install_panos_version(firewall_ip, api_key, version):
         response = api_request_post(firewall_ip, api_key, cmd, cmd_type='op')
 
         if not response:
+            error(f"No response from firewall {firewall_ip} after retries")
             return {
                 'status': 'error',
-                'message': 'Failed to get response from firewall'
+                'message': 'Failed to get response from firewall after multiple retry attempts. The firewall may be busy or temporarily unavailable. Please wait and try again.'
             }
 
         # Parse XML response
@@ -288,9 +290,10 @@ def check_job_status(firewall_ip, api_key, job_id):
         response = api_request_post(firewall_ip, api_key, cmd, cmd_type='op')
 
         if not response:
+            error(f"No response from firewall {firewall_ip} after retries")
             return {
                 'status': 'error',
-                'message': 'Failed to get response from firewall'
+                'message': 'Failed to get response from firewall after multiple retry attempts. The firewall may be busy or temporarily unavailable. Please wait and try again.'
             }
 
         # Parse XML response
@@ -384,9 +387,10 @@ def reboot_firewall(firewall_ip, api_key):
         response = api_request_post(firewall_ip, api_key, cmd, cmd_type='op')
 
         if not response:
+            error(f"No response from firewall {firewall_ip} after retries")
             return {
                 'status': 'error',
-                'message': 'Failed to get response from firewall'
+                'message': 'Failed to get response from firewall after multiple retry attempts. The firewall may be busy or temporarily unavailable. Please wait and try again.'
             }
 
         # Parse XML response
