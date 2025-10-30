@@ -11,7 +11,7 @@ Separate module per .clinerules file size guidelines
 """
 
 import xml.etree.ElementTree as ET
-from logger import debug, error, warning
+from logger import debug, error, exception, warning
 from utils import api_request_post
 
 
@@ -105,10 +105,10 @@ def check_content_updates(firewall_ip, api_key):
         }
 
     except ET.ParseError as e:
-        error(f"Failed to parse content updates response: {e}")
+        exception(f"Failed to parse content updates response: {e}")
         return {'status': 'error', 'message': f'Parse error: {str(e)}'}
     except Exception as e:
-        error(f"Error checking content updates: {e}")
+        exception(f"Error checking content updates: {e}")
         return {'status': 'error', 'message': str(e)}
 
 
@@ -161,10 +161,10 @@ def download_content_update(firewall_ip, api_key):
             return {'status': 'error', 'message': error_msg}
 
     except ET.ParseError as e:
-        error(f"Failed to parse content download response: {e}")
+        exception(f"Failed to parse content download response: {e}")
         return {'status': 'error', 'message': f'Parse error: {str(e)}'}
     except Exception as e:
-        error(f"Error downloading content: {e}")
+        exception(f"Error downloading content: {e}")
         return {'status': 'error', 'message': str(e)}
 
 
@@ -222,8 +222,8 @@ def install_content_update(firewall_ip, api_key, version='latest'):
             return {'status': 'error', 'message': error_msg}
 
     except ET.ParseError as e:
-        error(f"Failed to parse content install response: {e}")
+        exception(f"Failed to parse content install response: {e}")
         return {'status': 'error', 'message': f'Parse error: {str(e)}'}
     except Exception as e:
-        error(f"Error installing content: {e}")
+        exception(f"Error installing content: {e}")
         return {'status': 'error', 'message': str(e)}

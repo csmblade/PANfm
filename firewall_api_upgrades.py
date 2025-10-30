@@ -7,7 +7,7 @@ and keep file sizes manageable per .clinerules guidelines.
 """
 
 import xml.etree.ElementTree as ET
-from logger import debug, error, warning
+from logger import debug, error, warning, exception
 from utils import api_request_post
 
 
@@ -97,13 +97,13 @@ def check_available_panos_versions(firewall_ip, api_key):
         }
 
     except ET.ParseError as e:
-        error(f"Failed to parse PAN-OS versions response: {e}")
+        exception(f"Failed to parse PAN-OS versions response: {e}")
         return {
             'status': 'error',
             'message': f'XML parsing error: {str(e)}'
         }
     except Exception as e:
-        error(f"Error checking PAN-OS versions: {e}")
+        exception(f"Error checking PAN-OS versions: {e}")
         return {
             'status': 'error',
             'message': str(e)
@@ -173,13 +173,13 @@ def download_panos_version(firewall_ip, api_key, version):
         }
 
     except ET.ParseError as e:
-        error(f"Failed to parse download response: {e}")
+        exception(f"Failed to parse download response: {e}")
         return {
             'status': 'error',
             'message': f'XML parsing error: {str(e)}'
         }
     except Exception as e:
-        error(f"Error downloading PAN-OS version: {e}")
+        exception(f"Error downloading PAN-OS version: {e}")
         return {
             'status': 'error',
             'message': str(e)
@@ -249,13 +249,13 @@ def install_panos_version(firewall_ip, api_key, version):
         }
 
     except ET.ParseError as e:
-        error(f"Failed to parse install response: {e}")
+        exception(f"Failed to parse install response: {e}")
         return {
             'status': 'error',
             'message': f'XML parsing error: {str(e)}'
         }
     except Exception as e:
-        error(f"Error installing PAN-OS version: {e}")
+        exception(f"Error installing PAN-OS version: {e}")
         return {
             'status': 'error',
             'message': str(e)
@@ -351,13 +351,13 @@ def check_job_status(firewall_ip, api_key, job_id):
         }
 
     except ET.ParseError as e:
-        error(f"Failed to parse job status response: {e}")
+        exception(f"Failed to parse job status response: {e}")
         return {
             'status': 'error',
             'message': f'XML parsing error: {str(e)}'
         }
     except Exception as e:
-        error(f"Error checking job status: {e}")
+        exception(f"Error checking job status: {e}")
         return {
             'status': 'error',
             'message': str(e)
@@ -414,13 +414,13 @@ def reboot_firewall(firewall_ip, api_key):
         }
 
     except ET.ParseError as e:
-        error(f"Failed to parse reboot response: {e}")
+        exception(f"Failed to parse reboot response: {e}")
         return {
             'status': 'error',
             'message': f'XML parsing error: {str(e)}'
         }
     except Exception as e:
-        error(f"Error rebooting firewall: {e}")
+        exception(f"Error rebooting firewall: {e}")
         return {
             'status': 'error',
             'message': str(e)
