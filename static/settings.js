@@ -455,27 +455,41 @@ function initServicePortDbControls() {
  * If yes, automatically open Settings page and Security tab with warning
  */
 function checkPasswordChangeRequired() {
+    console.log('[PASSWORD-CHANGE] Checking if password change required...');
     const urlParams = new URLSearchParams(window.location.search);
     const mustChangePassword = urlParams.get('must_change_password');
+    console.log('[PASSWORD-CHANGE] URL parameter value:', mustChangePassword);
 
     if (mustChangePassword === 'true') {
+        console.log('[PASSWORD-CHANGE] Password change required - showing prompt');
+
         // Show password change warning
         const warningDiv = document.getElementById('passwordChangeWarning');
         if (warningDiv) {
+            console.log('[PASSWORD-CHANGE] Showing warning div');
             warningDiv.style.display = 'block';
+        } else {
+            console.error('[PASSWORD-CHANGE] Warning div not found!');
         }
 
         // Switch to Settings page
+        console.log('[PASSWORD-CHANGE] Switching to Settings page');
         showPage('settings');
 
         // Switch to Security tab
         const securityTab = document.querySelector('.settings-tab[data-tab="security"]');
         if (securityTab) {
+            console.log('[PASSWORD-CHANGE] Clicking Security tab');
             securityTab.click();
+        } else {
+            console.error('[PASSWORD-CHANGE] Security tab not found!');
         }
 
         // Clear URL parameter
         window.history.replaceState({}, document.title, '/');
+        console.log('[PASSWORD-CHANGE] URL parameter cleared');
+    } else {
+        console.log('[PASSWORD-CHANGE] No password change required');
     }
 }
 

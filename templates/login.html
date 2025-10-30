@@ -265,15 +265,21 @@
 
                 const data = await response.json();
 
+                // Debug logging
+                console.log('[LOGIN] Response data:', data);
+                console.log('[LOGIN] must_change_password flag:', data.must_change_password);
+
                 if (data.status === 'success') {
                     // Mark as not first visit
                     localStorage.setItem('panfm_first_visit', 'false');
 
                     // Check if password must be changed
                     if (data.must_change_password) {
+                        console.log('[LOGIN] Password change required - redirecting with flag');
                         // Redirect to dashboard with password change flag
                         window.location.href = '/?must_change_password=true';
                     } else {
+                        console.log('[LOGIN] No password change required - normal redirect');
                         // Redirect to dashboard
                         window.location.href = '/';
                     }
