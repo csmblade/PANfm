@@ -290,7 +290,7 @@ def get_system_resources():
         }
 
     except Exception as e:
-        debug(f"CPU Error: {str(e)}")
+        exception(f"CPU Error: {str(e)}")
         return {'data_plane_cpu': 0, 'mgmt_plane_cpu': 0, 'uptime': None, 'memory_used_pct': 0, 'memory_used_mb': 0, 'memory_total_mb': 0}
 
 
@@ -568,6 +568,7 @@ def get_session_count():
             return {'active': 0, 'tcp': 0, 'udp': 0, 'icmp': 0}
 
     except Exception as e:
+        exception(f"Session count error: {str(e)}")
         return {'active': 0, 'tcp': 0, 'udp': 0, 'icmp': 0}
 
 
@@ -866,6 +867,7 @@ def get_throughput_data():
             return {'status': 'error', 'message': f'HTTP {response.status_code}'}
 
     except Exception as e:
+        exception(f"Throughput data error: {str(e)}")
         return {'status': 'error', 'message': f'Error: {str(e)}'}
 
 

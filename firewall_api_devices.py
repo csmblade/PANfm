@@ -312,6 +312,7 @@ def is_virtual_mac(mac_address, vendor_name=None):
     - reason: string explaining why (if virtual)
     - is_randomized: bool (for privacy features like iOS/Android)
     """
+    debug("is_virtual_mac called for MAC: %s, vendor: %s", mac_address, vendor_name)
     if not mac_address or mac_address == 'N/A':
         return {'is_virtual': False, 'reason': None, 'is_randomized': False}
 
@@ -394,6 +395,7 @@ def lookup_mac_vendor(mac_address):
     Lookup vendor name for a MAC address.
     Returns vendor name or None if not found.
     """
+    debug("lookup_mac_vendor called for MAC: %s", mac_address)
     if not mac_address or mac_address == 'N/A':
         return None
 
@@ -1066,6 +1068,7 @@ def format_interface_speed(speed_raw):
     Returns:
         Formatted speed string (e.g., "10 Gbps", "1000 Mbps", "-")
     """
+    debug("format_interface_speed called with: %s", speed_raw)
     if not speed_raw or speed_raw in ['ukn', '[n/a]', '-']:
         return '-'
 
@@ -1187,6 +1190,7 @@ def parse_interface_entry(entry, firewall_config, transceiver_map, is_logical=Fa
 
 def determine_interface_type(interface_name):
     """Determine the type of interface based on its name"""
+    debug("determine_interface_type called for: %s", interface_name)
     # Check for subinterface first (has a dot)
     if '.' in interface_name:
         return 'Subinterface'
@@ -1209,6 +1213,7 @@ def get_parent_interface_name(interface_name):
     Extract parent interface name from a subinterface name
     e.g., 'ethernet1/1.100' -> 'ethernet1/1'
     """
+    debug("get_parent_interface_name called for: %s", interface_name)
     if '.' in interface_name:
         return interface_name.split('.')[0]
     return interface_name

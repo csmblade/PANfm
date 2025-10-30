@@ -23,6 +23,11 @@ def generate_key():
     Returns:
         bytes: The generated encryption key
     """
+    try:
+        from logger import debug
+        debug("generate_key called - creating new encryption key")
+    except:
+        pass
     key = Fernet.generate_key()
 
     try:
@@ -45,6 +50,11 @@ def check_key_permissions():
     Returns:
         bool: True if permissions are correct or were fixed, False on error
     """
+    try:
+        from logger import debug
+        debug("check_key_permissions called for %s", KEY_FILE)
+    except:
+        pass
     if not os.path.exists(KEY_FILE):
         return True  # File doesn't exist yet, will be created with correct permissions
 
@@ -72,6 +82,11 @@ def load_key():
     Returns:
         bytes: The encryption key
     """
+    try:
+        from logger import debug
+        debug("load_key called for %s", KEY_FILE)
+    except:
+        pass
     if not os.path.exists(KEY_FILE):
         return generate_key()
 
@@ -93,6 +108,11 @@ def get_cipher():
     Returns:
         Fernet: Cipher instance for encryption/decryption
     """
+    try:
+        from logger import debug
+        debug("get_cipher called")
+    except:
+        pass
     key = load_key()
     return Fernet(key)
 
@@ -247,6 +267,11 @@ def is_encrypted(value):
     Returns:
         bool: True if the value appears encrypted, False otherwise
     """
+    try:
+        from logger import debug
+        debug("is_encrypted called for value of length: %d", len(value) if value else 0)
+    except:
+        pass
     if not isinstance(value, str) or not value:
         return False
 
@@ -274,6 +299,11 @@ def migrate_unencrypted_data(data_dict):
     Returns:
         dict: Dictionary with all string values encrypted
     """
+    try:
+        from logger import debug
+        debug("migrate_unencrypted_data called with %d top-level keys", len(data_dict))
+    except:
+        pass
     migrated_dict = {}
 
     for key, value in data_dict.items():
