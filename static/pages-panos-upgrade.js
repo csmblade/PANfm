@@ -674,6 +674,8 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
         let consecutiveFailures = 0;
         const maxConsecutiveFailures = 3; // Fail only after 3 consecutive failures
         let lastSuccessfulProgress = progressStart;
+        let lastProgressUpdate = Date.now(); // Track last time we got progress
+        const maxStaleTime = 10 * 60 * 1000; // 10 minutes without progress = stale
 
         upgradeState.pollInterval = setInterval(async () => {
             pollCount++;
@@ -706,6 +708,9 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
                 if (data.status === 'success') {
                     // Reset consecutive failures on success
                     consecutiveFailures = 0;
+
+                    // Update last progress time - we got a response from firewall
+                    lastProgressUpdate = Date.now();
 
                     // Calculate progress within the specified range
                     const progressRange = progressEnd - progressStart;
@@ -766,12 +771,33 @@ async function pollJobStatus(stepName, stepDisplayName, progressStart = 0, progr
                 }
             }
 
-            // Timeout after max polls
-            if (pollCount >= maxPolls) {
+            // Check for stale progress (no updates for 10 minutes = stuck)
+            const timeSinceLastProgress = Date.now() - lastProgressUpdate;
+            if (timeSinceLastProgress > maxStaleTime) {
                 clearInterval(upgradeState.pollInterval);
-                updateUpgradeProgress('Failed', `${stepDisplayName} timed out after 30 minutes`, 0, true);
+                const minutesStale = Math.floor(timeSinceLastProgress / 60000);
+                updateUpgradeProgress('Failed', `${stepDisplayName} appears stuck - no progress for ${minutesStale} minutes. The job may have failed on the firewall. Check firewall status manually.`, 0, true);
                 clearUpgradeState();
                 resolve(false);
+                return;
+            }
+
+            // Timeout after max polls ONLY if we haven't gotten recent progress
+            // This prevents timing out while firewall is actively working
+            if (pollCount >= maxPolls) {
+                // If we got progress recently (within last 2 minutes), extend timeout
+                const recentProgress = (Date.now() - lastProgressUpdate) < (2 * 60 * 1000);
+
+                if (recentProgress) {
+                    console.log(`Extending timeout - still receiving progress updates (poll ${pollCount}/${maxPolls})`);
+                    pollCount = maxPolls - 10; // Reset counter to give 2.5 more minutes
+                    updateUpgradeProgress(stepName, `${stepDisplayName}: Taking longer than expected, but still progressing...`, lastSuccessfulProgress);
+                } else {
+                    clearInterval(upgradeState.pollInterval);
+                    updateUpgradeProgress('Failed', `${stepDisplayName} timed out after 30 minutes with no progress`, 0, true);
+                    clearUpgradeState();
+                    resolve(false);
+                }
             }
 
         }, 15000); // Poll every 15 seconds
