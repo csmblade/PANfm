@@ -234,12 +234,14 @@ def must_change_password():
     Returns:
         bool: True if password must be changed
     """
+    debug("must_change_password called")
     auth_data = load_auth_data()
     if not auth_data:
         return False
 
     # Get username from session
     username = session.get('username', 'admin')
+    debug("Checking password change requirement for user: %s", username)
 
     # Check if user exists and must change password
     users = auth_data.get('users', {})

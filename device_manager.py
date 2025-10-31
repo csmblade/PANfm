@@ -104,10 +104,13 @@ class DeviceManager:
 
     def get_device(self, device_id):
         """Get a specific device by ID"""
+        debug("get_device called for device_id: %s", device_id)
         devices = self.load_devices()
         for device in devices:
             if device.get('id') == device_id:
+                debug("Found device: %s", device.get('name'))
                 return device
+        debug("Device not found: %s", device_id)
         return None
 
     def add_device(self, name, ip, api_key, group="Default", description="", monitored_interface="ethernet1/12", wan_interface=""):
@@ -144,17 +147,24 @@ class DeviceManager:
 
     def delete_device(self, device_id):
         """Delete a device"""
+        debug("delete_device called for device_id: %s", device_id)
         devices = self.load_devices()
+        initial_count = len(devices)
         devices = [d for d in devices if d.get('id') != device_id]
+        debug("Deleted device. Device count: %d -> %d", initial_count, len(devices))
         return self.save_devices(devices)
 
     def get_groups(self):
         """Get list of device groups"""
+        debug("get_groups called")
         try:
             with open(self.devices_file, 'r') as f:
                 data = json.load(f)
-                return data.get('groups', [])
-        except:
+                groups = data.get('groups', [])
+                debug("Found %d device groups", len(groups))
+                return groups
+        except Exception as e:
+            debug("Error loading groups, returning default: %s", str(e))
             return ["Default"]
 
     def test_connection(self, ip, api_key):

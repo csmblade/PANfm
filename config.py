@@ -149,6 +149,8 @@ def get_vendor_db_info():
     """
     Get information about the vendor database file.
     """
+    debug, _, _ = _get_logger()
+    debug("get_vendor_db_info called")
     if os.path.exists(VENDOR_DB_FILE):
         file_size = os.path.getsize(VENDOR_DB_FILE)
         file_mtime = os.path.getmtime(VENDOR_DB_FILE)
@@ -231,6 +233,8 @@ def get_service_port_db_info():
     """
     Get information about the service port database file.
     """
+    debug, _, _ = _get_logger()
+    debug("get_service_port_db_info called")
     if os.path.exists(SERVICE_PORT_DB_FILE):
         file_size = os.path.getsize(SERVICE_PORT_DB_FILE)
         file_mtime = os.path.getmtime(SERVICE_PORT_DB_FILE)
