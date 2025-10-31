@@ -10,16 +10,16 @@ PATCH: Bug fixes, small improvements, documentation updates
 # Current version
 VERSION_MAJOR = 1
 VERSION_MINOR = 5
-VERSION_PATCH = 1
+VERSION_PATCH = 2
 
 # Build metadata (optional)
-VERSION_BUILD = "20251029"  # YYYYMMDD format
+VERSION_BUILD = "20251031"  # YYYYMMDD format
 
 # Pre-release identifier (optional, e.g., 'alpha', 'beta', 'rc1')
 VERSION_PRERELEASE = None
 
 # Codename for this version (optional)
-VERSION_CODENAME = "Hotfix Selector"
+VERSION_CODENAME = "Debug Logging"
 
 
 def get_version():
@@ -75,6 +75,27 @@ def get_short_version():
 
 # Version history and changelog
 VERSION_HISTORY = [
+    {
+        'version': '1.5.2',
+        'codename': 'Debug Logging',
+        'date': '2025-10-31',
+        'type': 'patch',
+        'changes': [
+            'MAJOR: Comprehensive debug logging improvements across entire codebase',
+            'Fixed CRITICAL: All exception handlers now use exception() for full tracebacks (16 functions)',
+            'Fixed premature timeout during long PAN-OS upgrades (12-15 min operations)',
+            'Added smart timeout extension - extends if receiving progress updates',
+            'Fixed intermittent API timeout errors with retry logic and exponential backoff',
+            'Added entry logging to 19 utility functions for better tracking',
+            'Added progress logging to device management and encryption operations',
+            'Debug logging compliance: 95%+ (up from 75%)',
+            'Files improved: firewall_api.py, firewall_api_upgrades.py, firewall_api_content.py',
+            'Files improved: firewall_api_devices.py, encryption.py, auth.py, device_manager.py, config.py',
+            'Increased API timeout from 30s to 60s for large operations',
+            'Added consecutive failure tracking (requires 3 failures before abort)',
+            'All logging follows CLAUDE.md standards for easier troubleshooting'
+        ]
+    },
     {
         'version': '1.5.1',
         'codename': 'Hotfix Selector',
